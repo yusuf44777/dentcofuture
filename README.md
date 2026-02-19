@@ -16,7 +16,9 @@ Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliğ
 - `/submit` mobil geri bildirim formu
 - `/oyla` -> `/submit` yönlendirmesi
 - `/dashboard` büyük ekran canlı analiz panosu
+- `/dashboard/login` dashboard giriş ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
+- `/api/dashboard-auth` dashboard oturum endpoint'i
 
 ## 1. Veritabanı Kurulumu (Supabase)
 
@@ -52,6 +54,9 @@ Gerekli:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
 - `CRON_SECRET` (zorunlu, `/api/analyze` endpoint koruması için)
+- `DASHBOARD_USERNAME` (dashboard kullanıcı adı)
+- `DASHBOARD_PASSWORD` (dashboard şifresi)
+- `DASHBOARD_AUTH_SECRET` (opsiyonel, dashboard cookie imzası için; boşsa `CRON_SECRET` kullanılır)
 - `NEXT_PUBLIC_APP_URL` (QR URL üretimi için)
 
 ## 3. Local Çalıştırma
@@ -91,11 +96,20 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
 
 ## 6. Vercel Deploy ve API Güvenliği
 
-- `vercel.json` içinde `/api/analyze` için cron tanımlıdır (2 dakikada bir).
+- `vercel.json` içinde `/api/analyze` için cron tanımlıdır (Hobby plan uyumlu: günde 1 kez).
 - Vercel Project Settings -> Environment Variables alanına tüm değişkenleri ekle.
 - `CRON_SECRET` mutlaka tanımlı olmalı; endpoint bu secret olmadan production'da çalışmaz.
 - `SUPABASE_SERVICE_ROLE_KEY` ve `OPENAI_API_KEY` sadece server-side değişken olarak tutulmalı, client'a taşınmamalı.
 - `.env.local` dosyasını kesinlikle repo'ya commit etme.
+
+## 7. Dashboard Erişim Koruması
+
+- `/dashboard` sayfası artık giriş zorunludur; oturum yoksa otomatik `/dashboard/login` sayfasına yönlenir.
+- Giriş doğrulaması `/api/dashboard-auth` üzerinden server-side yapılır.
+- Varsayılan kullanıcı adı/şifre:
+  - `communitive`
+  - `communitiveİstanbul2026`
+- Üretim ortamında bu bilgileri Vercel Environment Variables üzerinden yönet.
 
 ## Notlar
 
