@@ -35,8 +35,7 @@ export default function SubmitPage() {
           <CardHeader>
             <CardTitle>Canlı Geri Bildirim</CardTitle>
             <CardDescription>
-              Kısa ve net mesajlarınız, salon genelindeki eğilimlerin gerçek zamanlı izlenmesine yardımcı
-              olur.
+              Dilerseniz serbest yorum bırakın, dilerseniz çoktan seçmeli anket sorusunu yanıtlayın.
             </CardDescription>
           </CardHeader>
           <CardContent>

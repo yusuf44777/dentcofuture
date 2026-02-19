@@ -1,17 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import {
+  DASHBOARD_AUTH_COOKIE_NAME,
+  isDashboardSessionValid
+} from "@/lib/auth/dashboard";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isPollMessage } from "@/lib/engagement";
 import type { Json } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-5-mini-2025-08-07";
 const MIN_BATCH_SIZE = 10;
 const MAX_BATCH_SIZE = 50;
 
 const SYSTEM_PROMPT =
-  "Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliği için uzman bir veri analistisiniz. Aşağıdaki katılımcı geri bildirimlerini analiz edin. YALNIZCA şu alanları içeren bir JSON döndürün: 1. 'sentiment': olumlu, olumsuz ve nötr yüzdeleri içeren nesne. 2. 'top_topics': en çok konuşulan 3 temayı içeren dizi. 3. 'summary': genel atmosferi anlatan tek cümlelik özet. Sonuç metinlerini Türkçe üretin.";
+  [
+    "Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliği için kıdemli veri analisti olarak çalışıyorsun.",
+    "Senden beklenen: moderatörün sahnede hızlı ve doğru karar almasını sağlayacak net içgörü üretmek.",
+    "YALNIZCA geçerli JSON döndür, markdown veya açıklama metni yazma.",
+    "Dil: Türkçe.",
+    "JSON şeması:",
+    "{",
+    "  \"sentiment\": { \"positive\": number, \"neutral\": number, \"negative\": number },",
+    "  \"top_topics\": [string, string, string],",
+    "  \"summary\": string,",
+    "  \"moderator_brief\": {",
+    "    \"room_mood\": string,",
+    "    \"audience_priorities\": [string, string, string],",
+    "    \"critical_questions\": [string, string, string],",
+    "    \"recommended_actions\": [string, string, string],",
+    "    \"confidence_0_100\": number",
+    "  }",
+    "}",
+    "Kurallar:",
+    "- sentiment yüzdeleri 0-100 aralığında olsun ve toplamları yaklaşık 100 olsun.",
+    "- top_topics en çok konuşulan 3 temayı kısa ve net ifade etsin.",
+    "- summary tek cümle ve moderasyon açısından eyleme dönük olsun.",
+    "- moderator_brief maddeleri tekrar etmeyen, uygulanabilir ve kısa ifadelerden oluşsun.",
+    "- Yetersiz veri varsa bunu summary ve moderator_brief içinde açıkça belirt."
+  ].join("\n");
 
 function getAnalyzeSecret() {
   return process.env.CRON_SECRET ?? process.env.ANALYZE_API_SECRET ?? "";
@@ -31,7 +60,7 @@ function getBearerToken(request: NextRequest) {
   return token.trim();
 }
 
-function isAnalyzeAuthorized(request: NextRequest) {
+function isAnalyzeSecretAuthorized(request: NextRequest) {
   const secret = getAnalyzeSecret();
 
   // Local development convenience: allow requests when no secret is configured.
@@ -47,6 +76,19 @@ function isAnalyzeAuthorized(request: NextRequest) {
   const headerSecret = request.headers.get("x-analyze-secret")?.trim() ?? "";
 
   return bearerToken === secret || headerSecret === secret;
+}
+
+function isDashboardModeratorAuthorized(request: NextRequest) {
+  const sessionToken = request.cookies.get(DASHBOARD_AUTH_COOKIE_NAME)?.value;
+  return isDashboardSessionValid(sessionToken);
+}
+
+function isAnalyzeAuthorized(request: NextRequest) {
+  if (isAnalyzeSecretAuthorized(request)) {
+    return true;
+  }
+
+  return isDashboardModeratorAuthorized(request);
 }
 
 function isAnalyzeSecretRequiredButMissing() {
@@ -68,6 +110,27 @@ function toPercent(value: unknown) {
   }
 
   return Math.max(0, Math.min(100, Math.round(numeric * 10) / 10));
+}
+
+function clampNumber(value: unknown, min: number, max: number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return min;
+  }
+
+  return Math.max(min, Math.min(max, numeric));
+}
+
+function toStringArray(value: unknown, maxItems: number) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
 
 function normalizeSentiment(value: unknown) {
@@ -146,15 +209,45 @@ async function runBatch(force: boolean) {
     };
   }
 
-  if (pending.length < MIN_BATCH_SIZE && !force) {
+  const pollRows = pending.filter((row) => isPollMessage(row.message));
+  const textRows = pending.filter((row) => !isPollMessage(row.message) && row.message.trim().length > 0);
+
+  const markRowsAnalyzed = async (ids: string[]) => {
+    if (ids.length === 0) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("attendee_feedbacks")
+      .update({ is_analyzed: true })
+      .in("id", ids);
+
+    if (error) {
+      throw new Error(`Geri bildirim kayıtları analiz edildi olarak işaretlenemedi: ${error.message}`);
+    }
+  };
+
+  if (textRows.length === 0) {
+    await markRowsAnalyzed(pollRows.map((row) => row.id));
+
     return {
-      processed: 0,
+      processed: pollRows.length,
       skipped: true,
-      reason: `Bekleyen kayıt sayısı eşik altında (${pending.length}/${MIN_BATCH_SIZE}).`
+      reason: "Sadece anket yanıtları bulundu; metin analizi için serbest geri bildirim bekleniyor."
     };
   }
 
-  const combinedFeedback = pending
+  if (textRows.length < MIN_BATCH_SIZE && !force) {
+    await markRowsAnalyzed(pollRows.map((row) => row.id));
+
+    return {
+      processed: pollRows.length,
+      skipped: true,
+      reason: `Serbest metin yanıtları eşik altında (${textRows.length}/${MIN_BATCH_SIZE}).`
+    };
+  }
+
+  const combinedFeedback = textRows
     .map((item, index) => `${index + 1}. ${item.message.replace(/\s+/g, " ").trim()}`)
     .join("\n");
 
@@ -167,7 +260,6 @@ async function runBatch(force: boolean) {
   const completion = await openai.chat.completions.create({
     model: MODEL,
     response_format: { type: "json_object" },
-    temperature: 0.2,
     messages: [
       {
         role: "system",
@@ -189,6 +281,7 @@ async function runBatch(force: boolean) {
     sentiment?: unknown;
     top_topics?: unknown;
     summary?: unknown;
+    moderator_brief?: unknown;
   };
 
   try {
@@ -196,16 +289,27 @@ async function runBatch(force: boolean) {
       sentiment?: unknown;
       top_topics?: unknown;
       summary?: unknown;
+      moderator_brief?: unknown;
     };
   } catch {
     throw new Error("Model çıktısı JSON olarak ayrıştırılamadı.");
   }
 
   const sentiment = normalizeSentiment(parsed.sentiment);
-  const topTopics = Array.isArray(parsed.top_topics)
-    ? parsed.top_topics.filter((item): item is string => typeof item === "string").slice(0, 3)
-    : [];
-  const summary = typeof parsed.summary === "string" ? parsed.summary : "";
+  const topTopics = toStringArray(parsed.top_topics, 3);
+  const summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
+  const moderatorBriefRaw =
+    parsed.moderator_brief && typeof parsed.moderator_brief === "object"
+      ? (parsed.moderator_brief as Record<string, unknown>)
+      : {};
+  const moderatorBrief = {
+    room_mood:
+      typeof moderatorBriefRaw.room_mood === "string" ? moderatorBriefRaw.room_mood.trim() : "",
+    audience_priorities: toStringArray(moderatorBriefRaw.audience_priorities, 3),
+    critical_questions: toStringArray(moderatorBriefRaw.critical_questions, 3),
+    recommended_actions: toStringArray(moderatorBriefRaw.recommended_actions, 3),
+    confidence_0_100: Math.round(clampNumber(moderatorBriefRaw.confidence_0_100, 0, 100))
+  };
 
   const { count: totalCount, error: countError } = await supabase
     .from("attendee_feedbacks")
@@ -224,7 +328,8 @@ async function runBatch(force: boolean) {
     sentiment_score: sentiment,
     top_keywords: {
       top_topics: topTopics,
-      summary
+      summary,
+      moderator_brief: moderatorBrief
     }
   };
 
@@ -236,28 +341,25 @@ async function runBatch(force: boolean) {
     throw new Error(`Analitik kaydı eklenemedi: ${analyticsError.message}`);
   }
 
-  const processedIds = pending.map((item) => item.id);
-
-  const { error: markError } = await supabase
-    .from("attendee_feedbacks")
-    .update({ is_analyzed: true })
-    .in("id", processedIds);
-
-  if (markError) {
-    throw new Error(`Geri bildirim kayıtları analiz edildi olarak işaretlenemedi: ${markError.message}`);
-  }
+  const processedIds = [...textRows.map((item) => item.id), ...pollRows.map((item) => item.id)];
+  await markRowsAnalyzed(processedIds);
 
   return {
     processed: processedIds.length,
+    processed_text_rows: textRows.length,
+    processed_poll_rows: pollRows.length,
     skipped: false,
     sentiment,
     top_topics: topTopics,
-    summary
+    summary,
+    moderator_brief: moderatorBrief
   };
 }
 
 export async function POST(request: NextRequest) {
-  if (isAnalyzeSecretRequiredButMissing()) {
+  const moderatorAuthorized = isDashboardModeratorAuthorized(request);
+
+  if (isAnalyzeSecretRequiredButMissing() && !moderatorAuthorized) {
     return NextResponse.json(
       {
         error: "Güvenlik yapılandırması eksik: CRON_SECRET veya ANALYZE_API_SECRET tanımlanmalı."
@@ -290,7 +392,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (isAnalyzeSecretRequiredButMissing()) {
+  const moderatorAuthorized = isDashboardModeratorAuthorized(request);
+
+  if (isAnalyzeSecretRequiredButMissing() && !moderatorAuthorized) {
     return NextResponse.json(
       {
         error: "Güvenlik yapılandırması eksik: CRON_SECRET veya ANALYZE_API_SECRET tanımlanmalı."

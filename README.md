@@ -7,7 +7,7 @@ Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliğ
 - Next.js 15 (App Router, TypeScript)
 - Tailwind CSS + Shadcn-style UI primitives
 - Supabase (PostgreSQL + Realtime)
-- OpenAI (`gpt-4o-mini`) for batch analytics
+- OpenAI (`gpt-5-mini-2025-08-07`) for batch analytics
 - Recharts for sentiment charting
 - `react-qr-code` for the dashboard CTA
 
@@ -69,11 +69,13 @@ npm run dev
 ## 4. AI Batch Analiz Akışı
 
 - `/api/analyze`, `attendee_feedbacks` tablosunda `is_analyzed = false` kayıtlarını alır
-- Bekleyen kayıt sayısı `>= 10` ise batch mesajı `gpt-4o-mini` modeline gönderir
+- Bekleyen kayıt sayısı `>= 10` ise batch mesajı `gpt-5-mini-2025-08-07` modeline gönderir
 - Bekleyen kayıt `< 10` ise, yalnızca `force=true` ile çalışır
 - Sonucu `congress_analytics` tablosuna yazar
 - İşlenen geri bildirimleri `is_analyzed = true` yapar
-- Endpoint public değildir; `Authorization: Bearer <CRON_SECRET>` veya `x-analyze-secret` ister
+- Endpoint public değildir; `Authorization: Bearer <CRON_SECRET>`/`x-analyze-secret` veya moderatör dashboard oturumu ister
+- Dashboard'a giriş yapan moderatörler, `/dashboard` üzerindeki "AI Analizini Yenile" butonuyla manuel analiz tetikleyebilir
+- Model: `gpt-5-mini-2025-08-07`
 
 ### Manuel tetikleme örnekleri
 
@@ -89,10 +91,19 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
 
 ## 5. Realtime Davranış
 
-`/dashboard` listens to `postgres_changes` events:
+`/dashboard`, `postgres_changes` eventlerini dinler:
 
 - `attendee_feedbacks` insert -> `Toplam Yanıt` + son 5 yorum güncellenir
 - `congress_analytics` insert -> duygu grafiği + top konular + özet güncellenir
+
+## 5.1 Yanıt Tipleri
+
+- `/submit` ekranında iki mod vardır:
+  - `Serbest Yanıt` (açık uçlu metin)
+  - `Çoktan Seçmeli` (tek seçimli anket)
+- Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: <seçenek>` formatında yazılır.
+- `/dashboard` anket kartı bu yanıtları canlı olarak sayar.
+- `/api/analyze` yalnızca serbest metinleri AI analizine dahil eder; anket yanıtları analiz kuyruğunda birikmez.
 
 ## 6. Vercel Deploy ve API Güvenliği
 
