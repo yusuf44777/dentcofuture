@@ -13,7 +13,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
-    "next": "15.2.0",
+    "next": "15.2.8",
     "openai": "^4.85.4",
     "pg": "^8.18.0",
     "react": "^19.0.0",
