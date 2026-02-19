@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #eef7ff;
+  --foreground: #08253f;
+  --panel: #ffffff;
+  --panel-foreground: #0c2f4d;
+  --border: #d5e7f7;
+  --ring: #3ea0d8;
+}
+
+* {
+  border-color: #d5e7f7;
+}
+
+body {
+  font-family: "Avenir Next", "Segoe UI Variable", "Nunito Sans", "Trebuchet MS", sans-serif;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(146, 219, 246, 0.4) 0%, transparent 42%),
+    radial-gradient(circle at 90% 10%, rgba(191, 241, 233, 0.45) 0%, transparent 35%),
+    linear-gradient(170deg, #f5fbff 0%, #eaf6ff 55%, #f8fdff 100%);
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
+.dashboard-surface {
+  background:
+    radial-gradient(circle at 15% -10%, rgba(56, 189, 248, 0.14), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.18), transparent 35%),
+    linear-gradient(180deg, #031127 0%, #030c1c 100%);
+}
+
+.glass-panel {
+  background-color: rgba(7, 28, 52, 0.82);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+.subtle-grid {
+  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #f0f9ff 0%, #bae6fd 45%, #99f6e4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
