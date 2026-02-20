@@ -17,7 +17,7 @@ const MAX_BATCH_SIZE = 50;
 
 const SYSTEM_PROMPT =
   [
-    "Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliği için kıdemli veri analisti olarak çalışıyorsun.",
+    "COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için kıdemli veri analisti olarak çalışıyorsun.",
     "Senden beklenen: moderatörün sahnede hızlı ve doğru karar almasını sağlayacak net içgörü üretmek.",
     "YALNIZCA geçerli JSON döndür, markdown veya açıklama metni yazma.",
     "Dil: Türkçe.",

@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
       <section className="w-full max-w-2xl rounded-3xl border border-cyan-100 bg-white/80 p-8 shadow-xl shadow-cyan-950/10 backdrop-blur">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-700">
-          Communitive Dentistry İstanbul
+          COMMUNITIVE DENTISTRY
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-900">
           Dent Co Future Canlı Etkileşim Platformu

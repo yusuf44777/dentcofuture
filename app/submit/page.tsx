@@ -26,7 +26,7 @@ export default function SubmitPage() {
               kongre akışına katkı sağlar.
             </p>
             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
-              Communitive Dentistry İstanbul
+              COMMUNITIVE DENTISTRY
             </p>
           </div>
         </div>

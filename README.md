@@ -1,6 +1,6 @@
 # Dent Co Future Canlı
 
-Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliği için Next.js App Router + Supabase + OpenAI tabanlı gerçek zamanlı etkileşim uygulaması.
+COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Next.js App Router + Supabase + OpenAI tabanlı gerçek zamanlı etkileşim uygulaması.
 
 ## Stack
 

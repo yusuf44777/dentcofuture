@@ -413,7 +413,7 @@ export function LiveDashboard() {
                 </p>
                 <h1 className="text-xl font-semibold tracking-tight md:text-3xl">Dent Co Future</h1>
                 <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200/80">
-                  Communitive Dentistry İstanbul
+                  COMMUNITIVE DENTISTRY
                 </p>
               </div>
             </div>

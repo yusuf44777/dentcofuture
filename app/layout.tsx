@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Dent Co Future Canlı",
   description:
-    "Communitive Dentistry İstanbul tarafından düzenlenen Dent Co Future etkinliği için gerçek zamanlı etkileşim ve canlı geri bildirim panosu."
+    "COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için gerçek zamanlı etkileşim ve canlı geri bildirim panosu."
 };
 
 export default function RootLayout({
