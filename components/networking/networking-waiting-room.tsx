@@ -16,6 +16,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getInstagramDisplay,
+  getInstagramProfileUrl,
+  getLinkedinDisplay,
+  getLinkedinProfileUrl,
+  parseContactInfo
+} from "@/lib/networking-contact";
+import { AppPageSwitcher } from "@/components/navigation/app-page-switcher";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { NetworkingProfileRow } from "@/lib/types";
 
@@ -39,27 +47,6 @@ type SimilarProfilesResponse = {
 
 function isValidUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function parseContactInfo(raw: string | null) {
-  if (!raw) {
-    return { instagram: "", linkedin: "" };
-  }
-
-  const parts = raw.split("|");
-  let instagram = "";
-  let linkedin = "";
-
-  for (const part of parts) {
-    if (part.startsWith("ig:")) {
-      instagram = part.slice(3).trim();
-    }
-    if (part.startsWith("in:")) {
-      linkedin = part.slice(3).trim();
-    }
-  }
-
-  return { instagram, linkedin };
 }
 
 interface NetworkingWaitingRoomProps {
@@ -253,6 +240,8 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
           </p>
         </div>
 
+        <AppPageSwitcher showSavedProfileButton={false} />
+
         {currentProfile ? (
           <Card>
             <CardHeader>
@@ -267,31 +256,37 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
               <p className="text-sm text-slate-600">Kariyer Yönü: {currentProfile.goal}</p>
               {(() => {
                 const social = parseContactInfo(currentProfile.contact_info);
+                const instagramUrl = getInstagramProfileUrl(social.instagram);
+                const instagramLabel = getInstagramDisplay(social.instagram);
+                const linkedinUrl = getLinkedinProfileUrl(social.linkedin);
+                const linkedinLabel = getLinkedinDisplay(social.linkedin);
+
                 if (!social.instagram && !social.linkedin) {
                   return null;
                 }
 
                 return (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {social.instagram ? (
+                    {instagramUrl && instagramLabel ? (
                       <a
-                        href={`https://instagram.com/${social.instagram}`}
+                        href={instagramUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 text-xs font-medium text-pink-700"
                       >
-                        <Instagram className="h-3.5 w-3.5" />@{social.instagram}
+                        <Instagram className="h-3.5 w-3.5" />
+                        {instagramLabel}
                       </a>
                     ) : null}
-                    {social.linkedin ? (
+                    {linkedinUrl && linkedinLabel ? (
                       <a
-                        href={`https://linkedin.com/in/${social.linkedin}`}
+                        href={linkedinUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700"
                       >
                         <Linkedin className="h-3.5 w-3.5" />
-                        {social.linkedin}
+                        {linkedinLabel}
                       </a>
                     ) : null}
                   </div>
@@ -368,31 +363,37 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
                     <p className="text-xs text-slate-600">Kariyer Yönü: {profile.goal}</p>
                     {(() => {
                       const social = parseContactInfo(profile.contact_info);
+                      const instagramUrl = getInstagramProfileUrl(social.instagram);
+                      const instagramLabel = getInstagramDisplay(social.instagram);
+                      const linkedinUrl = getLinkedinProfileUrl(social.linkedin);
+                      const linkedinLabel = getLinkedinDisplay(social.linkedin);
+
                       if (!social.instagram && !social.linkedin) {
                         return null;
                       }
 
                       return (
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {social.instagram ? (
+                          {instagramUrl && instagramLabel ? (
                             <a
-                              href={`https://instagram.com/${social.instagram}`}
+                              href={instagramUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-700"
                             >
-                              <Instagram className="h-3.5 w-3.5" />@{social.instagram}
+                              <Instagram className="h-3.5 w-3.5" />
+                              {instagramLabel}
                             </a>
                           ) : null}
-                          {social.linkedin ? (
+                          {linkedinUrl && linkedinLabel ? (
                             <a
-                              href={`https://linkedin.com/in/${social.linkedin}`}
+                              href={linkedinUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700"
                             >
                               <Linkedin className="h-3.5 w-3.5" />
-                              {social.linkedin}
+                              {linkedinLabel}
                             </a>
                           ) : null}
                         </div>

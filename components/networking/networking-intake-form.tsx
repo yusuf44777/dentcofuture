@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -13,9 +13,11 @@ import {
   Users
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { AppPageSwitcher } from "@/components/navigation/app-page-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildContactInfo } from "@/lib/networking-contact";
 
 const INTEREST_OPTIONS = [
   "Ortodonti",
@@ -37,40 +39,6 @@ const FUTURE_PATH_OPTIONS = [
 type SubmitState = "idle" | "loading" | "error";
 const NETWORKING_PROFILE_STORAGE_KEY = "dentco_networking_profile_id";
 
-function isValidUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function normalizeInstagram(value: string) {
-  const trimmed = value.trim().replace(/^@+/, "");
-  const fromUrl = trimmed.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "");
-  const normalized = fromUrl.split(/[/?#]/)[0]?.trim() ?? "";
-  return normalized.slice(0, 40);
-}
-
-function normalizeLinkedin(value: string) {
-  const trimmed = value.trim();
-  const fromUrl = trimmed.replace(/^https?:\/\/(www\.)?linkedin\.com\/(in|company)\//i, "");
-  const normalized = fromUrl.split(/[?#]/)[0]?.replace(/^\/+|\/+$/g, "").trim() ?? "";
-  return normalized.slice(0, 60);
-}
-
-function buildContactInfo(instagram: string, linkedin: string) {
-  const ig = normalizeInstagram(instagram);
-  const ln = normalizeLinkedin(linkedin);
-  const parts: string[] = [];
-
-  if (ig) {
-    parts.push(`ig:${ig}`);
-  }
-  if (ln) {
-    parts.push(`in:${ln}`);
-  }
-
-  const joined = parts.join("|");
-  return joined.length > 0 ? joined : null;
-}
-
 export function NetworkingIntakeForm() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -80,14 +48,6 @@ export function NetworkingIntakeForm() {
   const [linkedin, setLinkedin] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [savedProfileId, setSavedProfileId] = useState("");
-
-  useEffect(() => {
-    const existingProfileId = localStorage.getItem(NETWORKING_PROFILE_STORAGE_KEY)?.trim() ?? "";
-    if (isValidUuid(existingProfileId)) {
-      setSavedProfileId(existingProfileId);
-    }
-  }, []);
 
   const canSubmit = useMemo(
     () =>
@@ -130,7 +90,6 @@ export function NetworkingIntakeForm() {
       }
 
       localStorage.setItem(NETWORKING_PROFILE_STORAGE_KEY, data.id);
-      setSavedProfileId(data.id);
       router.push(`/networking/waiting-room?id=${data.id}`);
     } catch (error) {
       setSubmitState("error");
@@ -139,16 +98,16 @@ export function NetworkingIntakeForm() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8">
+    <main className="min-h-screen px-4 py-6">
       <section className="mx-auto flex w-full max-w-md flex-col gap-5">
-        <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center gap-2.5 text-center">
           <Image
             src="https://i.imgur.com/Q3ASL2i.png"
             alt="Dent Co Future logosu"
             width={210}
             height={92}
             priority
-            className="h-auto w-[170px] sm:w-[210px]"
+            className="h-auto w-[148px] object-contain sm:w-[176px]"
           />
           <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY</Badge>
           <div>
@@ -161,6 +120,8 @@ export function NetworkingIntakeForm() {
           </div>
         </div>
 
+        <AppPageSwitcher />
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -171,17 +132,6 @@ export function NetworkingIntakeForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {savedProfileId ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => router.push(`/networking/waiting-room?id=${savedProfileId}`)}
-                >
-                  Kayıtlı Profilime Dön
-                </Button>
-              ) : null}
-
               <div className="space-y-1.5">
                 <label htmlFor="full-name" className="text-sm font-medium text-slate-700">
                   Ad Soyad

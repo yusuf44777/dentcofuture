@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Instagram } from "lucide-react";
+import { AppPageSwitcher } from "@/components/navigation/app-page-switcher";
 
 export default function HomePage() {
   return (
@@ -77,20 +77,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/submit"
-            className="rounded-xl bg-cyan-600 px-4 py-2.5 font-medium text-white transition hover:bg-cyan-500"
-          >
-            Sahne Nabzı • Soru Akışı
-          </Link>
-          <Link
-            href="/networking"
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-800 transition hover:bg-slate-50"
-          >
-            DentCo Link • Networking
-          </Link>
-        </div>
+        <AppPageSwitcher className="mt-8" />
 
         <div className="mt-5 flex items-start justify-between gap-4 rounded-2xl border border-cyan-100 bg-white/80 px-4 py-3">
           <div>

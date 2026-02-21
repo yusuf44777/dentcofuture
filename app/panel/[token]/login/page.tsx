@@ -28,16 +28,16 @@ export default async function PrivateDashboardLoginPage({ params }: PrivateDashb
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:py-10">
+    <main className="min-h-screen px-4 py-6 sm:py-8">
       <section className="mx-auto flex w-full max-w-md flex-col gap-6">
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-center gap-2.5 text-center">
           <Image
             src="https://i.imgur.com/Q3ASL2i.png"
             alt="Dent Co Future logosu"
             width={220}
             height={92}
             priority
-            className="h-auto w-[180px] sm:w-[220px]"
+            className="h-auto w-[154px] object-contain sm:w-[184px]"
           />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard Erişimi</h1>
