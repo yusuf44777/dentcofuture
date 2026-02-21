@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function DashboardLoginForm() {
+interface DashboardLoginFormProps {
+  redirectPath?: string;
+}
+
+export function DashboardLoginForm({ redirectPath = "/dashboard" }: DashboardLoginFormProps) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +41,7 @@ export function DashboardLoginForm() {
         throw new Error(data?.error ?? "Giriş sırasında bir hata oluştu.");
       }
 
-      router.replace("/dashboard");
+      router.replace(redirectPath);
       router.refresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Giriş sırasında bir hata oluştu.");

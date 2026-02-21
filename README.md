@@ -15,8 +15,10 @@ COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Ne
 
 - `/submit` mobil geri bildirim formu
 - `/oyla` -> `/submit` yönlendirmesi
-- `/dashboard` büyük ekran canlı analiz panosu
-- `/dashboard/login` dashboard giriş ekranı
+- `/networking` networking formu
+- `/networking/waiting-room` benzer profil listesi
+- `/panel/<DASHBOARD_PRIVATE_TOKEN>` özel büyük ekran canlı analiz panosu
+- `/panel/<DASHBOARD_PRIVATE_TOKEN>/login` özel dashboard giriş ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/dashboard-auth` dashboard oturum endpoint'i
 
@@ -57,6 +59,7 @@ Gerekli:
 - `DASHBOARD_USERNAME` (dashboard kullanıcı adı)
 - `DASHBOARD_PASSWORD` (dashboard şifresi)
 - `DASHBOARD_AUTH_SECRET` (opsiyonel, dashboard cookie imzası için; boşsa `CRON_SECRET` kullanılır)
+- `DASHBOARD_PRIVATE_TOKEN` (özel panel URL token'ı; panel yolu `/panel/<token>`)
 - `NEXT_PUBLIC_APP_URL` (QR URL üretimi için)
 
 ## 3. Local Çalıştırma
@@ -74,7 +77,7 @@ npm run dev
 - Sonucu `congress_analytics` tablosuna yazar
 - İşlenen geri bildirimleri `is_analyzed = true` yapar
 - Endpoint public değildir; `Authorization: Bearer <CRON_SECRET>`/`x-analyze-secret` veya moderatör dashboard oturumu ister
-- Dashboard'a giriş yapan moderatörler, `/dashboard` üzerindeki "AI Analizini Yenile" butonuyla manuel analiz tetikleyebilir
+- Dashboard'a giriş yapan moderatörler, özel panel üzerindeki "AI Analizini Yenile" butonuyla manuel analiz tetikleyebilir
 - Model: `gpt-5-mini-2025-08-07`
 
 ### Manuel tetikleme örnekleri
@@ -91,7 +94,7 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
 
 ## 5. Realtime Davranış
 
-`/dashboard`, `postgres_changes` eventlerini dinler:
+Özel panel (`/panel/<DASHBOARD_PRIVATE_TOKEN>`), `postgres_changes` eventlerini dinler:
 
 - `attendee_feedbacks` insert -> `Toplam Yanıt` + son 5 yorum güncellenir
 - `congress_analytics` insert -> duygu grafiği + top konular + özet güncellenir
@@ -102,7 +105,7 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
   - `Serbest Yanıt` (açık uçlu metin)
   - `Çoktan Seçmeli` (tek seçimli anket)
 - Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: <seçenek>` formatında yazılır.
-- `/dashboard` anket kartı bu yanıtları canlı olarak sayar.
+- Özel panel anket kartı bu yanıtları canlı olarak sayar.
 - `/api/analyze` yalnızca serbest metinleri AI analizine dahil eder; anket yanıtları analiz kuyruğunda birikmez.
 
 ## 6. Vercel Deploy ve API Güvenliği
@@ -115,7 +118,9 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
 
 ## 7. Dashboard Erişim Koruması
 
-- `/dashboard` sayfası artık giriş zorunludur; oturum yoksa otomatik `/dashboard/login` sayfasına yönlenir.
+- Public `/dashboard` ve `/dashboard/login` yolları ana sayfaya yönlenir.
+- Dashboard sadece özel URL üzerinden açılır: `/panel/<DASHBOARD_PRIVATE_TOKEN>`.
+- Özel panelde oturum yoksa `/panel/<DASHBOARD_PRIVATE_TOKEN>/login` sayfasına yönlenir.
 - Giriş doğrulaması `/api/dashboard-auth` üzerinden server-side yapılır.
 - Varsayılan kullanıcı adı/şifre:
   - `communitive`
