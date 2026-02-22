@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import QRCode from "react-qr-code";
 import {
   Activity,
   Bot,
   ChartColumnBig,
+  Download,
   Hash,
   ListChecks,
   LoaderCircle,
@@ -191,6 +192,7 @@ function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>) {
 }
 
 export function LiveDashboard() {
+  const qrContainerRef = useRef<HTMLDivElement | null>(null);
   const [submitUrl, setSubmitUrl] = useState(
     process.env.NEXT_PUBLIC_APP_URL
       ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/submit`
@@ -209,6 +211,8 @@ export function LiveDashboard() {
   const [moderatorBrief, setModeratorBrief] = useState<ModeratorBrief>(EMPTY_MODERATOR_BRIEF);
   const [analyzeUiState, setAnalyzeUiState] = useState<AnalyzeUiState>("idle");
   const [analyzeUiMessage, setAnalyzeUiMessage] = useState("");
+  const [qrDownloadState, setQrDownloadState] = useState<"idle" | "loading" | "error">("idle");
+  const [qrDownloadMessage, setQrDownloadMessage] = useState("");
 
   const barData = useMemo(
     () => [
@@ -393,6 +397,45 @@ export function LiveDashboard() {
     }
   };
 
+  const handleDownloadQr = () => {
+    if (qrDownloadState === "loading") {
+      return;
+    }
+
+    setQrDownloadState("loading");
+    setQrDownloadMessage("");
+
+    try {
+      const svgElement = qrContainerRef.current?.querySelector("svg");
+      if (!svgElement) {
+        throw new Error("QR kod bulunamadı.");
+      }
+
+      const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
+      clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clonedSvg.setAttribute("width", "1024");
+      clonedSvg.setAttribute("height", "1024");
+
+      const serialized = new XMLSerializer().serializeToString(clonedSvg);
+      const blob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = "dentcofuture-qr.svg";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+
+      URL.revokeObjectURL(blobUrl);
+      setQrDownloadState("idle");
+      setQrDownloadMessage("QR kod indirildi.");
+    } catch (error) {
+      setQrDownloadState("error");
+      setQrDownloadMessage(error instanceof Error ? error.message : "QR kod indirilemedi.");
+    }
+  };
+
   return (
     <main className="dashboard-surface subtle-grid min-h-screen px-4 py-4 text-slate-100 md:px-8 md:py-6">
       <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-6">
@@ -434,7 +477,10 @@ export function LiveDashboard() {
               Katılımcılar QR kodu okutarak birkaç saniye içinde geri bildirim formuna ulaşabilir.
             </p>
 
-            <div className="mx-auto w-fit rounded-3xl bg-white p-5 shadow-2xl shadow-cyan-300/15">
+            <div
+              ref={qrContainerRef}
+              className="mx-auto w-fit rounded-3xl bg-white p-5 shadow-2xl shadow-cyan-300/15"
+            >
               <QRCode
                 value={submitUrl || "https://example.com/submit"}
                 size={280}
@@ -445,6 +491,27 @@ export function LiveDashboard() {
 
             <p className="mt-6 text-center text-sm uppercase tracking-[0.18em] text-cyan-100/70">Kısa URL</p>
             <p className="mt-2 text-center text-2xl font-semibold tracking-tight text-cyan-100">{shortUrl}</p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20"
+                onClick={handleDownloadQr}
+                disabled={qrDownloadState === "loading"}
+              >
+                <Download className="h-4 w-4" />
+                {qrDownloadState === "loading" ? "Hazırlanıyor..." : "Karekodu İndir"}
+              </Button>
+              {qrDownloadMessage ? (
+                <p
+                  className={`text-xs ${
+                    qrDownloadState === "error" ? "text-rose-300" : "text-cyan-100/80"
+                  }`}
+                >
+                  {qrDownloadMessage}
+                </p>
+              ) : null}
+            </div>
           </aside>
 
           <section className="grid gap-6 md:grid-cols-2">
