@@ -6,11 +6,11 @@ import {
   isDashboardSessionValid
 } from "@/lib/auth/dashboard";
 
-interface PrivateDashboardPageProps {
+interface PrivateRafflePageProps {
   params: Promise<{ token: string }>;
 }
 
-export default async function PrivateDashboardPage({ params }: PrivateDashboardPageProps) {
+export default async function PrivateRafflePage({ params }: PrivateRafflePageProps) {
   const { token } = await params;
 
   if (!isDashboardPrivateTokenValid(token)) {
@@ -24,5 +24,5 @@ export default async function PrivateDashboardPage({ params }: PrivateDashboardP
     redirect("/konusmacipanel/login");
   }
 
-  redirect("/konusmacipanel");
+  redirect("/cekilispanel");
 }

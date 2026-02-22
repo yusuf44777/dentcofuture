@@ -1,25 +1,14 @@
 import Image from "next/image";
 import { cookies } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { DashboardLoginForm } from "@/components/dashboard/dashboard-login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DASHBOARD_AUTH_COOKIE_NAME,
-  isDashboardPrivateTokenValid,
   isDashboardSessionValid
 } from "@/lib/auth/dashboard";
 
-interface PrivateDashboardLoginPageProps {
-  params: Promise<{ token: string }>;
-}
-
-export default async function PrivateDashboardLoginPage({ params }: PrivateDashboardLoginPageProps) {
-  const { token } = await params;
-
-  if (!isDashboardPrivateTokenValid(token)) {
-    notFound();
-  }
-
+export default async function SpeakerDashboardLoginPage() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(DASHBOARD_AUTH_COOKIE_NAME)?.value;
 
@@ -40,7 +29,9 @@ export default async function PrivateDashboardLoginPage({ params }: PrivateDashb
             className="h-auto w-[154px] object-contain sm:w-[184px]"
           />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard Erişimi</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Konuşmacı Paneli
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Bu alan sadece yetkili ekip erişimine açıktır.
             </p>

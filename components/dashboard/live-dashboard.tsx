@@ -2,16 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import QRCode from "react-qr-code";
 import {
   Activity,
   Bot,
   ChartColumnBig,
   Download,
+  Gift,
   Hash,
   ListChecks,
   LoaderCircle,
   MessageSquareMore,
+  RotateCcw,
+  Trash2,
   Sparkles
 } from "lucide-react";
 import {
@@ -41,6 +45,7 @@ type Sentiment = {
 
 type PollCounts = Record<LivePollOption, number>;
 type AnalyzeUiState = "idle" | "loading" | "success" | "error";
+type HardResetUiState = "idle" | "loading" | "success" | "error";
 type ModeratorBrief = {
   roomMood: string;
   audiencePriorities: string[];
@@ -48,6 +53,15 @@ type ModeratorBrief = {
   recommendedActions: string[];
   confidence: number | null;
 };
+const SUBMIT_TARGET_URL = "https://dentcofuture.vercel.app/submit";
+const DASHBOARD_RESET_CURSOR_STORAGE_KEY = "dentco_dashboard_reset_cursor";
+const DEFAULT_SUMMARY = "Analiz hazır olduğunda salonun genel duygu özeti burada görünecek.";
+const RESET_SUMMARY = "Sıfırlama sonrası yeni geri bildirimler bekleniyor.";
+const DEFAULT_TOPICS = [
+  "Canlı veri bekleniyor",
+  "Yapay zeka destekli diş hekimliği",
+  "Hasta iletişimi"
+];
 
 const DEFAULT_SENTIMENT: Sentiment = {
   positive: 34,
@@ -191,28 +205,58 @@ function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>) {
   return counts;
 }
 
+function isAfterResetCursor(createdAt: string, resetCursor: string | null) {
+  if (!resetCursor) {
+    return true;
+  }
+
+  const createdAtMs = new Date(createdAt).getTime();
+  const cursorMs = new Date(resetCursor).getTime();
+  if (!Number.isFinite(createdAtMs) || !Number.isFinite(cursorMs)) {
+    return true;
+  }
+
+  return createdAtMs >= cursorMs;
+}
+
+function formatResetCursor(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(date);
+}
+
 export function LiveDashboard() {
   const qrContainerRef = useRef<HTMLDivElement | null>(null);
-  const [submitUrl, setSubmitUrl] = useState(
-    process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/submit`
-      : ""
-  );
+  const [submitUrl] = useState(SUBMIT_TARGET_URL);
   const [totalResponses, setTotalResponses] = useState(0);
   const [sentiment, setSentiment] = useState<Sentiment>(DEFAULT_SENTIMENT);
-  const [summary, setSummary] = useState("Analiz hazır olduğunda salonun genel duygu özeti burada görünecek.");
-  const [topTopics, setTopTopics] = useState<string[]>([
-    "Canlı veri bekleniyor",
-    "Yapay zeka destekli diş hekimliği",
-    "Hasta iletişimi"
-  ]);
+  const [summary, setSummary] = useState(DEFAULT_SUMMARY);
+  const [topTopics, setTopTopics] = useState<string[]>(DEFAULT_TOPICS);
   const [latestComments, setLatestComments] = useState<FeedbackRow[]>([]);
   const [pollCounts, setPollCounts] = useState<PollCounts>(createEmptyPollCounts());
   const [moderatorBrief, setModeratorBrief] = useState<ModeratorBrief>(EMPTY_MODERATOR_BRIEF);
   const [analyzeUiState, setAnalyzeUiState] = useState<AnalyzeUiState>("idle");
   const [analyzeUiMessage, setAnalyzeUiMessage] = useState("");
+  const [hardResetUiState, setHardResetUiState] = useState<HardResetUiState>("idle");
+  const [hardResetUiMessage, setHardResetUiMessage] = useState("");
   const [qrDownloadState, setQrDownloadState] = useState<"idle" | "loading" | "error">("idle");
   const [qrDownloadMessage, setQrDownloadMessage] = useState("");
+  const [resetCursor, setResetCursor] = useState<string | null>(null);
+  const [resetCursorLoaded, setResetCursorLoaded] = useState(false);
+  const [resetUiMessage, setResetUiMessage] = useState("");
 
   const barData = useMemo(
     () => [
@@ -238,17 +282,24 @@ export function LiveDashboard() {
   );
 
   const shortUrl = useMemo(() => getShortUrl(submitUrl), [submitUrl]);
+  const resetCursorLabel = useMemo(() => formatResetCursor(resetCursor), [resetCursor]);
 
   useEffect(() => {
-    if (!submitUrl && typeof window !== "undefined") {
-      setSubmitUrl(`${window.location.origin}/submit`);
+    const storedCursor = localStorage.getItem(DASHBOARD_RESET_CURSOR_STORAGE_KEY)?.trim() ?? "";
+    if (storedCursor && Number.isFinite(new Date(storedCursor).getTime())) {
+      setResetCursor(storedCursor);
     }
-  }, [submitUrl]);
+    setResetCursorLoaded(true);
+  }, []);
 
   useEffect(() => {
+    if (!resetCursorLoaded) {
+      return;
+    }
+
     const supabase = createSupabaseBrowserClient();
 
-    const applyAnalytics = (row: Pick<AnalyticsRow, "sentiment_score" | "top_keywords" | "total_feedbacks">) => {
+    const applyAnalytics = (row: Pick<AnalyticsRow, "sentiment_score" | "top_keywords">) => {
       setSentiment(parseSentiment(row.sentiment_score));
       const parsedTopics = parseTopics(row.top_keywords);
 
@@ -261,26 +312,31 @@ export function LiveDashboard() {
       }
 
       setModeratorBrief(parsedTopics.moderatorBrief);
-
-      if (typeof row.total_feedbacks === "number") {
-        setTotalResponses(row.total_feedbacks);
-      }
     };
 
     const loadInitialData = async () => {
+      let countQuery = supabase.from("attendee_feedbacks").select("id", { count: "exact", head: true });
+      let feedbackQuery = supabase
+        .from("attendee_feedbacks")
+        .select("id, message, created_at, is_analyzed")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      let analyticsQuery = supabase
+        .from("congress_analytics")
+        .select("sentiment_score, top_keywords, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (resetCursor) {
+        countQuery = countQuery.gte("created_at", resetCursor);
+        feedbackQuery = feedbackQuery.gte("created_at", resetCursor);
+        analyticsQuery = analyticsQuery.gte("created_at", resetCursor);
+      }
+
       const [countResult, feedbackResult, analyticsResult] = await Promise.all([
-        supabase.from("attendee_feedbacks").select("id", { count: "exact", head: true }),
-        supabase
-          .from("attendee_feedbacks")
-          .select("id, message, created_at, is_analyzed")
-          .order("created_at", { ascending: false })
-          .limit(300),
-        supabase
-          .from("congress_analytics")
-          .select("total_feedbacks, sentiment_score, top_keywords")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        countQuery,
+        feedbackQuery,
+        analyticsQuery.maybeSingle()
       ]);
 
       if (!countResult.error) {
@@ -295,6 +351,11 @@ export function LiveDashboard() {
 
       if (!analyticsResult.error && analyticsResult.data) {
         applyAnalytics(analyticsResult.data);
+      } else if (resetCursor) {
+        setSentiment(DEFAULT_SENTIMENT);
+        setSummary(RESET_SUMMARY);
+        setTopTopics(DEFAULT_TOPICS);
+        setModeratorBrief(EMPTY_MODERATOR_BRIEF);
       }
     };
 
@@ -311,6 +372,10 @@ export function LiveDashboard() {
         },
         (payload) => {
           const row = payload.new as FeedbackRow;
+          if (!isAfterResetCursor(row.created_at, resetCursor)) {
+            return;
+          }
+
           setTotalResponses((prev) => prev + 1);
 
           const pollOption = parsePollOption(row.message);
@@ -337,7 +402,12 @@ export function LiveDashboard() {
           table: "congress_analytics"
         },
         (payload) => {
-          applyAnalytics(payload.new as AnalyticsRow);
+          const row = payload.new as AnalyticsRow;
+          if (!isAfterResetCursor(row.created_at, resetCursor)) {
+            return;
+          }
+
+          applyAnalytics(row);
         }
       )
       .subscribe();
@@ -346,7 +416,7 @@ export function LiveDashboard() {
       void supabase.removeChannel(feedbackChannel);
       void supabase.removeChannel(analyticsChannel);
     };
-  }, []);
+  }, [resetCursor, resetCursorLoaded]);
 
   const handleRunAnalyze = async () => {
     if (analyzeUiState === "loading") {
@@ -436,6 +506,83 @@ export function LiveDashboard() {
     }
   };
 
+  const handleResetDashboardView = () => {
+    const nextCursor = new Date().toISOString();
+    localStorage.setItem(DASHBOARD_RESET_CURSOR_STORAGE_KEY, nextCursor);
+    setResetCursor(nextCursor);
+    setTotalResponses(0);
+    setLatestComments([]);
+    setPollCounts(createEmptyPollCounts());
+    setSentiment(DEFAULT_SENTIMENT);
+    setSummary(RESET_SUMMARY);
+    setTopTopics(DEFAULT_TOPICS);
+    setModeratorBrief(EMPTY_MODERATOR_BRIEF);
+    setResetUiMessage("Panel görünümü sıfırlandı. Veritabanı verileri silinmedi.");
+    setHardResetUiMessage("");
+  };
+
+  const handleHardResetDatabase = async () => {
+    if (hardResetUiState === "loading") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bu işlem Supabase'deki tüm geri bildirim ve analiz kayıtlarını kalıcı olarak siler. Devam etmek istiyor musunuz?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setHardResetUiState("loading");
+    setHardResetUiMessage("");
+
+    try {
+      const response = await fetch("/api/dashboard/reset-data", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({ confirm: "DELETE_MESSAGES" })
+      });
+
+      const data = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            deleted_feedbacks?: number;
+            deleted_analytics?: number;
+            error?: string;
+          }
+        | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Veritabanı temizlenirken bir hata oluştu.");
+      }
+
+      const nextCursor = new Date().toISOString();
+      localStorage.setItem(DASHBOARD_RESET_CURSOR_STORAGE_KEY, nextCursor);
+      setResetCursor(nextCursor);
+      setTotalResponses(0);
+      setLatestComments([]);
+      setPollCounts(createEmptyPollCounts());
+      setSentiment(DEFAULT_SENTIMENT);
+      setSummary(RESET_SUMMARY);
+      setTopTopics(DEFAULT_TOPICS);
+      setModeratorBrief(EMPTY_MODERATOR_BRIEF);
+      setAnalyzeUiMessage("");
+      setResetUiMessage("Panel sıfırlandı. Veritabanındaki eski mesajlar kalıcı olarak silindi.");
+      setHardResetUiState("success");
+      setHardResetUiMessage(
+        `Silinen kayıtlar: ${data.deleted_feedbacks ?? 0} geri bildirim, ${data.deleted_analytics ?? 0} analiz.`
+      );
+    } catch (error) {
+      setHardResetUiState("error");
+      setHardResetUiMessage(
+        error instanceof Error ? error.message : "Veritabanı temizlenirken bir hata oluştu."
+      );
+    }
+  };
+
   return (
     <main className="dashboard-surface subtle-grid min-h-screen px-4 py-4 text-slate-100 md:px-8 md:py-6">
       <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-6">
@@ -460,10 +607,19 @@ export function LiveDashboard() {
                 </p>
               </div>
             </div>
-            <p className="max-w-xl text-sm leading-relaxed text-slate-300">
-              28 Şubat 2026, Nâzım Hikmet Kültür Merkezi etkinliğinden gelen salon geri bildirimleri gerçek
-              zamanlı olarak toplanır, yapay zeka ile analiz edilir ve anında güncellenir.
-            </p>
+            <div className="flex max-w-xl flex-col gap-3">
+              <p className="text-sm leading-relaxed text-slate-300">
+                28 Şubat 2026, Nâzım Hikmet Kültür Merkezi etkinliğinden gelen salon geri bildirimleri gerçek
+                zamanlı olarak toplanır, yapay zeka ile analiz edilir ve anında güncellenir.
+              </p>
+              <Link
+                href="/cekilispanel"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-200/20"
+              >
+                <Gift className="h-4 w-4" />
+                Çekiliş Merkezi
+              </Link>
+            </div>
           </div>
         </header>
 
@@ -528,7 +684,7 @@ export function LiveDashboard() {
                   <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/5 px-4 py-3">
                     <p className="text-sm text-cyan-50">{summary}</p>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Button
                       type="button"
                       onClick={handleRunAnalyze}
@@ -547,6 +703,34 @@ export function LiveDashboard() {
                         </>
                       )}
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleResetDashboardView}
+                      className="h-10 border-cyan-200/30 bg-cyan-200/10 px-4 text-cyan-50 hover:bg-cyan-200/20"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Mesajları Sıfırla
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleHardResetDatabase}
+                      disabled={hardResetUiState === "loading"}
+                      className="h-10 border-rose-300/40 bg-rose-500/15 px-4 text-rose-100 hover:bg-rose-500/25"
+                    >
+                      {hardResetUiState === "loading" ? (
+                        <>
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          Veriler Siliniyor...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          Supabase&apos;i Temizle
+                        </>
+                      )}
+                    </Button>
                     {analyzeUiMessage ? (
                       <p
                         className={`text-xs font-medium ${
@@ -561,6 +745,23 @@ export function LiveDashboard() {
                       </p>
                     )}
                   </div>
+                  {resetUiMessage ? (
+                    <p className="text-xs text-cyan-100/80">{resetUiMessage}</p>
+                  ) : null}
+                  {hardResetUiMessage ? (
+                    <p
+                      className={`text-xs ${
+                        hardResetUiState === "error" ? "text-rose-300" : "text-emerald-200"
+                      }`}
+                    >
+                      {hardResetUiMessage}
+                    </p>
+                  ) : null}
+                  {resetCursorLabel ? (
+                    <p className="text-xs text-cyan-200/75">
+                      Sıfırlama aktif. Bu panel {resetCursorLabel} sonrasındaki verileri gösteriyor.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </article>

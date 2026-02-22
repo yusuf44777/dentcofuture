@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { History, Home, MessageSquareText, UsersRound } from "lucide-react";
+import { Gift, History, Home, MessageSquareText, UsersRound } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +52,12 @@ export function AppPageSwitcher({
         label: "Networking",
         icon: UsersRound,
         active: pathname.startsWith("/networking")
+      },
+      {
+        href: "/cekilis",
+        label: "Çekiliş",
+        icon: Gift,
+        active: pathname === "/cekilis"
       }
     ],
     [pathname]

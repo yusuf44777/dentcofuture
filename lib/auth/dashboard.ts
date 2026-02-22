@@ -54,7 +54,7 @@ export function getDashboardCookieMaxAge() {
 }
 
 export function getDashboardPrivatePath() {
-  return `/panel/${getDashboardPrivateToken()}`;
+  return "/konusmacipanel";
 }
 
 export function isDashboardPrivateTokenValid(token?: string) {
