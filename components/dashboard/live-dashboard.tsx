@@ -784,6 +784,8 @@ export function LiveDashboard() {
                     />
                     <Tooltip
                       cursor={{ fill: "rgba(148,163,184,0.15)" }}
+                      labelStyle={{ color: "#bae6fd" }}
+                      itemStyle={{ color: "#f8fafc" }}
                       contentStyle={{
                         backgroundColor: "#081731",
                         border: "1px solid rgba(186,230,253,0.3)",
