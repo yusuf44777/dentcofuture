@@ -34,32 +34,64 @@ async function getProfileById(profileId: string) {
   return data as PublicProfile | null;
 }
 
-async function getSimilarProfiles(currentProfile: PublicProfile) {
+async function getDirectoryProfiles(currentProfile: PublicProfile) {
   const supabase = createSupabaseAdminClient();
 
   const { data, error } = await supabase
     .from("networking_profiles")
     .select("id, full_name, interest_area, goal, contact_info, created_at")
-    .eq("interest_area", currentProfile.interest_area)
     .neq("id", currentProfile.id)
-    .order("created_at", { ascending: false })
-    .limit(40);
+    .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(`Benzer profiller okunamadı: ${error.message}`);
+    throw new Error(`Katılımcı profilleri okunamadı: ${error.message}`);
   }
 
   const profiles = (data ?? []) as PublicProfile[];
-  const prioritized = profiles.sort((a, b) => {
-    const goalScoreA = a.goal === currentProfile.goal ? 1 : 0;
-    const goalScoreB = b.goal === currentProfile.goal ? 1 : 0;
-    if (goalScoreA !== goalScoreB) {
-      return goalScoreB - goalScoreA;
-    }
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  const recommendedProfiles = profiles
+    .filter((profile) => profile.interest_area === currentProfile.interest_area)
+    .sort((a, b) => {
+      const goalScoreA = a.goal === currentProfile.goal ? 1 : 0;
+      const goalScoreB = b.goal === currentProfile.goal ? 1 : 0;
+      if (goalScoreA !== goalScoreB) {
+        return goalScoreB - goalScoreA;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    })
+    .slice(0, 8);
 
-  return prioritized.slice(0, 8);
+  const recommendedIds = new Set(recommendedProfiles.map((profile) => profile.id));
+  const otherProfiles = profiles
+    .filter((profile) => !recommendedIds.has(profile.id))
+    .sort((a, b) => {
+      const goalScoreA = a.goal === currentProfile.goal ? 1 : 0;
+      const goalScoreB = b.goal === currentProfile.goal ? 1 : 0;
+      if (goalScoreA !== goalScoreB) {
+        return goalScoreB - goalScoreA;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+  return {
+    recommendedProfiles,
+    otherProfiles
+  };
+}
+
+function buildDirectoryMessage(recommendedCount: number, otherCount: number) {
+  if (recommendedCount === 0 && otherCount === 0) {
+    return "Henüz başka katılımcı bulunamadı. Yeni katılımcılar geldikçe liste güncellenecek.";
+  }
+
+  if (recommendedCount > 0 && otherCount > 0) {
+    return `${recommendedCount} önerilen profil ve ${otherCount} diğer katılımcı listelendi.`;
+  }
+
+  if (recommendedCount > 0) {
+    return `${recommendedCount} önerilen profil listelendi.`;
+  }
+
+  return `Şu an eşleşme önerisi yok, ${otherCount} farklı katılımcı listelendi.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -83,16 +115,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Profil bulunamadı." }, { status: 404 });
     }
 
-    const similarProfiles = await getSimilarProfiles(currentProfile);
+    const { recommendedProfiles, otherProfiles } = await getDirectoryProfiles(currentProfile);
+    const totalCount = recommendedProfiles.length + otherProfiles.length;
 
     return NextResponse.json({
-      status: similarProfiles.length > 0 ? "found" : "waiting",
+      status: totalCount > 0 ? "found" : "waiting",
       currentProfile,
-      similarProfiles,
-      message:
-        similarProfiles.length > 0
-          ? `${similarProfiles.length} benzer profil listelendi.`
-          : "Henüz benzer profil bulunamadı. Yeni katılımcılar geldikçe liste güncellenecek."
+      recommendedProfiles,
+      otherProfiles,
+      message: buildDirectoryMessage(recommendedProfiles.length, otherProfiles.length)
     });
   } catch (error) {
     return NextResponse.json(

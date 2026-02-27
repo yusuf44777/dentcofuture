@@ -37,9 +37,11 @@ type PublicProfile = Pick<
   "id" | "full_name" | "interest_area" | "goal" | "contact_info" | "created_at"
 >;
 
-type SimilarProfilesResponse = {
+type DirectoryProfilesResponse = {
   status?: "found" | "waiting";
   currentProfile?: PublicProfile | null;
+  recommendedProfiles?: PublicProfile[];
+  otherProfiles?: PublicProfile[];
   similarProfiles?: PublicProfile[];
   message?: string;
   error?: string;
@@ -62,14 +64,14 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [infoMessage, setInfoMessage] = useState(
-    "Etrafınızdaki benzer profiller listeleniyor..."
+    "Size önerilen eşleşmeler ve diğer katılımcılar listeleniyor..."
   );
   const [currentProfile, setCurrentProfile] = useState<PublicProfile | null>(null);
-  const [similarProfiles, setSimilarProfiles] = useState<PublicProfile[]>([]);
+  const [recommendedProfiles, setRecommendedProfiles] = useState<PublicProfile[]>([]);
+  const [otherProfiles, setOtherProfiles] = useState<PublicProfile[]>([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const viewStateRef = useRef<ViewState>("loading");
-  const currentInterestRef = useRef<string>("");
   const requestInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
     setResolvingProfileId(false);
   }, [profileId, router]);
 
-  const fetchSimilarProfiles = useCallback(async () => {
+  const fetchDirectoryProfiles = useCallback(async () => {
     if (requestInFlightRef.current) {
       return;
     }
@@ -112,27 +114,31 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
         body: JSON.stringify({ profileId: resolvedProfileId })
       });
 
-      const payload = (await response.json()) as SimilarProfilesResponse;
+      const payload = (await response.json()) as DirectoryProfilesResponse;
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Profil servisi yanıt vermedi.");
       }
 
       if (payload.currentProfile) {
-        currentInterestRef.current = payload.currentProfile.interest_area;
         setCurrentProfile(payload.currentProfile);
       }
 
-      const nextProfiles = payload.similarProfiles ?? [];
-      setSimilarProfiles(nextProfiles);
-      setViewState(nextProfiles.length > 0 ? "ready" : "empty");
+      const nextRecommendedProfiles = payload.recommendedProfiles ?? payload.similarProfiles ?? [];
+      const nextOtherProfiles = payload.otherProfiles ?? [];
+
+      setRecommendedProfiles(nextRecommendedProfiles);
+      setOtherProfiles(nextOtherProfiles);
+      setViewState(
+        nextRecommendedProfiles.length > 0 || nextOtherProfiles.length > 0 ? "ready" : "empty"
+      );
 
       if (payload.message) {
         setInfoMessage(payload.message);
       }
     } catch (error) {
       setViewState("error");
-      setErrorMessage(error instanceof Error ? error.message : "Benzer profiller alınamadı.");
+      setErrorMessage(error instanceof Error ? error.message : "Katılımcı listesi alınamadı.");
     } finally {
       requestInFlightRef.current = false;
     }
@@ -153,7 +159,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
     const startedAt = Date.now();
 
     setViewState("loading");
-    void fetchSimilarProfiles();
+    void fetchDirectoryProfiles();
 
     const channel = supabase
       .channel(`networking-directory-${resolvedProfileId}`)
@@ -169,11 +175,8 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
             return;
           }
           const nextRow = payload.new as NetworkingProfileRow;
-          if (!currentInterestRef.current) {
-            return;
-          }
-          if (nextRow.id !== resolvedProfileId && nextRow.interest_area === currentInterestRef.current) {
-            void fetchSimilarProfiles();
+          if (nextRow.id !== resolvedProfileId) {
+            void fetchDirectoryProfiles();
           }
         }
       )
@@ -184,22 +187,11 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
           schema: "public",
           table: "networking_profiles"
         },
-        (payload) => {
+        () => {
           if (!isMounted) {
             return;
           }
-          const nextRow = payload.new as NetworkingProfileRow;
-          if (nextRow.id === resolvedProfileId) {
-            void fetchSimilarProfiles();
-            return;
-          }
-
-          if (!currentInterestRef.current) {
-            return;
-          }
-          if (nextRow.interest_area === currentInterestRef.current) {
-            void fetchSimilarProfiles();
-          }
+          void fetchDirectoryProfiles();
         }
       )
       .subscribe();
@@ -216,7 +208,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
       if (!isMounted || viewStateRef.current === "error") {
         return;
       }
-      void fetchSimilarProfiles();
+      void fetchDirectoryProfiles();
     }, REFRESH_INTERVAL_MS);
 
     return () => {
@@ -225,7 +217,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
       window.clearInterval(refreshInterval);
       void supabase.removeChannel(channel);
     };
-  }, [fetchSimilarProfiles, resolvedProfileId, resolvingProfileId, supabase]);
+  }, [fetchDirectoryProfiles, resolvedProfileId, resolvingProfileId, supabase]);
 
   return (
     <main className="min-h-screen px-4 py-8">
@@ -233,10 +225,10 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
         <div className="text-center">
           <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY • Networking</Badge>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-            Yakınınızdaki Benzer Profiller
+            Networking Katılımcıları
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Bu alan yalnızca kongre içi profesyonel iletişim için hazırlanmıştır.
+            Eşleşme önerilerini ve diğer katılımcıları tek ekranda görüntüleyin.
           </p>
         </div>
 
@@ -300,7 +292,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-700" />
-              Benzer Katılımcılar
+              Katılımcı Listesi
             </CardTitle>
             <CardDescription>{infoMessage}</CardDescription>
           </CardHeader>
@@ -320,7 +312,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
             {viewState === "loading" ? (
               <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-3 text-sm text-cyan-800">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
-                Benzer profiller yükleniyor...
+                Katılımcı listesi yükleniyor...
               </div>
             ) : null}
 
@@ -336,7 +328,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
                   onClick={() => {
                     setViewState("loading");
                     setErrorMessage("");
-                    void fetchSimilarProfiles();
+                    void fetchDirectoryProfiles();
                   }}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -347,60 +339,136 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
 
             {viewState === "empty" ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                Şu an aynı ilgi alanında profil bulunamadı. Liste otomatik yenilenmeye devam ediyor.
+                Şu an listelenecek başka katılımcı bulunamadı. Liste otomatik yenilenmeye devam ediyor.
               </div>
             ) : null}
 
             {viewState === "ready" ? (
-              <div className="space-y-2">
-                {similarProfiles.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className="rounded-xl border border-cyan-100 bg-white px-3 py-3 transition hover:bg-cyan-50/50"
-                  >
-                    <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
-                    <p className="text-xs text-slate-600">İlgi Alanı: {profile.interest_area}</p>
-                    <p className="text-xs text-slate-600">Kariyer Yönü: {profile.goal}</p>
-                    {(() => {
-                      const social = parseContactInfo(profile.contact_info);
-                      const instagramUrl = getInstagramProfileUrl(social.instagram);
-                      const instagramLabel = getInstagramDisplay(social.instagram);
-                      const linkedinUrl = getLinkedinProfileUrl(social.linkedin);
-                      const linkedinLabel = getLinkedinDisplay(social.linkedin);
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">
+                    Sizin İçin Önerilenler
+                  </p>
 
-                      if (!social.instagram && !social.linkedin) {
-                        return null;
-                      }
+                  {recommendedProfiles.length > 0 ? (
+                    <div className="space-y-2">
+                      {recommendedProfiles.map((profile) => (
+                        <div
+                          key={profile.id}
+                          className="rounded-xl border border-cyan-200 bg-cyan-50/30 px-3 py-3 transition hover:bg-cyan-50/60"
+                        >
+                          <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
+                          <p className="text-xs text-slate-600">İlgi Alanı: {profile.interest_area}</p>
+                          <p className="text-xs text-slate-600">Kariyer Yönü: {profile.goal}</p>
+                          {(() => {
+                            const social = parseContactInfo(profile.contact_info);
+                            const instagramUrl = getInstagramProfileUrl(social.instagram);
+                            const instagramLabel = getInstagramDisplay(social.instagram);
+                            const linkedinUrl = getLinkedinProfileUrl(social.linkedin);
+                            const linkedinLabel = getLinkedinDisplay(social.linkedin);
 
-                      return (
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {instagramUrl && instagramLabel ? (
-                            <a
-                              href={instagramUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-700"
-                            >
-                              <Instagram className="h-3.5 w-3.5" />
-                              {instagramLabel}
-                            </a>
-                          ) : null}
-                          {linkedinUrl && linkedinLabel ? (
-                            <a
-                              href={linkedinUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700"
-                            >
-                              <Linkedin className="h-3.5 w-3.5" />
-                              {linkedinLabel}
-                            </a>
-                          ) : null}
+                            if (!social.instagram && !social.linkedin) {
+                              return null;
+                            }
+
+                            return (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {instagramUrl && instagramLabel ? (
+                                  <a
+                                    href={instagramUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-700"
+                                  >
+                                    <Instagram className="h-3.5 w-3.5" />
+                                    {instagramLabel}
+                                  </a>
+                                ) : null}
+                                {linkedinUrl && linkedinLabel ? (
+                                  <a
+                                    href={linkedinUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700"
+                                  >
+                                    <Linkedin className="h-3.5 w-3.5" />
+                                    {linkedinLabel}
+                                  </a>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
                         </div>
-                      );
-                    })()}
-                  </div>
-                ))}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
+                      Şu an ilgi alanınıza göre öneri bulunamadı. Diğer katılımcıları inceleyebilirsiniz.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+                    Diğer Katılımcılar
+                  </p>
+                  {otherProfiles.length > 0 ? (
+                    <div className="space-y-2">
+                      {otherProfiles.map((profile) => (
+                        <div
+                          key={profile.id}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-3 transition hover:bg-slate-50"
+                        >
+                          <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
+                          <p className="text-xs text-slate-600">İlgi Alanı: {profile.interest_area}</p>
+                          <p className="text-xs text-slate-600">Kariyer Yönü: {profile.goal}</p>
+                          {(() => {
+                            const social = parseContactInfo(profile.contact_info);
+                            const instagramUrl = getInstagramProfileUrl(social.instagram);
+                            const instagramLabel = getInstagramDisplay(social.instagram);
+                            const linkedinUrl = getLinkedinProfileUrl(social.linkedin);
+                            const linkedinLabel = getLinkedinDisplay(social.linkedin);
+
+                            if (!social.instagram && !social.linkedin) {
+                              return null;
+                            }
+
+                            return (
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {instagramUrl && instagramLabel ? (
+                                  <a
+                                    href={instagramUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-full border border-pink-200 bg-pink-50 px-2.5 py-1 text-[11px] font-medium text-pink-700"
+                                  >
+                                    <Instagram className="h-3.5 w-3.5" />
+                                    {instagramLabel}
+                                  </a>
+                                ) : null}
+                                {linkedinUrl && linkedinLabel ? (
+                                  <a
+                                    href={linkedinUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-700"
+                                  >
+                                    <Linkedin className="h-3.5 w-3.5" />
+                                    {linkedinLabel}
+                                  </a>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                      Şu an öneriler dışında listelenecek katılımcı yok.
+                    </p>
+                  )}
+                </div>
               </div>
             ) : null}
 
