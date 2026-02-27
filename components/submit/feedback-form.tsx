@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ListChecks, LoaderCircle, MessageSquareText, Send } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createPollMessage,
-  type LivePollOption,
+  type LivePollConfig,
   LIVE_POLL_OPTIONS,
   LIVE_POLL_PROMPT,
   type ResponseMode
@@ -16,16 +16,87 @@ import {
 const MAX_CHARS = 200;
 
 type SubmissionState = "idle" | "loading" | "success" | "error";
+type PollConfigUiState = "loading" | "ready" | "error";
+
+type LivePollApiResponse = {
+  activePoll?: LivePollConfig | null;
+  error?: string;
+};
 
 export function FeedbackForm() {
   const [mode, setMode] = useState<ResponseMode>("text");
   const [message, setMessage] = useState("");
-  const [selectedOption, setSelectedOption] = useState<LivePollOption | "">("");
+  const [selectedOption, setSelectedOption] = useState("");
   const [state, setState] = useState<SubmissionState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [activePoll, setActivePoll] = useState<LivePollConfig | null>(null);
+  const [pollConfigUiState, setPollConfigUiState] = useState<PollConfigUiState>("loading");
+  const [pollConfigMessage, setPollConfigMessage] = useState("");
 
   const charactersLeft = useMemo(() => MAX_CHARS - message.length, [message.length]);
   const isTextMode = mode === "text";
+  const pollPrompt = activePoll?.question ?? LIVE_POLL_PROMPT;
+  const pollOptions = useMemo(
+    () => (activePoll?.options?.length ? activePoll.options : [...LIVE_POLL_OPTIONS]),
+    [activePoll]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPoll = async () => {
+      try {
+        const response = await fetch("/api/live-poll", {
+          method: "GET",
+          cache: "no-store"
+        });
+        const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+
+        if (!response.ok) {
+          throw new Error(data?.error ?? "Canlı anket bilgisi alınamadı.");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setActivePoll(data?.activePoll ?? null);
+        setPollConfigUiState("ready");
+        setPollConfigMessage("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPollConfigUiState("error");
+        setPollConfigMessage(
+          error instanceof Error ? error.message : "Canlı anket bilgisi alınamadı."
+        );
+      }
+    };
+
+    void loadPoll();
+
+    const interval = window.setInterval(() => {
+      void loadPoll();
+    }, 12000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedOption) {
+      return;
+    }
+
+    if (!pollOptions.includes(selectedOption)) {
+      setSelectedOption("");
+    }
+  }, [pollOptions, selectedOption]);
+
   const canSubmit = useMemo(() => {
     if (state === "loading") {
       return false;
@@ -53,7 +124,7 @@ export function FeedbackForm() {
       const supabase = createSupabaseBrowserClient();
       const payloadMessage = isTextMode
         ? message.trim()
-        : createPollMessage(selectedOption as LivePollOption);
+        : createPollMessage(selectedOption, activePoll?.id);
 
       const { error } = await supabase.from("attendee_feedbacks").insert({
         message: payloadMessage
@@ -125,9 +196,22 @@ export function FeedbackForm() {
         </>
       ) : (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-slate-700">{LIVE_POLL_PROMPT}</legend>
+          <legend className="text-sm font-medium text-slate-700">{pollPrompt}</legend>
+          {pollConfigUiState === "loading" ? (
+            <p className="text-xs text-slate-500">Canlı anket kontrol ediliyor...</p>
+          ) : null}
+          {pollConfigUiState === "error" ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {pollConfigMessage}
+            </p>
+          ) : null}
+          {activePoll ? (
+            <p className="text-xs font-medium text-cyan-700">Canlı anket yayında</p>
+          ) : (
+            <p className="text-xs text-slate-500">Varsayılan anket gösteriliyor</p>
+          )}
           <div className="space-y-2.5">
-            {LIVE_POLL_OPTIONS.map((option, index) => {
+            {pollOptions.map((option, index) => {
               const optionId = `poll-option-${index + 1}`;
               const checked = selectedOption === option;
 

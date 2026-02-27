@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +17,7 @@ import { AppPageSwitcher } from "@/components/navigation/app-page-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildContactInfo } from "@/lib/networking-contact";
+import { buildContactInfo, parseContactInfo } from "@/lib/networking-contact";
 
 const INTEREST_OPTIONS = [
   "Ortodonti",
@@ -39,6 +39,16 @@ const FUTURE_PATH_OPTIONS = [
 type SubmitState = "idle" | "loading" | "error";
 const NETWORKING_PROFILE_STORAGE_KEY = "dentco_networking_profile_id";
 
+type UpdateProfileApiResponse = {
+  ok?: boolean;
+  id?: string;
+  error?: string;
+};
+
+function isValidUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function NetworkingIntakeForm() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -46,16 +56,87 @@ export function NetworkingIntakeForm() {
   const [futurePath, setFuturePath] = useState("");
   const [instagram, setInstagram] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [savedProfileId, setSavedProfileId] = useState("");
+  const [isLoadingSavedProfile, setIsLoadingSavedProfile] = useState(true);
+  const [savedProfileMessage, setSavedProfileMessage] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSavedProfile = async () => {
+      const savedId = localStorage.getItem(NETWORKING_PROFILE_STORAGE_KEY)?.trim() ?? "";
+      if (!isValidUuid(savedId)) {
+        if (isMounted) {
+          setIsLoadingSavedProfile(false);
+        }
+        return;
+      }
+
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("networking_profiles")
+          .select("id, full_name, interest_area, goal, contact_info")
+          .eq("id", savedId)
+          .maybeSingle();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (!data) {
+          localStorage.removeItem(NETWORKING_PROFILE_STORAGE_KEY);
+          if (isMounted) {
+            setSavedProfileId("");
+            setSavedProfileMessage("");
+          }
+          return;
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const social = parseContactInfo(data.contact_info);
+        setSavedProfileId(data.id);
+        setFullName(data.full_name);
+        setInterestArea(data.interest_area);
+        setFuturePath(data.goal);
+        setInstagram(social.instagram);
+        setLinkedin(social.linkedin);
+        setSavedProfileMessage("Kayıtlı profiliniz yüklendi. Düzenleyip güncelleyebilirsiniz.");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        setSavedProfileMessage("");
+        setErrorMessage(
+          error instanceof Error ? error.message : "Kayıtlı profil yüklenirken bir hata oluştu."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoadingSavedProfile(false);
+        }
+      }
+    };
+
+    void loadSavedProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const canSubmit = useMemo(
     () =>
+      !isLoadingSavedProfile &&
       submitState !== "loading" &&
       fullName.trim().length > 1 &&
       Boolean(interestArea) &&
       Boolean(futurePath),
-    [fullName, futurePath, interestArea, submitState]
+    [fullName, futurePath, interestArea, isLoadingSavedProfile, submitState]
   );
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -69,28 +150,58 @@ export function NetworkingIntakeForm() {
     setErrorMessage("");
 
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("networking_profiles")
-        .insert({
-          full_name: fullName.trim(),
-          interest_area: interestArea,
-          goal: futurePath,
-          contact_info: buildContactInfo(instagram, linkedin)
-        })
-        .select("id")
-        .single();
+      let targetProfileId = "";
 
-      if (error) {
-        throw new Error(error.message);
+      if (isValidUuid(savedProfileId)) {
+        const updateResponse = await fetch("/api/networking/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profileId: savedProfileId,
+            fullName: fullName.trim(),
+            interestArea,
+            goal: futurePath,
+            instagram,
+            linkedin
+          })
+        });
+
+        const updatePayload = (await updateResponse.json().catch(() => null)) as
+          | UpdateProfileApiResponse
+          | null;
+
+        if (!updateResponse.ok) {
+          throw new Error(updatePayload?.error ?? "Profil güncellenemedi.");
+        }
+
+        targetProfileId = updatePayload?.id ?? savedProfileId;
+      } else {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("networking_profiles")
+          .insert({
+            full_name: fullName.trim(),
+            interest_area: interestArea,
+            goal: futurePath,
+            contact_info: buildContactInfo(instagram, linkedin)
+          })
+          .select("id")
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (!data?.id) {
+          throw new Error("Profil kimliği oluşturulamadı.");
+        }
+
+        targetProfileId = data.id;
+        setSavedProfileId(data.id);
       }
 
-      if (!data?.id) {
-        throw new Error("Profil kimliği oluşturulamadı.");
-      }
-
-      localStorage.setItem(NETWORKING_PROFILE_STORAGE_KEY, data.id);
-      router.push(`/networking/waiting-room?id=${data.id}`);
+      localStorage.setItem(NETWORKING_PROFILE_STORAGE_KEY, targetProfileId);
+      router.push(`/networking/waiting-room?id=${targetProfileId}`);
     } catch (error) {
       setSubmitState("error");
       setErrorMessage(error instanceof Error ? error.message : "Eşleşme kaydı sırasında bir hata oluştu.");
@@ -132,6 +243,19 @@ export function NetworkingIntakeForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isLoadingSavedProfile ? (
+                <p className="flex items-center gap-1 text-xs font-medium text-cyan-700">
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Kayıtlı profil kontrol ediliyor...
+                </p>
+              ) : null}
+
+              {savedProfileMessage ? (
+                <p className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
+                  {savedProfileMessage}
+                </p>
+              ) : null}
+
               <div className="space-y-1.5">
                 <label htmlFor="full-name" className="text-sm font-medium text-slate-700">
                   Ad Soyad
@@ -224,12 +348,12 @@ export function NetworkingIntakeForm() {
                 {submitState === "loading" ? (
                   <>
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Benzer Profiller Hazırlanıyor...
+                    Profil kaydediliyor...
                   </>
                 ) : (
                   <>
                     <Search className="h-4 w-4" />
-                    Benzer Profilleri Göster
+                    {isValidUuid(savedProfileId) ? "Profili Güncelle ve Listeye Dön" : "Benzer Profilleri Göster"}
                   </>
                 )}
               </Button>
@@ -243,7 +367,7 @@ export function NetworkingIntakeForm() {
               {submitState === "loading" ? (
                 <p className="flex items-center gap-1 text-xs font-medium text-cyan-700">
                   <CheckCircle2 className="h-4 w-4" />
-                  Profiliniz kaydedildi, liste hazırlanıyor...
+                  Profiliniz kaydediliyor, liste hazırlanıyor...
                 </p>
               ) : null}
 

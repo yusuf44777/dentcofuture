@@ -29,10 +29,10 @@ import {
 } from "recharts";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
-  type LivePollOption,
+  type LivePollConfig,
   LIVE_POLL_OPTIONS,
   LIVE_POLL_PROMPT,
-  parsePollOption
+  parsePollResponse
 } from "@/lib/engagement";
 import type { AnalyticsRow, FeedbackRow, Json } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,10 @@ type Sentiment = {
   negative: number;
 };
 
-type PollCounts = Record<LivePollOption, number>;
+type PollCounts = Record<string, number>;
 type AnalyzeUiState = "idle" | "loading" | "success" | "error";
 type HardResetUiState = "idle" | "loading" | "success" | "error";
+type PollControlUiState = "idle" | "loading" | "success" | "error";
 type ModeratorBrief = {
   roomMood: string;
   audiencePriorities: string[];
@@ -53,10 +54,21 @@ type ModeratorBrief = {
   recommendedActions: string[];
   confidence: number | null;
 };
+type LivePollApiResponse = {
+  ok?: boolean;
+  activePoll?: LivePollConfig | null;
+  message?: string;
+  error?: string;
+};
+
 const SUBMIT_TARGET_URL = "https://dentcofuture.vercel.app/submit";
 const DASHBOARD_RESET_CURSOR_STORAGE_KEY = "dentco_dashboard_reset_cursor";
 const DEFAULT_SUMMARY = "Analiz hazır olduğunda salonun genel duygu özeti burada görünecek.";
 const RESET_SUMMARY = "Sıfırlama sonrası yeni geri bildirimler bekleniyor.";
+const MIN_POLL_OPTIONS = 2;
+const MAX_POLL_OPTIONS = 6;
+const POLL_QUESTION_MAX_CHARS = 180;
+const POLL_OPTION_MAX_CHARS = 80;
 const DEFAULT_TOPICS = [
   "Canlı veri bekleniyor",
   "Yapay zeka destekli diş hekimliği",
@@ -76,11 +88,66 @@ const EMPTY_MODERATOR_BRIEF: ModeratorBrief = {
   confidence: null
 };
 
-function createEmptyPollCounts(): PollCounts {
-  return LIVE_POLL_OPTIONS.reduce((acc, option) => {
+function createEmptyPollCounts(options: string[]): PollCounts {
+  return options.reduce((acc, option) => {
     acc[option] = 0;
     return acc;
   }, {} as PollCounts);
+}
+
+function getActivePollOptions(activePoll: LivePollConfig | null) {
+  if (activePoll && Array.isArray(activePoll.options) && activePoll.options.length >= MIN_POLL_OPTIONS) {
+    return activePoll.options;
+  }
+
+  return [...LIVE_POLL_OPTIONS];
+}
+
+function getActivePollPrompt(activePoll: LivePollConfig | null) {
+  return activePoll?.question ?? LIVE_POLL_PROMPT;
+}
+
+function normalizePollDraftText(value: string, maxLength: number) {
+  return value.replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function sanitizePollDraftOptions(options: string[]) {
+  const dedupe = new Set<string>();
+  const sanitized: string[] = [];
+
+  for (const option of options) {
+    const normalized = normalizePollDraftText(option, POLL_OPTION_MAX_CHARS);
+    if (!normalized) {
+      continue;
+    }
+
+    const key = normalized.toLocaleLowerCase("tr-TR");
+    if (dedupe.has(key)) {
+      continue;
+    }
+
+    dedupe.add(key);
+    sanitized.push(normalized);
+  }
+
+  return sanitized.slice(0, MAX_POLL_OPTIONS);
+}
+
+function isSameActivePoll(a: LivePollConfig | null, b: LivePollConfig | null) {
+  if (!a && !b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  if (a.id !== b.id || a.updatedAt !== b.updatedAt || a.question !== b.question) {
+    return false;
+  }
+  if (a.options.length !== b.options.length) {
+    return false;
+  }
+
+  return a.options.every((option, index) => option === b.options[index]);
 }
 
 function toPercentage(value: unknown) {
@@ -189,17 +256,33 @@ function getShortUrl(fullUrl: string) {
 }
 
 function getFilteredComments(rows: FeedbackRow[]) {
-  return rows.filter((row) => !parsePollOption(row.message)).slice(0, 5);
+  return rows.filter((row) => !parsePollResponse(row.message)).slice(0, 5);
 }
 
-function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>) {
-  const counts = createEmptyPollCounts();
+function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>, activePoll: LivePollConfig | null) {
+  const options = getActivePollOptions(activePoll);
+  const counts = createEmptyPollCounts(options);
+  const allowedOptions = new Set(options);
 
   rows.forEach((row) => {
-    const option = parsePollOption(row.message);
-    if (option) {
-      counts[option] += 1;
+    const response = parsePollResponse(row.message);
+    if (!response) {
+      return;
     }
+
+    if (activePoll?.id) {
+      if (response.pollId !== activePoll.id) {
+        return;
+      }
+    } else if (response.pollId) {
+      return;
+    }
+
+    if (!allowedOptions.has(response.option)) {
+      return;
+    }
+
+    counts[response.option] += 1;
   });
 
   return counts;
@@ -246,7 +329,10 @@ export function LiveDashboard() {
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [topTopics, setTopTopics] = useState<string[]>(DEFAULT_TOPICS);
   const [latestComments, setLatestComments] = useState<FeedbackRow[]>([]);
-  const [pollCounts, setPollCounts] = useState<PollCounts>(createEmptyPollCounts());
+  const [activePoll, setActivePoll] = useState<LivePollConfig | null>(null);
+  const [pollCounts, setPollCounts] = useState<PollCounts>(() =>
+    createEmptyPollCounts([...LIVE_POLL_OPTIONS])
+  );
   const [moderatorBrief, setModeratorBrief] = useState<ModeratorBrief>(EMPTY_MODERATOR_BRIEF);
   const [analyzeUiState, setAnalyzeUiState] = useState<AnalyzeUiState>("idle");
   const [analyzeUiMessage, setAnalyzeUiMessage] = useState("");
@@ -257,6 +343,17 @@ export function LiveDashboard() {
   const [resetCursor, setResetCursor] = useState<string | null>(null);
   const [resetCursorLoaded, setResetCursorLoaded] = useState(false);
   const [resetUiMessage, setResetUiMessage] = useState("");
+  const [pollConfigUiState, setPollConfigUiState] = useState<"loading" | "ready" | "error">("loading");
+  const [pollConfigUiMessage, setPollConfigUiMessage] = useState("");
+  const [pollPublishUiState, setPollPublishUiState] = useState<PollControlUiState>("idle");
+  const [pollPublishUiMessage, setPollPublishUiMessage] = useState("");
+  const [pollCloseUiState, setPollCloseUiState] = useState<PollControlUiState>("idle");
+  const [pollCloseUiMessage, setPollCloseUiMessage] = useState("");
+  const [pollQuestionDraft, setPollQuestionDraft] = useState("");
+  const [pollOptionDrafts, setPollOptionDrafts] = useState(["", "", "", ""]);
+
+  const activePollOptions = useMemo(() => getActivePollOptions(activePoll), [activePoll]);
+  const activePollPrompt = useMemo(() => getActivePollPrompt(activePoll), [activePoll]);
 
   const barData = useMemo(
     () => [
@@ -269,11 +366,11 @@ export function LiveDashboard() {
 
   const pollEntries = useMemo(
     () =>
-      LIVE_POLL_OPTIONS.map((option) => ({
+      activePollOptions.map((option) => ({
         option,
         count: pollCounts[option] ?? 0
       })),
-    [pollCounts]
+    [activePollOptions, pollCounts]
   );
 
   const pollTotal = useMemo(
@@ -293,11 +390,64 @@ export function LiveDashboard() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadActivePoll = async (backgroundRefresh: boolean) => {
+      if (!backgroundRefresh) {
+        setPollConfigUiState("loading");
+        setPollConfigUiMessage("");
+      }
+
+      try {
+        const response = await fetch("/api/live-poll", {
+          method: "GET",
+          cache: "no-store"
+        });
+        const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+
+        if (!response.ok) {
+          throw new Error(data?.error ?? "Canlı anket alınamadı.");
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        const nextPoll = data?.activePoll ?? null;
+        setActivePoll((prev) => (isSameActivePoll(prev, nextPoll) ? prev : nextPoll));
+        setPollConfigUiState("ready");
+        setPollConfigUiMessage("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setPollConfigUiState("error");
+        setPollConfigUiMessage(
+          error instanceof Error ? error.message : "Canlı anket bilgisi alınamadı."
+        );
+      }
+    };
+
+    void loadActivePoll(false);
+
+    const interval = window.setInterval(() => {
+      void loadActivePoll(true);
+    }, 8000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!resetCursorLoaded) {
       return;
     }
 
     const supabase = createSupabaseBrowserClient();
+    const allowedPollOptions = new Set(activePollOptions);
 
     const applyAnalytics = (row: Pick<AnalyticsRow, "sentiment_score" | "top_keywords">) => {
       setSentiment(parseSentiment(row.sentiment_score));
@@ -346,7 +496,7 @@ export function LiveDashboard() {
       if (!feedbackResult.error) {
         const rows = feedbackResult.data ?? [];
         setLatestComments(getFilteredComments(rows));
-        setPollCounts(getPollCounts(rows));
+        setPollCounts(getPollCounts(rows, activePoll));
       }
 
       if (!analyticsResult.error && analyticsResult.data) {
@@ -378,12 +528,18 @@ export function LiveDashboard() {
 
           setTotalResponses((prev) => prev + 1);
 
-          const pollOption = parsePollOption(row.message);
-          if (pollOption) {
-            setPollCounts((prev) => ({
-              ...prev,
-              [pollOption]: (prev[pollOption] ?? 0) + 1
-            }));
+          const pollResponse = parsePollResponse(row.message);
+          if (pollResponse) {
+            const matchesActivePoll = activePoll?.id
+              ? pollResponse.pollId === activePoll.id
+              : !pollResponse.pollId;
+
+            if (matchesActivePoll && allowedPollOptions.has(pollResponse.option)) {
+              setPollCounts((prev) => ({
+                ...prev,
+                [pollResponse.option]: (prev[pollResponse.option] ?? 0) + 1
+              }));
+            }
             return;
           }
 
@@ -416,7 +572,7 @@ export function LiveDashboard() {
       void supabase.removeChannel(feedbackChannel);
       void supabase.removeChannel(analyticsChannel);
     };
-  }, [resetCursor, resetCursorLoaded]);
+  }, [activePoll, activePollOptions, resetCursor, resetCursorLoaded]);
 
   const handleRunAnalyze = async () => {
     if (analyzeUiState === "loading") {
@@ -512,7 +668,7 @@ export function LiveDashboard() {
     setResetCursor(nextCursor);
     setTotalResponses(0);
     setLatestComments([]);
-    setPollCounts(createEmptyPollCounts());
+    setPollCounts(createEmptyPollCounts(activePollOptions));
     setSentiment(DEFAULT_SENTIMENT);
     setSummary(RESET_SUMMARY);
     setTopTopics(DEFAULT_TOPICS);
@@ -564,7 +720,7 @@ export function LiveDashboard() {
       setResetCursor(nextCursor);
       setTotalResponses(0);
       setLatestComments([]);
-      setPollCounts(createEmptyPollCounts());
+      setPollCounts(createEmptyPollCounts(activePollOptions));
       setSentiment(DEFAULT_SENTIMENT);
       setSummary(RESET_SUMMARY);
       setTopTopics(DEFAULT_TOPICS);
@@ -580,6 +736,141 @@ export function LiveDashboard() {
       setHardResetUiMessage(
         error instanceof Error ? error.message : "Veritabanı temizlenirken bir hata oluştu."
       );
+    }
+  };
+
+  const handlePollOptionDraftChange = (index: number, value: string) => {
+    setPollOptionDrafts((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? value.slice(0, POLL_OPTION_MAX_CHARS) : item
+      )
+    );
+  };
+
+  const handleAddPollOptionDraft = () => {
+    setPollOptionDrafts((prev) => {
+      if (prev.length >= MAX_POLL_OPTIONS) {
+        return prev;
+      }
+
+      return [...prev, ""];
+    });
+  };
+
+  const handleRemovePollOptionDraft = (index: number) => {
+    setPollOptionDrafts((prev) => {
+      if (prev.length <= MIN_POLL_OPTIONS) {
+        return prev;
+      }
+
+      return prev.filter((_, itemIndex) => itemIndex !== index);
+    });
+  };
+
+  const handlePublishLivePoll = async () => {
+    if (pollPublishUiState === "loading") {
+      return;
+    }
+
+    const question = normalizePollDraftText(pollQuestionDraft, POLL_QUESTION_MAX_CHARS);
+    const options = sanitizePollDraftOptions(pollOptionDrafts);
+
+    if (question.length < 6) {
+      setPollPublishUiState("error");
+      setPollPublishUiMessage("Anket sorusu en az 6 karakter olmalı.");
+      return;
+    }
+
+    if (options.length < MIN_POLL_OPTIONS) {
+      setPollPublishUiState("error");
+      setPollPublishUiMessage(`En az ${MIN_POLL_OPTIONS} seçenek girilmeli.`);
+      return;
+    }
+
+    setPollPublishUiState("loading");
+    setPollPublishUiMessage("");
+    setPollCloseUiMessage("");
+
+    try {
+      const response = await fetch("/api/live-poll", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          question,
+          options
+        })
+      });
+
+      const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Anket yayınlanamadı.");
+      }
+
+      const nextPoll = data.activePoll ?? null;
+      setActivePoll((prev) => (isSameActivePoll(prev, nextPoll) ? prev : nextPoll));
+      setPollCounts(createEmptyPollCounts(getActivePollOptions(nextPoll)));
+      setPollQuestionDraft("");
+      setPollOptionDrafts(["", "", "", ""]);
+      setPollPublishUiState("success");
+      setPollPublishUiMessage(data.message ?? "Canlı anket yayınlandı.");
+      setPollCloseUiState("idle");
+      setPollConfigUiState("ready");
+      setPollConfigUiMessage("");
+    } catch (error) {
+      setPollPublishUiState("error");
+      setPollPublishUiMessage(error instanceof Error ? error.message : "Anket yayınlanamadı.");
+    }
+  };
+
+  const handleCloseLivePoll = async () => {
+    if (pollCloseUiState === "loading") {
+      return;
+    }
+
+    if (!activePoll) {
+      setPollCloseUiState("error");
+      setPollCloseUiMessage("Kapatılacak aktif anket bulunamadı.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Aktif canlı anketi kapatmak istediğinizden emin misiniz?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setPollCloseUiState("loading");
+    setPollCloseUiMessage("");
+    setPollPublishUiMessage("");
+
+    try {
+      const response = await fetch("/api/live-poll", {
+        method: "DELETE",
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+
+      const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Aktif anket kapatılamadı.");
+      }
+
+      setActivePoll(null);
+      setPollCounts(createEmptyPollCounts(getActivePollOptions(null)));
+      setPollCloseUiState("success");
+      setPollCloseUiMessage(data.message ?? "Aktif anket kapatıldı.");
+      setPollPublishUiState("idle");
+      setPollConfigUiState("ready");
+      setPollConfigUiMessage("");
+    } catch (error) {
+      setPollCloseUiState("error");
+      setPollCloseUiMessage(error instanceof Error ? error.message : "Aktif anket kapatılamadı.");
     }
   };
 
@@ -762,6 +1053,147 @@ export function LiveDashboard() {
                       Sıfırlama aktif. Bu panel {resetCursorLabel} sonrasındaki verileri gösteriyor.
                     </p>
                   ) : null}
+
+                  <div className="space-y-3 rounded-2xl border border-cyan-200/20 bg-cyan-200/5 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-cyan-100">Canlı Anket Yönetimi</p>
+                      <p
+                        className={`text-xs font-medium ${
+                          activePoll ? "text-emerald-200" : "text-slate-300"
+                        }`}
+                      >
+                        {activePoll ? "Aktif anket yayında" : "Şu an aktif anket yok"}
+                      </p>
+                    </div>
+
+                    {pollConfigUiState === "loading" ? (
+                      <p className="text-xs text-cyan-200/80">Canlı anket durumu yükleniyor...</p>
+                    ) : null}
+                    {pollConfigUiMessage ? (
+                      <p
+                        className={`text-xs ${
+                          pollConfigUiState === "error" ? "text-rose-300" : "text-cyan-200/80"
+                        }`}
+                      >
+                        {pollConfigUiMessage}
+                      </p>
+                    ) : null}
+                    {activePoll ? (
+                      <div className="rounded-xl border border-cyan-200/20 bg-slate-900/30 px-3 py-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+                          Yayındaki Soru
+                        </p>
+                        <p className="mt-1 text-sm text-slate-100">{activePoll.question}</p>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-1">
+                      <label htmlFor="live-poll-question" className="text-xs font-medium text-cyan-100">
+                        Yeni anket sorusu
+                      </label>
+                      <textarea
+                        id="live-poll-question"
+                        value={pollQuestionDraft}
+                        onChange={(event) =>
+                          setPollQuestionDraft(event.target.value.slice(0, POLL_QUESTION_MAX_CHARS))
+                        }
+                        rows={2}
+                        className="w-full resize-none rounded-xl border border-cyan-200/25 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
+                        placeholder="Örn: Bugün en çok hangi başlığı derinleştirelim?"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-cyan-100">Seçenekler</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
+                          onClick={handleAddPollOptionDraft}
+                          disabled={pollOptionDrafts.length >= MAX_POLL_OPTIONS}
+                        >
+                          Seçenek Ekle
+                        </Button>
+                      </div>
+
+                      {pollOptionDrafts.map((option, index) => (
+                        <div key={`poll-option-draft-${index}`} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(event) =>
+                              handlePollOptionDraftChange(index, event.target.value)
+                            }
+                            className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
+                            placeholder={`Seçenek ${index + 1}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-9 border-rose-300/35 bg-rose-500/10 px-3 text-xs text-rose-100 hover:bg-rose-500/20"
+                            onClick={() => handleRemovePollOptionDraft(index)}
+                            disabled={pollOptionDrafts.length <= MIN_POLL_OPTIONS}
+                          >
+                            Sil
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        className="h-9 px-4"
+                        onClick={handlePublishLivePoll}
+                        disabled={pollPublishUiState === "loading"}
+                      >
+                        {pollPublishUiState === "loading" ? (
+                          <>
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            Yayınlanıyor...
+                          </>
+                        ) : (
+                          "Anketi Yayınla"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-9 border-amber-300/40 bg-amber-500/10 px-4 text-amber-50 hover:bg-amber-500/20"
+                        onClick={handleCloseLivePoll}
+                        disabled={!activePoll || pollCloseUiState === "loading"}
+                      >
+                        {pollCloseUiState === "loading" ? (
+                          <>
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            Kapatılıyor...
+                          </>
+                        ) : (
+                          "Aktif Anketi Kapat"
+                        )}
+                      </Button>
+                    </div>
+
+                    {pollPublishUiMessage ? (
+                      <p
+                        className={`text-xs ${
+                          pollPublishUiState === "error" ? "text-rose-300" : "text-emerald-200"
+                        }`}
+                      >
+                        {pollPublishUiMessage}
+                      </p>
+                    ) : null}
+                    {pollCloseUiMessage ? (
+                      <p
+                        className={`text-xs ${
+                          pollCloseUiState === "error" ? "text-rose-300" : "text-amber-100"
+                        }`}
+                      >
+                        {pollCloseUiMessage}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </article>
@@ -805,7 +1237,10 @@ export function LiveDashboard() {
                 <ListChecks className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Canlı Anket Sonuçları</h3>
               </div>
-              <p className="mb-3 text-sm text-slate-300">{LIVE_POLL_PROMPT}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+                {activePoll ? "Yayındaki anket" : "Varsayılan anket"}
+              </p>
+              <p className="mb-3 mt-1 text-sm text-slate-300">{activePollPrompt}</p>
               <div className="space-y-3">
                 {pollEntries.map((entry) => {
                   const percent = pollTotal > 0 ? Math.round((entry.count / pollTotal) * 100) : 0;

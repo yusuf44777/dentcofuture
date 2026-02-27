@@ -23,6 +23,7 @@ COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Ne
 - `/cekilispanel` özel çekiliş yönetim ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/dashboard-auth` dashboard oturum endpoint'i
+- `/api/live-poll` canlı anket yayınlama/okuma endpoint'i
 - `/api/raffle/overview` çekiliş özet endpoint'i
 - `/api/raffle/participants/import` katılımcı toplu içe aktarma endpoint'i
 - `/api/raffle/participants/import-project-csv` proje kökündeki `cekilis.csv` dosyasını tek tık içe aktarma endpoint'i
@@ -57,6 +58,13 @@ Oluşan tablolar:
   - `is_matched` boolean
   - `matched_with_id` uuid
   - `created_at` timestamptz
+- `live_polls`
+  - `id` uuid (PK)
+  - `question` text
+  - `options` jsonb (2-6 seçenek)
+  - `is_active` boolean
+  - `created_at` timestamptz
+  - `updated_at` timestamptz
 - `raffle_participants`
   - `id` uuid (PK)
   - `full_name` text
@@ -146,9 +154,10 @@ Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
 
 - `/submit` ekranında iki mod vardır:
   - `Serbest Yanıt` (açık uçlu metin)
-  - `Çoktan Seçmeli` (tek seçimli anket)
-- Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: <seçenek>` formatında yazılır.
-- Özel panel anket kartı bu yanıtları canlı olarak sayar.
+  - `Çoktan Seçmeli` (tek seçimli anket; konuşmacı panelinden canlı güncellenir)
+- Konuşmacı panelindeki canlı anket yönetim alanı üzerinden yeni soru/seçenek yayınlanabilir ve aktif anket kapatılabilir.
+- Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: ...` formatında yazılır.
+- Özel panel anket kartı aktif ankete ait yanıtları canlı olarak sayar.
 - `/api/analyze` yalnızca serbest metinleri AI analizine dahil eder; anket yanıtları analiz kuyruğunda birikmez.
 
 ## 6. Vercel Deploy ve API Güvenliği
