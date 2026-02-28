@@ -156,6 +156,7 @@ Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
   - `Serbest Yanıt` (açık uçlu metin)
   - `Çoktan Seçmeli` (tek seçimli anket; konuşmacı panelinden canlı güncellenir)
 - Konuşmacı panelindeki canlı anket yönetim alanı üzerinden yeni soru/seçenek yayınlanabilir ve aktif anket kapatılabilir.
+- Aynı panelde hazır soru havuzu oluşturulabilir; kayıtlı sorular taslağa doldurulabilir veya tek tıkla yayına alınabilir.
 - Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: ...` formatında yazılır.
 - Özel panel anket kartı aktif ankete ait yanıtları canlı olarak sayar.
 - `/api/analyze` yalnızca serbest metinleri AI analizine dahil eder; anket yanıtları analiz kuyruğunda birikmez.

@@ -81,6 +81,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      live_poll_presets: {
+        Row: {
+          id: string;
+          question: string;
+          options: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          question: string;
+          options: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          question?: string;
+          options?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       networking_profiles: {
         Row: {
           id: string;
@@ -234,6 +258,7 @@ export interface Database {
 export type FeedbackRow = Database["public"]["Tables"]["attendee_feedbacks"]["Row"];
 export type AnalyticsRow = Database["public"]["Tables"]["congress_analytics"]["Row"];
 export type LivePollRow = Database["public"]["Tables"]["live_polls"]["Row"];
+export type LivePollPresetRow = Database["public"]["Tables"]["live_poll_presets"]["Row"];
 export type NetworkingProfileRow = Database["public"]["Tables"]["networking_profiles"]["Row"];
 export type RaffleParticipantRow = Database["public"]["Tables"]["raffle_participants"]["Row"];
 export type RafflePrizeRow = Database["public"]["Tables"]["raffle_prizes"]["Row"];

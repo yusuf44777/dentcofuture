@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "react-qr-code";
@@ -30,6 +30,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   type LivePollConfig,
+  type LivePollPresetConfig,
   LIVE_POLL_OPTIONS,
   LIVE_POLL_PROMPT,
   parsePollResponse
@@ -57,6 +58,14 @@ type ModeratorBrief = {
 type LivePollApiResponse = {
   ok?: boolean;
   activePoll?: LivePollConfig | null;
+  message?: string;
+  error?: string;
+};
+type LivePollPresetApiResponse = {
+  ok?: boolean;
+  presets?: LivePollPresetConfig[];
+  preset?: LivePollPresetConfig | null;
+  presetId?: string;
   message?: string;
   error?: string;
 };
@@ -351,6 +360,13 @@ export function LiveDashboard() {
   const [pollCloseUiMessage, setPollCloseUiMessage] = useState("");
   const [pollQuestionDraft, setPollQuestionDraft] = useState("");
   const [pollOptionDrafts, setPollOptionDrafts] = useState(["", "", "", ""]);
+  const [pollPresets, setPollPresets] = useState<LivePollPresetConfig[]>([]);
+  const [pollPresetUiState, setPollPresetUiState] = useState<"loading" | "ready" | "error">("loading");
+  const [pollPresetUiMessage, setPollPresetUiMessage] = useState("");
+  const [presetSaveUiState, setPresetSaveUiState] = useState<PollControlUiState>("idle");
+  const [presetSaveUiMessage, setPresetSaveUiMessage] = useState("");
+  const [presetDeletingId, setPresetDeletingId] = useState("");
+  const [presetLaunchingId, setPresetLaunchingId] = useState("");
 
   const activePollOptions = useMemo(() => getActivePollOptions(activePoll), [activePoll]);
   const activePollPrompt = useMemo(() => getActivePollPrompt(activePoll), [activePoll]);
@@ -380,6 +396,39 @@ export function LiveDashboard() {
 
   const shortUrl = useMemo(() => getShortUrl(submitUrl), [submitUrl]);
   const resetCursorLabel = useMemo(() => formatResetCursor(resetCursor), [resetCursor]);
+
+  const loadPollPresets = useCallback(async (backgroundRefresh: boolean) => {
+    if (!backgroundRefresh) {
+      setPollPresetUiState("loading");
+      setPollPresetUiMessage("");
+    }
+
+    try {
+      const response = await fetch("/api/live-poll/presets", {
+        method: "GET",
+        cache: "no-store"
+      });
+      const data = (await response.json().catch(() => null)) as LivePollPresetApiResponse | null;
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Hazır sorular alınamadı.");
+      }
+
+      setPollPresets(data?.presets ?? []);
+      setPollPresetUiState("ready");
+      setPollPresetUiMessage("");
+    } catch (error) {
+      setPollPresetUiState("error");
+      setPollPresetUiMessage(error instanceof Error ? error.message : "Hazır sorular alınamadı.");
+    }
+  }, []);
+
+  const applyPresetToDraft = useCallback((preset: LivePollPresetConfig) => {
+    setPollQuestionDraft(preset.question);
+    setPollOptionDrafts([...preset.options]);
+    setPresetSaveUiMessage("Hazır soru taslağa dolduruldu.");
+    setPresetSaveUiState("success");
+  }, []);
 
   useEffect(() => {
     const storedCursor = localStorage.getItem(DASHBOARD_RESET_CURSOR_STORAGE_KEY)?.trim() ?? "";
@@ -440,6 +489,10 @@ export function LiveDashboard() {
       window.clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    void loadPollPresets(false);
+  }, [loadPollPresets]);
 
   useEffect(() => {
     if (!resetCursorLoaded) {
@@ -767,6 +820,34 @@ export function LiveDashboard() {
     });
   };
 
+  const publishLivePollRequest = async (question: string, options: string[]) => {
+    const response = await fetch("/api/live-poll", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        question,
+        options
+      })
+    });
+
+    const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error ?? "Anket yayınlanamadı.");
+    }
+
+    const nextPoll = data.activePoll ?? null;
+    setActivePoll((prev) => (isSameActivePoll(prev, nextPoll) ? prev : nextPoll));
+    setPollCounts(createEmptyPollCounts(getActivePollOptions(nextPoll)));
+    setPollCloseUiState("idle");
+    setPollConfigUiState("ready");
+    setPollConfigUiMessage("");
+
+    return data;
+  };
+
   const handlePublishLivePoll = async () => {
     if (pollPublishUiState === "loading") {
       return;
@@ -792,7 +873,43 @@ export function LiveDashboard() {
     setPollCloseUiMessage("");
 
     try {
-      const response = await fetch("/api/live-poll", {
+      const data = await publishLivePollRequest(question, options);
+      setPollQuestionDraft("");
+      setPollOptionDrafts(["", "", "", ""]);
+      setPollPublishUiState("success");
+      setPollPublishUiMessage(data.message ?? "Canlı anket yayınlandı.");
+      setPresetSaveUiMessage("");
+    } catch (error) {
+      setPollPublishUiState("error");
+      setPollPublishUiMessage(error instanceof Error ? error.message : "Anket yayınlanamadı.");
+    }
+  };
+
+  const handleSavePollPreset = async () => {
+    if (presetSaveUiState === "loading") {
+      return;
+    }
+
+    const question = normalizePollDraftText(pollQuestionDraft, POLL_QUESTION_MAX_CHARS);
+    const options = sanitizePollDraftOptions(pollOptionDrafts);
+
+    if (question.length < 6) {
+      setPresetSaveUiState("error");
+      setPresetSaveUiMessage("Hazır soru için en az 6 karakterlik soru girilmelidir.");
+      return;
+    }
+
+    if (options.length < MIN_POLL_OPTIONS) {
+      setPresetSaveUiState("error");
+      setPresetSaveUiMessage(`Hazır soru için en az ${MIN_POLL_OPTIONS} seçenek girilmelidir.`);
+      return;
+    }
+
+    setPresetSaveUiState("loading");
+    setPresetSaveUiMessage("");
+
+    try {
+      const response = await fetch("/api/live-poll/presets", {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -803,25 +920,86 @@ export function LiveDashboard() {
         })
       });
 
-      const data = (await response.json().catch(() => null)) as LivePollApiResponse | null;
+      const data = (await response.json().catch(() => null)) as LivePollPresetApiResponse | null;
 
-      if (!response.ok || !data?.ok) {
-        throw new Error(data?.error ?? "Anket yayınlanamadı.");
+      if (!response.ok || !data?.ok || !data?.preset) {
+        throw new Error(data?.error ?? "Hazır soru kaydedilemedi.");
       }
 
-      const nextPoll = data.activePoll ?? null;
-      setActivePoll((prev) => (isSameActivePoll(prev, nextPoll) ? prev : nextPoll));
-      setPollCounts(createEmptyPollCounts(getActivePollOptions(nextPoll)));
-      setPollQuestionDraft("");
-      setPollOptionDrafts(["", "", "", ""]);
+      setPollPresets((prev) => [data.preset as LivePollPresetConfig, ...prev].slice(0, 30));
+      setPollPresetUiState("ready");
+      setPollPresetUiMessage("");
+      setPresetSaveUiState("success");
+      setPresetSaveUiMessage(data.message ?? "Hazır soru kaydedildi.");
+    } catch (error) {
+      setPresetSaveUiState("error");
+      setPresetSaveUiMessage(
+        error instanceof Error ? error.message : "Hazır soru kaydedilemedi."
+      );
+    }
+  };
+
+  const handleLaunchPollPreset = async (preset: LivePollPresetConfig) => {
+    if (presetLaunchingId) {
+      return;
+    }
+
+    setPresetLaunchingId(preset.id);
+    setPollPublishUiMessage("");
+    setPollCloseUiMessage("");
+
+    try {
+      const data = await publishLivePollRequest(preset.question, preset.options);
       setPollPublishUiState("success");
-      setPollPublishUiMessage(data.message ?? "Canlı anket yayınlandı.");
-      setPollCloseUiState("idle");
-      setPollConfigUiState("ready");
-      setPollConfigUiMessage("");
+      setPollPublishUiMessage(data.message ?? "Hazır soru yayına alındı.");
+      setPresetSaveUiMessage("Hazır soru yayına alındı.");
+      setPresetSaveUiState("success");
     } catch (error) {
       setPollPublishUiState("error");
-      setPollPublishUiMessage(error instanceof Error ? error.message : "Anket yayınlanamadı.");
+      setPollPublishUiMessage(error instanceof Error ? error.message : "Hazır soru yayına alınamadı.");
+    } finally {
+      setPresetLaunchingId("");
+    }
+  };
+
+  const handleDeletePollPreset = async (presetId: string) => {
+    if (presetDeletingId) {
+      return;
+    }
+
+    const confirmed = window.confirm("Bu hazır soruyu silmek istediğinizden emin misiniz?");
+    if (!confirmed) {
+      return;
+    }
+
+    setPresetDeletingId(presetId);
+    setPollPresetUiMessage("");
+
+    try {
+      const response = await fetch("/api/live-poll/presets", {
+        method: "DELETE",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          presetId
+        })
+      });
+
+      const data = (await response.json().catch(() => null)) as LivePollPresetApiResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Hazır soru silinemedi.");
+      }
+
+      setPollPresets((prev) => prev.filter((preset) => preset.id !== presetId));
+      setPollPresetUiState("ready");
+      setPollPresetUiMessage(data.message ?? "Hazır soru silindi.");
+    } catch (error) {
+      setPollPresetUiState("error");
+      setPollPresetUiMessage(error instanceof Error ? error.message : "Hazır soru silinemedi.");
+    } finally {
+      setPresetDeletingId("");
     }
   };
 
@@ -1160,6 +1338,22 @@ export function LiveDashboard() {
                       <Button
                         type="button"
                         variant="outline"
+                        className="h-9 border-cyan-200/30 bg-cyan-200/10 px-4 text-cyan-50 hover:bg-cyan-200/20"
+                        onClick={handleSavePollPreset}
+                        disabled={presetSaveUiState === "loading"}
+                      >
+                        {presetSaveUiState === "loading" ? (
+                          <>
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            Kaydediliyor...
+                          </>
+                        ) : (
+                          "Hazır Soruya Kaydet"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
                         className="h-9 border-amber-300/40 bg-amber-500/10 px-4 text-amber-50 hover:bg-amber-500/20"
                         onClick={handleCloseLivePoll}
                         disabled={!activePoll || pollCloseUiState === "loading"}
@@ -1193,6 +1387,102 @@ export function LiveDashboard() {
                         {pollCloseUiMessage}
                       </p>
                     ) : null}
+
+                    {presetSaveUiMessage ? (
+                      <p
+                        className={`text-xs ${
+                          presetSaveUiState === "error" ? "text-rose-300" : "text-cyan-100"
+                        }`}
+                      >
+                        {presetSaveUiMessage}
+                      </p>
+                    ) : null}
+
+                    <div className="space-y-2 rounded-xl border border-cyan-200/15 bg-slate-900/25 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                          Hazır Sorular
+                        </p>
+                        <p className="text-xs text-cyan-100/70">{pollPresets.length} kayıt</p>
+                      </div>
+
+                      {pollPresetUiState === "loading" ? (
+                        <p className="text-xs text-cyan-100/75">Hazır sorular yükleniyor...</p>
+                      ) : null}
+
+                      {pollPresetUiMessage ? (
+                        <p
+                          className={`text-xs ${
+                            pollPresetUiState === "error" ? "text-rose-300" : "text-cyan-100"
+                          }`}
+                        >
+                          {pollPresetUiMessage}
+                        </p>
+                      ) : null}
+
+                      {pollPresets.length === 0 && pollPresetUiState !== "loading" ? (
+                        <p className="text-xs text-slate-300">
+                          Henüz kayıtlı hazır soru yok. Taslağı doldurup kaydedebilirsiniz.
+                        </p>
+                      ) : null}
+
+                      {pollPresets.length > 0 ? (
+                        <div className="space-y-2">
+                          {pollPresets.map((preset) => (
+                            <div
+                              key={preset.id}
+                              className="rounded-xl border border-cyan-200/15 bg-slate-900/35 p-3"
+                            >
+                              <p className="text-sm font-medium text-white">{preset.question}</p>
+                              <p className="mt-1 text-xs text-cyan-100/70">
+                                {preset.options.join(" • ")}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
+                                  onClick={() => applyPresetToDraft(preset)}
+                                >
+                                  Taslağa Doldur
+                                </Button>
+                                <Button
+                                  type="button"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => handleLaunchPollPreset(preset)}
+                                  disabled={presetLaunchingId === preset.id}
+                                >
+                                  {presetLaunchingId === preset.id ? (
+                                    <>
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                      Yayına Alınıyor...
+                                    </>
+                                  ) : (
+                                    "Hızlı Yayınla"
+                                  )}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="h-8 border-rose-300/35 bg-rose-500/10 px-3 text-xs text-rose-100 hover:bg-rose-500/20"
+                                  onClick={() => handleDeletePollPreset(preset.id)}
+                                  disabled={presetDeletingId === preset.id}
+                                >
+                                  {presetDeletingId === preset.id ? (
+                                    <>
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                      Siliniyor...
+                                    </>
+                                  ) : (
+                                    "Sil"
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>

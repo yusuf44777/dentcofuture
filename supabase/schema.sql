@@ -25,6 +25,14 @@ create table if not exists public.live_polls (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.live_poll_presets (
+  id uuid primary key default gen_random_uuid(),
+  question text not null check (char_length(question) between 6 and 180),
+  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 6),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.networking_profiles (
   id uuid primary key default gen_random_uuid(),
   full_name text not null check (char_length(full_name) <= 120),
@@ -113,6 +121,12 @@ execute function public.set_updated_at();
 drop trigger if exists set_live_polls_updated_at on public.live_polls;
 create trigger set_live_polls_updated_at
 before update on public.live_polls
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_live_poll_presets_updated_at on public.live_poll_presets;
+create trigger set_live_poll_presets_updated_at
+before update on public.live_poll_presets
 for each row
 execute function public.set_updated_at();
 
@@ -275,6 +289,7 @@ grant execute on function public.run_raffle_draw(uuid) to service_role;
 alter table public.attendee_feedbacks replica identity full;
 alter table public.congress_analytics replica identity full;
 alter table public.live_polls replica identity full;
+alter table public.live_poll_presets replica identity full;
 alter table public.networking_profiles replica identity full;
 alter table public.raffle_participants replica identity full;
 alter table public.raffle_prizes replica identity full;
@@ -284,6 +299,7 @@ alter table public.raffle_draws replica identity full;
 alter table public.attendee_feedbacks enable row level security;
 alter table public.congress_analytics enable row level security;
 alter table public.live_polls enable row level security;
+alter table public.live_poll_presets enable row level security;
 alter table public.networking_profiles enable row level security;
 alter table public.raffle_participants enable row level security;
 alter table public.raffle_prizes enable row level security;
@@ -340,6 +356,7 @@ grant select, insert on public.attendee_feedbacks to anon, authenticated;
 grant select on public.congress_analytics to anon, authenticated;
 grant select, insert on public.networking_profiles to anon, authenticated;
 revoke all on public.live_polls from anon, authenticated;
+revoke all on public.live_poll_presets from anon, authenticated;
 revoke all on public.raffle_participants from anon, authenticated;
 revoke all on public.raffle_prizes from anon, authenticated;
 revoke all on public.raffle_draws from anon, authenticated;

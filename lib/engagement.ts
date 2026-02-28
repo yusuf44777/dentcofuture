@@ -21,6 +21,15 @@ export type LivePollConfig = {
   updatedAt: string;
 };
 
+export type LivePollPresetConfig = {
+  id: string;
+  question: string;
+
+  options: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ParsedPollResponse = {
   pollId: string | null;
   option: string;
