@@ -19,7 +19,7 @@ create table if not exists public.congress_analytics (
 create table if not exists public.live_polls (
   id uuid primary key default gen_random_uuid(),
   question text not null check (char_length(question) between 6 and 180),
-  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 6),
+  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 10),
   is_active boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -28,7 +28,7 @@ create table if not exists public.live_polls (
 create table if not exists public.live_poll_presets (
   id uuid primary key default gen_random_uuid(),
   question text not null check (char_length(question) between 6 and 180),
-  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 6),
+  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 10),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
