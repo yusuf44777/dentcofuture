@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 6;
+const MAX_OPTIONS = 10;
 const QUESTION_MAX_LENGTH = 180;
 const OPTION_MAX_LENGTH = 80;
 
