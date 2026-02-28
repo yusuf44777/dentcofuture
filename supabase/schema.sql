@@ -3,7 +3,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.attendee_feedbacks (
   id uuid primary key default gen_random_uuid(),
-  message text not null check (char_length(message) <= 200),
+  message text not null,
   created_at timestamptz not null default now(),
   is_analyzed boolean not null default false
 );

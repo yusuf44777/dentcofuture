@@ -13,8 +13,6 @@ import {
   type ResponseMode
 } from "@/lib/engagement";
 
-const MAX_CHARS = 200;
-
 type SubmissionState = "idle" | "loading" | "success" | "error";
 type PollConfigUiState = "loading" | "ready" | "error";
 
@@ -33,7 +31,6 @@ export function FeedbackForm() {
   const [pollConfigUiState, setPollConfigUiState] = useState<PollConfigUiState>("loading");
   const [pollConfigMessage, setPollConfigMessage] = useState("");
 
-  const charactersLeft = useMemo(() => MAX_CHARS - message.length, [message.length]);
   const isTextMode = mode === "text";
   const pollPrompt = activePoll?.question ?? LIVE_POLL_PROMPT;
   const pollOptions = useMemo(
@@ -187,12 +184,10 @@ export function FeedbackForm() {
           <Textarea
             id="feedback"
             value={message}
-            onChange={(event) => setMessage(event.target.value.slice(0, MAX_CHARS))}
-            maxLength={MAX_CHARS}
+            onChange={(event) => setMessage(event.target.value)}
             placeholder="Örn: Panelde dijital diş hekimliğinde etik sınırlar konuşulabilir mi?"
             required
           />
-          <p className="text-xs font-medium text-slate-500">{charactersLeft} karakter kaldı</p>
         </>
       ) : (
         <fieldset className="space-y-3">
