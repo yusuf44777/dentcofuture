@@ -6,23 +6,15 @@ export const dynamic = "force-dynamic";
 
 function getSafeErrorMessage(error: unknown) {
   if (process.env.NODE_ENV === "production") {
-    return "Profil servisi hatasi.";
+    return "Networking onerileri alinamadi.";
   }
 
-  return error instanceof Error ? error.message : "Profil servisi hatasi.";
+  return error instanceof Error ? error.message : "Networking onerileri alinamadi.";
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    let body: Record<string, unknown> = {};
-
-    try {
-      body = (await request.json()) as Record<string, unknown>;
-    } catch {
-      body = {};
-    }
-
-    const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
+    const profileId = request.nextUrl.searchParams.get("profileId")?.trim() ?? "";
     if (!isValidUuid(profileId)) {
       return NextResponse.json({ error: "Gecersiz profil kimligi." }, { status: 400 });
     }

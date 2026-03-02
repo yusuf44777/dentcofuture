@@ -109,9 +109,22 @@ export interface Database {
         Row: {
           id: string;
           full_name: string;
+          headline: string | null;
           interest_area: string;
           goal: string;
+          profession: string | null;
+          city: string | null;
+          institution_name: string | null;
+          years_experience: number | null;
+          bio: string | null;
+          topics: Json;
+          collaboration_goals: Json;
+          languages: Json;
+          availability: string | null;
           contact_info: string | null;
+          is_visible: boolean;
+          profile_completion_score: number;
+          last_active_at: string;
           is_matched: boolean;
           matched_with_id: string | null;
           created_at: string;
@@ -119,9 +132,22 @@ export interface Database {
         Insert: {
           id?: string;
           full_name: string;
+          headline?: string | null;
           interest_area: string;
           goal: string;
+          profession?: string | null;
+          city?: string | null;
+          institution_name?: string | null;
+          years_experience?: number | null;
+          bio?: string | null;
+          topics?: Json;
+          collaboration_goals?: Json;
+          languages?: Json;
+          availability?: string | null;
           contact_info?: string | null;
+          is_visible?: boolean;
+          profile_completion_score?: number;
+          last_active_at?: string;
           is_matched?: boolean;
           matched_with_id?: string | null;
           created_at?: string;
@@ -129,9 +155,22 @@ export interface Database {
         Update: {
           id?: string;
           full_name?: string;
+          headline?: string | null;
           interest_area?: string;
           goal?: string;
+          profession?: string | null;
+          city?: string | null;
+          institution_name?: string | null;
+          years_experience?: number | null;
+          bio?: string | null;
+          topics?: Json;
+          collaboration_goals?: Json;
+          languages?: Json;
+          availability?: string | null;
           contact_info?: string | null;
+          is_visible?: boolean;
+          profile_completion_score?: number;
+          last_active_at?: string;
           is_matched?: boolean;
           matched_with_id?: string | null;
           created_at?: string;

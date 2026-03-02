@@ -1,0 +1,33 @@
+import type { ExpoConfig } from "expo/config";
+
+const config: ExpoConfig = {
+  name: "DentLinkCo",
+  slug: "dentlinkco",
+  scheme: "dentlinkco",
+  version: "1.0.0",
+  orientation: "portrait",
+  userInterfaceStyle: "light",
+  newArchEnabled: true,
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: "com.communitive.dentlinkco"
+  },
+  android: {
+    package: "com.communitive.dentlinkco"
+  },
+  experiments: {
+    typedRoutes: true
+  },
+  plugins: [
+    "expo-router",
+    "expo-secure-store"
+  ],
+  extra: {
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
+    eas: {
+      projectId: "03066288-4ace-49af-abd9-b6b82b1e7041"
+    }
+  }
+};
+
+export default config;

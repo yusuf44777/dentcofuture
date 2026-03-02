@@ -47,6 +47,45 @@ create table if not exists public.networking_profiles (
 create index if not exists networking_profiles_match_lookup_idx
   on public.networking_profiles (interest_area, is_matched, created_at);
 
+alter table public.networking_profiles
+  add column if not exists headline text,
+  add column if not exists profession text,
+  add column if not exists city text,
+  add column if not exists institution_name text,
+  add column if not exists years_experience integer,
+  add column if not exists bio text,
+  add column if not exists topics jsonb not null default '[]'::jsonb,
+  add column if not exists collaboration_goals jsonb not null default '[]'::jsonb,
+  add column if not exists languages jsonb not null default '[]'::jsonb,
+  add column if not exists availability text,
+  add column if not exists is_visible boolean not null default true,
+  add column if not exists profile_completion_score integer not null default 0,
+  add column if not exists last_active_at timestamptz not null default now();
+
+update public.networking_profiles
+set
+  topics = coalesce(topics, '[]'::jsonb),
+  collaboration_goals = coalesce(collaboration_goals, '[]'::jsonb),
+  languages = coalesce(languages, '[]'::jsonb),
+  is_visible = coalesce(is_visible, true),
+  profile_completion_score = coalesce(profile_completion_score, 0),
+  last_active_at = coalesce(last_active_at, created_at, now());
+
+create index if not exists networking_profiles_visibility_activity_idx
+  on public.networking_profiles (is_visible, last_active_at desc);
+
+create index if not exists networking_profiles_city_idx
+  on public.networking_profiles (city);
+
+create index if not exists networking_profiles_topics_gin_idx
+  on public.networking_profiles using gin (topics);
+
+create index if not exists networking_profiles_collaboration_goals_gin_idx
+  on public.networking_profiles using gin (collaboration_goals);
+
+create index if not exists networking_profiles_languages_gin_idx
+  on public.networking_profiles using gin (languages);
+
 create table if not exists public.raffle_participants (
   id uuid primary key default gen_random_uuid(),
   full_name text not null check (char_length(full_name) <= 120),

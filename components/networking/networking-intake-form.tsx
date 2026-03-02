@@ -17,24 +17,11 @@ import { AppPageSwitcher } from "@/components/navigation/app-page-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildContactInfo, parseContactInfo } from "@/lib/networking-contact";
-
-const INTEREST_OPTIONS = [
-  "Ortodonti",
-  "Periodontoloji",
-  "Endodonti",
-  "Pedodonti (Çocuk Diş Hekimliği)",
-  "Ağız, Diş ve Çene Cerrahisi",
-  "Protetik Diş Tedavisi",
-  "Restoratif Diş Tedavisi",
-  "Oral Diagnoz ve Radyoloji"
-] as const;
-
-const FUTURE_PATH_OPTIONS = [
-  "DUS",
-  "Kamu",
-  "Klinik"
-] as const;
+import {
+  NETWORKING_FUTURE_PATH_OPTIONS,
+  NETWORKING_INTEREST_OPTIONS
+} from "@/lib/networking/contracts";
+import { parseContactInfo } from "@/lib/networking-contact";
 
 type SubmitState = "idle" | "loading" | "error";
 const NETWORKING_PROFILE_STORAGE_KEY = "dentco_networking_profile_id";
@@ -176,28 +163,32 @@ export function NetworkingIntakeForm() {
 
         targetProfileId = updatePayload?.id ?? savedProfileId;
       } else {
-        const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase
-          .from("networking_profiles")
-          .insert({
-            full_name: fullName.trim(),
-            interest_area: interestArea,
+        const createResponse = await fetch("/api/networking/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName: fullName.trim(),
+            interestArea,
             goal: futurePath,
-            contact_info: buildContactInfo(instagram, linkedin)
+            instagram,
+            linkedin
           })
-          .select("id")
-          .single();
+        });
 
-        if (error) {
-          throw new Error(error.message);
+        const createPayload = (await createResponse.json().catch(() => null)) as
+          | UpdateProfileApiResponse
+          | null;
+
+        if (!createResponse.ok) {
+          throw new Error(createPayload?.error ?? "Profil oluşturulamadı.");
         }
 
-        if (!data?.id) {
+        if (!createPayload?.id) {
           throw new Error("Profil kimliği oluşturulamadı.");
         }
 
-        targetProfileId = data.id;
-        setSavedProfileId(data.id);
+        targetProfileId = createPayload.id;
+        setSavedProfileId(createPayload.id);
       }
 
       localStorage.setItem(NETWORKING_PROFILE_STORAGE_KEY, targetProfileId);
@@ -285,7 +276,7 @@ export function NetworkingIntakeForm() {
                   className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   <option value="">Alan seçin</option>
-                  {INTEREST_OPTIONS.map((option) => (
+                    {NETWORKING_INTEREST_OPTIONS.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -306,7 +297,7 @@ export function NetworkingIntakeForm() {
                   className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   <option value="">Bir yol seçin</option>
-                  {FUTURE_PATH_OPTIONS.map((option) => (
+                    {NETWORKING_FUTURE_PATH_OPTIONS.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>

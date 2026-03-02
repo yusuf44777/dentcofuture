@@ -5,6 +5,7 @@ COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Ne
 ## Stack
 
 - Next.js 15 (App Router, TypeScript)
+- Expo SDK 53 tabanlı React Native istemci (`/mobile`)
 - Tailwind CSS + Shadcn-style UI primitives
 - Supabase (PostgreSQL + Realtime)
 - OpenAI (`gpt-5-mini-2025-08-07`) for batch analytics
@@ -22,6 +23,8 @@ COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Ne
 - `/konusmacipanel/login` konuşmacı panel giriş ekranı
 - `/cekilispanel` özel çekiliş yönetim ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
+- `/api/networking/profile` networking profili oluşturma/okuma/güncelleme endpoint'i
+- `/api/networking/discovery` mobil discovery akışı endpoint'i
 - `/api/dashboard-auth` dashboard oturum endpoint'i
 - `/api/live-poll` canlı anket yayınlama/okuma endpoint'i
 - `/api/raffle/overview` çekiliş özet endpoint'i
@@ -52,9 +55,22 @@ Oluşan tablolar:
 - `networking_profiles`
   - `id` uuid (PK)
   - `full_name` text
+  - `headline` text
   - `interest_area` text
   - `goal` text
+  - `profession` text
+  - `city` text
+  - `institution_name` text
+  - `years_experience` int
+  - `bio` text
+  - `topics` jsonb
+  - `collaboration_goals` jsonb
+  - `languages` jsonb
+  - `availability` text
   - `contact_info` text
+  - `is_visible` boolean
+  - `profile_completion_score` int
+  - `last_active_at` timestamptz
   - `is_matched` boolean
   - `matched_with_id` uuid
   - `created_at` timestamptz
@@ -119,6 +135,21 @@ Gerekli:
 npm install
 npm run dev
 ```
+
+Mobil istemci:
+
+```bash
+cd mobile
+cp .env.example .env
+npm install
+npx expo install --fix
+npm run start
+```
+
+`EXPO_PUBLIC_API_URL`, çalışan Next.js sunucusuna işaret etmeli:
+
+- Simülatör: `http://127.0.0.1:3000`
+- Fiziksel cihaz: `http://<bilgisayarin-lan-ip-adresi>:3000`
 
 ## 4. AI Batch Analiz Akışı
 

@@ -1,97 +1,112 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildContactInfo } from "@/lib/networking-contact";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  createNetworkingProfile,
+  getNetworkingProfileById,
+  isValidUuid,
+  normalizeNetworkingProfileInput,
+  updateNetworkingProfile
+} from "@/lib/networking/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type UpdateProfileRequestBody = {
-  profileId?: unknown;
-  fullName?: unknown;
-  interestArea?: unknown;
-  goal?: unknown;
-  instagram?: unknown;
-  linkedin?: unknown;
-};
-
-function isValidUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function normalizeText(value: string) {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function getSafeErrorMessage(error: unknown) {
+function getSafeErrorMessage(error: unknown, fallback: string) {
   if (process.env.NODE_ENV === "production") {
-    return "Profil güncellenemedi.";
+    return fallback;
   }
-  return error instanceof Error ? error.message : "Profil güncellenemedi.";
+
+  return error instanceof Error ? error.message : fallback;
 }
 
-export async function PUT(request: NextRequest) {
-  let body: UpdateProfileRequestBody = {};
-
+async function parseRequestBody(request: NextRequest) {
   try {
-    body = (await request.json()) as UpdateProfileRequestBody;
+    return (await request.json()) as Record<string, unknown>;
   } catch {
-    body = {};
+    return {};
   }
+}
 
-  const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
-  const fullName = typeof body.fullName === "string" ? normalizeText(body.fullName) : "";
-  const interestArea = typeof body.interestArea === "string" ? normalizeText(body.interestArea) : "";
-  const goal = typeof body.goal === "string" ? normalizeText(body.goal) : "";
-  const instagram = typeof body.instagram === "string" ? body.instagram : "";
-  const linkedin = typeof body.linkedin === "string" ? body.linkedin : "";
-
-  if (!isValidUuid(profileId)) {
-    return NextResponse.json({ error: "Geçersiz profil kimliği." }, { status: 400 });
-  }
-
-  if (fullName.length < 2 || fullName.length > 120) {
-    return NextResponse.json({ error: "Ad soyad alanı geçersiz." }, { status: 400 });
-  }
-
-  if (!interestArea || interestArea.length > 120) {
-    return NextResponse.json({ error: "İlgi alanı alanı geçersiz." }, { status: 400 });
-  }
-
-  if (!goal || goal.length > 120) {
-    return NextResponse.json({ error: "Kariyer yönü alanı geçersiz." }, { status: 400 });
-  }
-
+export async function GET(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdminClient();
-
-    const { data, error } = await supabase
-      .from("networking_profiles")
-      .update({
-        full_name: fullName,
-        interest_area: interestArea,
-        goal,
-        contact_info: buildContactInfo(instagram, linkedin)
-      })
-      .eq("id", profileId)
-      .select("id")
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(error.message);
+    const profileId = request.nextUrl.searchParams.get("id")?.trim() ?? "";
+    if (!isValidUuid(profileId)) {
+      return NextResponse.json({ error: "Gecersiz profil kimligi." }, { status: 400 });
     }
 
-    if (!data?.id) {
-      return NextResponse.json({ error: "Güncellenecek profil bulunamadı." }, { status: 404 });
+    const profile = await getNetworkingProfileById(profileId);
+    if (!profile) {
+      return NextResponse.json({ error: "Profil bulunamadi." }, { status: 404 });
     }
 
     return NextResponse.json({
       ok: true,
-      id: data.id
+      id: profile.id,
+      profile
     });
   } catch (error) {
     return NextResponse.json(
       {
-        error: getSafeErrorMessage(error)
+        error: getSafeErrorMessage(error, "Profil okunamadi.")
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const body = await parseRequestBody(request);
+  const { input, errors } = normalizeNetworkingProfileInput(body);
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors[0] }, { status: 400 });
+  }
+
+  try {
+    const profile = await createNetworkingProfile(input);
+
+    return NextResponse.json({
+      ok: true,
+      id: profile.id,
+      profile
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: getSafeErrorMessage(error, "Profil olusturulamadi.")
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const body = await parseRequestBody(request);
+  const profileId = typeof body.profileId === "string" ? body.profileId.trim() : "";
+
+  if (!isValidUuid(profileId)) {
+    return NextResponse.json({ error: "Gecersiz profil kimligi." }, { status: 400 });
+  }
+
+  const { input, errors } = normalizeNetworkingProfileInput(body);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors[0] }, { status: 400 });
+  }
+
+  try {
+    const profile = await updateNetworkingProfile(profileId, input);
+    if (!profile) {
+      return NextResponse.json({ error: "Guncellenecek profil bulunamadi." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      id: profile.id,
+      profile
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: getSafeErrorMessage(error, "Profil guncellenemedi.")
       },
       { status: 500 }
     );

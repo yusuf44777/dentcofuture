@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+**/node_modules
 
 # next.js
 /.next/
@@ -12,6 +13,8 @@
 # misc
 .DS_Store
 *.pem
+mobile/.expo
+mobile/dist
 
 # debug
 npm-debug.log*
