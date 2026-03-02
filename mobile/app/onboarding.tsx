@@ -25,14 +25,14 @@ export default function OnboardingScreen() {
 
   return (
     <ScreenShell
-      title="Diş hekimleri için mobil networking"
-      subtitle="Profilini kur, klinik hedeflerini belirt ve kahve molasında kimi görmen gerektiğini anında bul."
+      title="DentLinkCo profilini kur"
+      subtitle="Diş hekimleri icin tasarlanmis profesyonel tanisma urunune giris yap. Uyumlu profilleri kart kart kesfet."
     >
       <ProfileEditor
         busy={createMutation.isPending}
         errorMessage={createMutation.error instanceof Error ? createMutation.error.message : undefined}
-        helperText="En az ad soyad, uzmanlık ve kariyer yönü yeterli; diğer alanlar eşleşme puanını yükseltir."
-        submitLabel="Profili Oluştur"
+        helperText="Temel alanlari doldur; detaylar arttikca kartlarin daha iyi profillere gider."
+        submitLabel="Profili Ac"
         onSubmit={(values) => {
           createMutation.mutate(values);
         }}

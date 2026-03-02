@@ -1,10 +1,10 @@
-# DentCo Future Mobile
+# DentLinkCo Mobile
 
-Expo Router tabanli mobil networking istemcisi.
+Dis hekimleri icin kart tabanli tanisma ve eslesme urunu.
 
 ## Stack
 
-- Expo SDK 53
+- Expo SDK 54
 - Expo Router
 - TanStack Query
 - Zustand + SecureStore
@@ -32,7 +32,8 @@ Ornekler:
 
 - `app/index.tsx`: cihazdaki profil kimligini hydrate eder ve yonlendirir
 - `app/onboarding.tsx`: yeni dis hekimi profili olusturur
-- `app/discovery.tsx`: guclu eslesmeler + diger profiller
+- `app/discovery.tsx`: dating-app tarzinda kart beslemesi
+- `app/matches.tsx`: karsilikli ilgi olusan profiller
 - `app/profile.tsx`: mevcut profili gunceller
 
 ## Sunucu Baglantisi
@@ -42,7 +43,9 @@ Mobil istemci asagidaki Next API endpointlerini kullanir:
 - `POST /api/networking/profile`
 - `PUT /api/networking/profile`
 - `GET /api/networking/profile?id=<uuid>`
-- `GET /api/networking/discovery?profileId=<uuid>`
+- `GET /api/networking/feed?profileId=<uuid>`
+- `POST /api/networking/interactions`
+- `GET /api/networking/matches?profileId=<uuid>`
 
 ## EAS
 
@@ -72,5 +75,6 @@ npm run build:android:preview
 ## Notlar
 
 - Profil kimligi cihazda `expo-secure-store` ile tutulur.
-- Discovery ekrani 15 saniyede bir yenilenir ve pull-to-refresh destekler.
-- Paylasilan networking sozlesmeleri repo kokundeki `lib/networking/contracts.ts` dosyasindan okunur.
+- Discovery kartlari like/pass aksiyonlariyla ilerler.
+- Karsilikli ilgi olusunca profil eslesmeler ekranina duser ve iletisim butonlari acilir.
+- Mobil veri sozlesmeleri `mobile/src/lib/contracts.ts` icinde tutulur.

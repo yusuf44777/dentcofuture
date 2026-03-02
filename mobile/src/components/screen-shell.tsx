@@ -43,7 +43,7 @@ export function ScreenShell({
           <View style={styles.heroCard}>
             <View style={styles.heroHeader}>
               <View style={styles.heroTextBlock}>
-                <Text style={styles.kicker}>DENTCO FUTURE NETWORKING</Text>
+                <Text style={styles.kicker}>DENTLINKCO</Text>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle}>{subtitle}</Text>
               </View>

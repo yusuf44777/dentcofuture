@@ -1,12 +1,16 @@
 import {
   NETWORKING_AVAILABILITY_OPTIONS,
   NETWORKING_COLLABORATION_GOAL_OPTIONS,
+  type NetworkingFeedResponse,
   NETWORKING_FUTURE_PATH_OPTIONS,
   NETWORKING_INTEREST_OPTIONS,
+  type NetworkingInteractionAction,
+  type NetworkingInteractionResponse,
   NETWORKING_LANGUAGE_OPTIONS,
   NETWORKING_MAX_GOAL_COUNT,
   NETWORKING_MAX_LANGUAGE_COUNT,
   NETWORKING_MAX_TOPIC_COUNT,
+  type NetworkingMatchesResponse,
   NETWORKING_PROFESSION_OPTIONS,
   NETWORKING_TOPIC_OPTIONS,
   type NetworkingDiscoveryResponse,
@@ -180,6 +184,29 @@ export async function updateNetworkingProfile(profileId: string, values: Profile
 
 export async function fetchNetworkingDiscovery(profileId: string) {
   return apiRequest<NetworkingDiscoveryResponse>(`/api/networking/discovery?profileId=${profileId}`);
+}
+
+export async function fetchNetworkingFeed(profileId: string) {
+  return apiRequest<NetworkingFeedResponse>(`/api/networking/feed?profileId=${profileId}`);
+}
+
+export async function sendNetworkingInteraction(
+  actorProfileId: string,
+  targetProfileId: string,
+  action: NetworkingInteractionAction
+) {
+  return apiRequest<NetworkingInteractionResponse>("/api/networking/interactions", {
+    method: "POST",
+    body: JSON.stringify({
+      actorProfileId,
+      targetProfileId,
+      action
+    })
+  });
+}
+
+export async function fetchNetworkingMatches(profileId: string) {
+  return apiRequest<NetworkingMatchesResponse>(`/api/networking/matches?profileId=${profileId}`);
 }
 
 export const networkingFilterOptions = {

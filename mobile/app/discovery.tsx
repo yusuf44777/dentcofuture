@@ -1,24 +1,60 @@
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import { Edit3, RefreshCw } from "lucide-react-native";
-import { MatchCard } from "../src/components/match-card";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Edit3, Heart, RefreshCw, Users, X } from "lucide-react-native";
+import { DiscoveryProfileCard } from "../src/components/discovery-profile-card";
 import { ScreenShell } from "../src/components/screen-shell";
-import { fetchNetworkingDiscovery, getProfileContact } from "../src/lib/networking";
+import {
+  fetchNetworkingFeed,
+  sendNetworkingInteraction
+} from "../src/lib/networking";
+import type { NetworkingMatchRecord } from "../src/lib/contracts";
 import { useNetworkingSessionStore } from "../src/store/networking-session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function DiscoveryScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const hydrated = useNetworkingSessionStore((state) => state.hydrated);
   const profileId = useNetworkingSessionStore((state) => state.profileId);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [latestMatch, setLatestMatch] = useState<NetworkingMatchRecord | null>(null);
 
-  const discoveryQuery = useQuery({
-    queryKey: ["networking-discovery", profileId],
-    queryFn: () => fetchNetworkingDiscovery(profileId as string),
+  const feedQuery = useQuery({
+    queryKey: ["networking-feed", profileId],
+    queryFn: () => fetchNetworkingFeed(profileId as string),
     enabled: Boolean(profileId),
-    refetchInterval: 15_000,
+    refetchInterval: 20_000,
     refetchOnReconnect: true
+  });
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [feedQuery.data?.refreshedAt]);
+
+  const interactionMutation = useMutation({
+    mutationFn: ({
+      targetProfileId,
+      action
+    }: {
+      targetProfileId: string;
+      action: "like" | "pass";
+    }) => sendNetworkingInteraction(profileId as string, targetProfileId, action),
+    onSuccess: async (response) => {
+      if (response.matched && response.match) {
+        setLatestMatch(response.match);
+      }
+
+      setActiveIndex((currentIndex) => currentIndex + 1);
+      await queryClient.invalidateQueries({
+        queryKey: ["networking-feed", profileId]
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["networking-matches", profileId]
+      });
+    }
   });
 
   if (!hydrated) {
@@ -29,117 +65,146 @@ export default function DiscoveryScreen() {
     return <Redirect href="/onboarding" />;
   }
 
-  const currentProfile = discoveryQuery.data?.currentProfile ?? null;
-  const contact = currentProfile ? getProfileContact(currentProfile) : null;
-  const contactSummary = [contact?.instagram.label, contact?.linkedin.label]
-    .filter((value): value is string => Boolean(value))
-    .join(" • ");
+  const queue = feedQuery.data?.queue ?? [];
+  const activeProfile = queue[activeIndex] ?? null;
+  const remainingCount = Math.max(queue.length - activeIndex - 1, 0);
 
   return (
     <ScreenShell
-      title="Akıllı discovery akışı"
-      subtitle="Benzer uzmanlıklar, ortak hedefler ve yakın aktiviteye göre sıralanan networking havuzu."
+      title="Klinik kimyasını keşfet"
+      subtitle="Dating app akışı gibi ilerle; profesyonel uyum gördüğün diş hekimlerine ilgini gönder."
       rightAction={
-        <Pressable
-          onPress={() => {
-            router.push("/profile");
-          }}
-          style={({ pressed }) => [styles.actionButton, pressed ? styles.actionButtonPressed : null]}
-        >
-          <Edit3 color={colors.ink} size={17} />
-          <Text style={styles.actionButtonText}>Profil</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => {
+              router.push("/matches");
+            }}
+            style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
+          >
+            <Users color={colors.ink} size={16} />
+            <Text style={styles.headerButtonText}>Eslesmeler</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              router.push("/profile");
+            }}
+            style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
+          >
+            <Edit3 color={colors.ink} size={16} />
+            <Text style={styles.headerButtonText}>Profil</Text>
+          </Pressable>
+        </View>
       }
       scrollProps={{
         refreshControl: (
           <RefreshControl
-            refreshing={discoveryQuery.isRefetching}
+            refreshing={feedQuery.isRefetching}
             tintColor={colors.accent}
             onRefresh={() => {
-              void discoveryQuery.refetch();
+              void feedQuery.refetch();
             }}
           />
         )
       }}
     >
-      <View style={styles.bannerCard}>
-        <View style={styles.bannerMetric}>
-          <Text style={styles.bannerValue}>
-            {discoveryQuery.data?.recommendedProfiles.length ?? 0}
-          </Text>
-          <Text style={styles.bannerLabel}>Güçlü eşleşme</Text>
-        </View>
-        <View style={styles.bannerMetric}>
-          <Text style={styles.bannerValue}>{discoveryQuery.data?.otherProfiles.length ?? 0}</Text>
-          <Text style={styles.bannerLabel}>Ek profil</Text>
-        </View>
-        <Pressable
-          onPress={() => {
-            void discoveryQuery.refetch();
-          }}
-          style={({ pressed }) => [styles.refreshButton, pressed ? styles.actionButtonPressed : null]}
-        >
-          <RefreshCw color={colors.accent} size={16} />
-          <Text style={styles.refreshButtonText}>Yenile</Text>
-        </Pressable>
+      <View style={styles.metricsCard}>
+        <Metric
+          label="Sıradaki kart"
+          value={activeProfile ? String(activeIndex + 1) : "0"}
+        />
+        <Metric label="Kalan aday" value={String(remainingCount)} />
+        <Metric label="Karsilikli eslesme" value={String(feedQuery.data?.mutualMatchesCount ?? 0)} />
       </View>
 
-      {currentProfile ? (
-        <View style={styles.currentCard}>
-          <Text style={styles.currentKicker}>SENIN KARTIN</Text>
-          <Text style={styles.currentName}>{currentProfile.full_name}</Text>
-          {currentProfile.headline ? <Text style={styles.currentHeadline}>{currentProfile.headline}</Text> : null}
-          <Text style={styles.currentMeta}>
-            {currentProfile.interest_area} • {currentProfile.goal}
+      {latestMatch ? (
+        <View style={styles.matchBanner}>
+          <Text style={styles.matchBannerTitle}>Karsilikli ilgi olustu</Text>
+          <Text style={styles.matchBannerText}>
+            {latestMatch.profile.full_name} artik eslesmeler ekraninda. Iletisim butonlari acildi.
           </Text>
-          <Text style={styles.currentStatus}>
-            Profil puani %{currentProfile.profile_completion_score} • {currentProfile.is_visible ? "gorunur" : "gizli"}
-          </Text>
-          {contactSummary ? <Text style={styles.currentContact}>{contactSummary}</Text> : null}
+          <Pressable
+            onPress={() => {
+              setLatestMatch(null);
+              router.push("/matches");
+            }}
+            style={({ pressed }) => [styles.matchBannerButton, pressed ? styles.headerButtonPressed : null]}
+          >
+            <Text style={styles.matchBannerButtonText}>Eslesmelere Git</Text>
+          </Pressable>
         </View>
       ) : null}
 
-      {discoveryQuery.isLoading && !discoveryQuery.data ? (
+      {feedQuery.isLoading && !feedQuery.data ? (
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loaderTitle}>Eşleşmeler hazırlanıyor</Text>
-          <Text style={styles.loaderText}>Uzmanlık, hedef ve aktivite sinyalleri işleniyor.</Text>
-        </View>
-      ) : null}
-
-      {discoveryQuery.isError ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorTitle}>Discovery yüklenemedi</Text>
-          <Text style={styles.errorText}>
-            {discoveryQuery.error instanceof Error
-              ? discoveryQuery.error.message
-              : "Networking listesi su anda getirilemiyor."}
+          <Text style={styles.loaderTitle}>Kartlar hazirlaniyor</Text>
+          <Text style={styles.loaderText}>
+            Uzmanlik, ilgi ve profesyonel hedefler taraniyor.
           </Text>
         </View>
       ) : null}
 
-      {discoveryQuery.data ? (
+      {feedQuery.isError ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>Besleme yuklenemedi</Text>
+          <Text style={styles.errorText}>
+            {feedQuery.error instanceof Error ? feedQuery.error.message : "Kart akisi alinamiyor."}
+          </Text>
+        </View>
+      ) : null}
+
+      {feedQuery.data ? (
         <>
           <View style={styles.infoCard}>
-            <Text style={styles.infoText}>{discoveryQuery.data.message}</Text>
+            <Text style={styles.infoText}>{feedQuery.data.message}</Text>
           </View>
 
-          <Text style={styles.sectionTitle}>Sana en uygun isimler</Text>
-          {discoveryQuery.data.recommendedProfiles.length > 0 ? (
-            discoveryQuery.data.recommendedProfiles.map((profile) => (
-              <MatchCard key={profile.id} profile={profile} accent="teal" />
-            ))
+          {activeProfile ? (
+            <>
+              <DiscoveryProfileCard profile={activeProfile} />
+              <View style={styles.actionBar}>
+                <ActionButton
+                  variant="pass"
+                  label={interactionMutation.isPending ? "Bekle..." : "Pas Gec"}
+                  icon={<X color={colors.danger} size={20} />}
+                  disabled={interactionMutation.isPending}
+                  onPress={() => {
+                    interactionMutation.mutate({
+                      targetProfileId: activeProfile.id,
+                      action: "pass"
+                    });
+                  }}
+                />
+                <ActionButton
+                  variant="like"
+                  label={interactionMutation.isPending ? "Bekle..." : "Ilgini Gonder"}
+                  icon={<Heart color="#FFFFFF" size={20} fill="#FFFFFF" />}
+                  disabled={interactionMutation.isPending}
+                  onPress={() => {
+                    interactionMutation.mutate({
+                      targetProfileId: activeProfile.id,
+                      action: "like"
+                    });
+                  }}
+                />
+              </View>
+            </>
           ) : (
-            <EmptyState text="Henüz güçlü bir eşleşme oluşmadı. Profilini zenginleştirirsen skor tabanı genişler." />
-          )}
-
-          <Text style={styles.sectionTitle}>Diğer görünür profiller</Text>
-          {discoveryQuery.data.otherProfiles.length > 0 ? (
-            discoveryQuery.data.otherProfiles.map((profile) => (
-              <MatchCard key={profile.id} profile={profile} accent="sand" />
-            ))
-          ) : (
-            <EmptyState text="Şu anda öneri havuzu dışında listelenecek ek profil yok." />
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Yeni kart kalmadi</Text>
+              <Text style={styles.emptyText}>
+                Profilleri tukkettin. Biraz sonra yenile veya eslesmeler ekranina gec.
+              </Text>
+              <Pressable
+                onPress={() => {
+                  void feedQuery.refetch();
+                }}
+                style={({ pressed }) => [styles.emptyButton, pressed ? styles.headerButtonPressed : null]}
+              >
+                <RefreshCw color={colors.accent} size={16} />
+                <Text style={styles.emptyButtonText}>Kart Havuzunu Yenile</Text>
+              </Pressable>
+            </View>
           )}
         </>
       ) : null}
@@ -147,119 +212,122 @@ export default function DiscoveryScreen() {
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.emptyCard}>
-      <Text style={styles.emptyText}>{text}</Text>
+    <View style={styles.metricBlock}>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
 }
 
+type ActionButtonProps = {
+  label: string;
+  icon: ReactNode;
+  onPress: () => void;
+  disabled?: boolean;
+  variant: "like" | "pass";
+};
+
+function ActionButton({ label, icon, onPress, disabled = false, variant }: ActionButtonProps) {
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        variant === "like" ? styles.likeButton : styles.passButton,
+        disabled ? styles.actionButtonDisabled : null,
+        pressed && !disabled ? styles.headerButtonPressed : null
+      ]}
+    >
+      {icon}
+      <Text style={[styles.actionButtonText, variant === "pass" ? styles.passButtonText : null]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  actionButton: {
+  headerActions: {
+    gap: spacing.sm
+  },
+  headerButton: {
     alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: radii.pill,
     flexDirection: "row",
+    marginBottom: spacing.xs,
     paddingHorizontal: 12,
     paddingVertical: 10
   },
-  actionButtonPressed: {
+  headerButtonPressed: {
     opacity: 0.84
   },
-  actionButtonText: {
+  headerButtonText: {
     color: colors.ink,
     fontFamily: typography.body,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
-    marginLeft: 8
+    marginLeft: 6
   },
-  bannerCard: {
-    alignItems: "center",
-    backgroundColor: "rgba(255, 253, 248, 0.88)",
+  metricsCard: {
+    backgroundColor: "rgba(255,253,248,0.88)",
     borderRadius: radii.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.lg,
     padding: spacing.md
   },
-  bannerMetric: {
+  metricBlock: {
     flex: 1
   },
-  bannerValue: {
+  metricValue: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700"
   },
-  bannerLabel: {
+  metricLabel: {
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 12,
     fontWeight: "700",
     marginTop: 2
   },
-  refreshButton: {
-    alignItems: "center",
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingVertical: 10
-  },
-  refreshButtonText: {
-    color: colors.accent,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800",
-    marginLeft: 8
-  },
-  currentCard: {
+  matchBanner: {
     backgroundColor: "#102B2D",
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg
   },
-  currentKicker: {
-    color: "#8FE4D8",
-    fontFamily: typography.body,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs
-  },
-  currentName: {
+  matchBannerTitle: {
     color: "#FFFFFF",
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: "700"
   },
-  currentHeadline: {
+  matchBannerText: {
     color: "#D7ECE8",
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20,
-    marginTop: spacing.xs
+    marginTop: spacing.sm
   },
-  currentMeta: {
-    color: "#F7D5C0",
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: spacing.md
+  matchBannerButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12
   },
-  currentStatus: {
-    color: "#D7ECE8",
-    fontFamily: typography.body,
-    fontSize: 13,
-    marginTop: spacing.xs
-  },
-  currentContact: {
+  matchBannerButtonText: {
     color: "#FFFFFF",
     fontFamily: typography.body,
     fontSize: 13,
-    fontWeight: "700",
-    marginTop: spacing.md
+    fontWeight: "800"
   },
   loaderCard: {
     alignItems: "center",
@@ -271,7 +339,7 @@ const styles = StyleSheet.create({
   loaderTitle: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: "700",
     marginTop: spacing.md
   },
@@ -315,24 +383,76 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 18
   },
-  sectionTitle: {
-    color: colors.ink,
-    fontFamily: typography.display,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: spacing.md,
-    marginTop: spacing.sm
+  actionBar: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+    marginTop: spacing.lg
+  },
+  actionButton: {
+    alignItems: "center",
+    borderRadius: radii.lg,
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 18
+  },
+  likeButton: {
+    backgroundColor: colors.accent
+  },
+  passButton: {
+    backgroundColor: colors.surface,
+    borderColor: "#F3C4C4",
+    borderWidth: 1
+  },
+  actionButtonDisabled: {
+    opacity: 0.55
+  },
+  actionButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 15,
+    fontWeight: "800",
+    marginLeft: 8
+  },
+  passButtonText: {
+    color: colors.danger
   },
   emptyCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    marginBottom: spacing.lg,
-    padding: spacing.lg
+    marginBottom: spacing.xl,
+    padding: spacing.xl
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 22,
+    fontWeight: "700"
   },
   emptyText: {
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 14,
-    lineHeight: 20
+    lineHeight: 20,
+    marginTop: spacing.sm
+  },
+  emptyButton: {
+    alignItems: "center",
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    marginTop: spacing.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    alignSelf: "flex-start"
+  },
+  emptyButtonText: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "800",
+    marginLeft: 8
   }
 });

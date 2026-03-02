@@ -86,6 +86,23 @@ create index if not exists networking_profiles_collaboration_goals_gin_idx
 create index if not exists networking_profiles_languages_gin_idx
   on public.networking_profiles using gin (languages);
 
+create table if not exists public.networking_profile_actions (
+  id uuid primary key default gen_random_uuid(),
+  actor_profile_id uuid not null references public.networking_profiles(id) on delete cascade,
+  target_profile_id uuid not null references public.networking_profiles(id) on delete cascade,
+  action text not null check (action in ('like', 'pass')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (actor_profile_id, target_profile_id),
+  check (actor_profile_id <> target_profile_id)
+);
+
+create index if not exists networking_profile_actions_actor_action_idx
+  on public.networking_profile_actions (actor_profile_id, action, updated_at desc);
+
+create index if not exists networking_profile_actions_target_action_idx
+  on public.networking_profile_actions (target_profile_id, action, updated_at desc);
+
 create table if not exists public.raffle_participants (
   id uuid primary key default gen_random_uuid(),
   full_name text not null check (char_length(full_name) <= 120),
@@ -166,6 +183,12 @@ execute function public.set_updated_at();
 drop trigger if exists set_live_poll_presets_updated_at on public.live_poll_presets;
 create trigger set_live_poll_presets_updated_at
 before update on public.live_poll_presets
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_networking_profile_actions_updated_at on public.networking_profile_actions;
+create trigger set_networking_profile_actions_updated_at
+before update on public.networking_profile_actions
 for each row
 execute function public.set_updated_at();
 
@@ -330,6 +353,7 @@ alter table public.congress_analytics replica identity full;
 alter table public.live_polls replica identity full;
 alter table public.live_poll_presets replica identity full;
 alter table public.networking_profiles replica identity full;
+alter table public.networking_profile_actions replica identity full;
 alter table public.raffle_participants replica identity full;
 alter table public.raffle_prizes replica identity full;
 alter table public.raffle_draws replica identity full;
@@ -340,6 +364,7 @@ alter table public.congress_analytics enable row level security;
 alter table public.live_polls enable row level security;
 alter table public.live_poll_presets enable row level security;
 alter table public.networking_profiles enable row level security;
+alter table public.networking_profile_actions enable row level security;
 alter table public.raffle_participants enable row level security;
 alter table public.raffle_prizes enable row level security;
 alter table public.raffle_draws enable row level security;
@@ -381,6 +406,9 @@ create policy "public_can_read_networking_profiles"
   to anon, authenticated
   using (true);
 
+drop policy if exists "public_can_read_networking_profile_actions" on public.networking_profile_actions;
+drop policy if exists "public_can_insert_networking_profile_actions" on public.networking_profile_actions;
+
 drop policy if exists "public_can_read_raffle_participants" on public.raffle_participants;
 drop policy if exists "public_can_insert_raffle_participants" on public.raffle_participants;
 drop policy if exists "public_can_read_raffle_prizes" on public.raffle_prizes;
@@ -394,6 +422,7 @@ grant usage on schema public to anon, authenticated;
 grant select, insert on public.attendee_feedbacks to anon, authenticated;
 grant select on public.congress_analytics to anon, authenticated;
 grant select, insert on public.networking_profiles to anon, authenticated;
+revoke all on public.networking_profile_actions from anon, authenticated;
 revoke all on public.live_polls from anon, authenticated;
 revoke all on public.live_poll_presets from anon, authenticated;
 revoke all on public.raffle_participants from anon, authenticated;
@@ -432,6 +461,16 @@ begin
       and tablename = 'networking_profiles'
   ) then
     alter publication supabase_realtime add table public.networking_profiles;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'networking_profile_actions'
+  ) then
+    alter publication supabase_realtime add table public.networking_profile_actions;
   end if;
 
   if not exists (

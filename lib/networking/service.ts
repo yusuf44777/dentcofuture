@@ -12,11 +12,16 @@ import {
   NETWORKING_MAX_TOPIC_COUNT,
   NETWORKING_PROFESSION_OPTIONS,
   NETWORKING_TOPIC_OPTIONS,
+  type NetworkingFeedResponse,
+  type NetworkingInteractionAction,
+  type NetworkingMatchRecord,
+  type NetworkingMatchesResponse,
   type NetworkingProfileInput,
   type NetworkingPublicProfile
 } from "@/lib/networking/contracts";
 
 type NetworkingProfileRow = Database["public"]["Tables"]["networking_profiles"]["Row"];
+type NetworkingProfileActionRow = Database["public"]["Tables"]["networking_profile_actions"]["Row"];
 type NetworkingProfileInsert = Database["public"]["Tables"]["networking_profiles"]["Insert"];
 type NetworkingProfileUpdate = Database["public"]["Tables"]["networking_profiles"]["Update"];
 
@@ -474,6 +479,98 @@ function buildDiscoveryMessage(recommendedCount: number, otherCount: number) {
   return `${otherCount} profil listelendi, ama su an cok guclu bir eslesme yok.`;
 }
 
+function buildFeedMessage(candidateCount: number, matchCount: number) {
+  if (candidateCount === 0 && matchCount === 0) {
+    return "Kart havuzu simdilik bos. Yeni profiller geldikce burada goreceksin.";
+  }
+
+  if (candidateCount === 0 && matchCount > 0) {
+    return `${matchCount} karsilikli eslesmen var. Yeni profiller geldiginde besleme tekrar dolar.`;
+  }
+
+  return `${candidateCount} yeni profil hazir. Karsilikli ilgi olursa eslesmeler sekmesine duser.`;
+}
+
+function buildMatchRecord(profile: NetworkingPublicProfile, matchedAt: string): NetworkingMatchRecord {
+  return {
+    profile,
+    matchedAt
+  };
+}
+
+async function getNetworkingActionsForActor(actorProfileId: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("networking_profile_actions")
+    .select("id, actor_profile_id, target_profile_id, action, created_at, updated_at")
+    .eq("actor_profile_id", actorProfileId);
+
+  if (error) {
+    throw new Error(`Profil aksiyonlari okunamadi: ${error.message}`);
+  }
+
+  return (data ?? []) as NetworkingProfileActionRow[];
+}
+
+async function getMutualMatchRecords(profileId: string, currentProfile: NetworkingPublicProfile) {
+  const supabase = createSupabaseAdminClient();
+
+  const { data, error } = await supabase
+    .from("networking_profile_actions")
+    .select("id, actor_profile_id, target_profile_id, action, created_at, updated_at")
+    .or(`actor_profile_id.eq.${profileId},target_profile_id.eq.${profileId}`)
+    .eq("action", "like");
+
+  if (error) {
+    throw new Error(`Eslesme aksiyonlari okunamadi: ${error.message}`);
+  }
+
+  const likeRows = (data ?? []) as NetworkingProfileActionRow[];
+  const sentLikes = likeRows.filter((row) => row.actor_profile_id === profileId);
+  const receivedLikes = likeRows.filter((row) => row.target_profile_id === profileId);
+  const sentLikeByTarget = new Map(sentLikes.map((row) => [row.target_profile_id, row]));
+  const matchedCounterparts = receivedLikes
+    .filter((row) => sentLikeByTarget.has(row.actor_profile_id))
+    .map((row) => {
+      const sentRow = sentLikeByTarget.get(row.actor_profile_id)!;
+      return {
+        counterpartId: row.actor_profile_id,
+        matchedAt:
+          new Date(sentRow.updated_at).getTime() > new Date(row.updated_at).getTime()
+            ? sentRow.updated_at
+            : row.updated_at
+      };
+    });
+
+  if (matchedCounterparts.length === 0) {
+    return [] as NetworkingMatchRecord[];
+  }
+
+  const counterpartIds = matchedCounterparts.map((item) => item.counterpartId);
+  const { data: profileData, error: profileError } = await supabase
+    .from("networking_profiles")
+    .select(NETWORKING_PUBLIC_PROFILE_COLUMNS)
+    .in("id", counterpartIds)
+    .eq("is_visible", true);
+
+  if (profileError) {
+    throw new Error(`Eslesen profiller okunamadi: ${profileError.message}`);
+  }
+
+  const counterpartProfiles = ((profileData ?? []) as NetworkingProfileRow[]).map(mapNetworkingProfileRow);
+  const counterpartById = new Map(
+    counterpartProfiles.map((profile) => [profile.id, scoreProfileMatch(currentProfile, profile)])
+  );
+
+  return matchedCounterparts
+    .map((item) => {
+      const profile = counterpartById.get(item.counterpartId);
+      return profile ? buildMatchRecord(profile, item.matchedAt) : null;
+    })
+    .filter((item): item is NetworkingMatchRecord => Boolean(item))
+    .sort((first, second) => new Date(second.matchedAt).getTime() - new Date(first.matchedAt).getTime());
+}
+
 export async function getNetworkingDiscovery(profileId: string) {
   const currentProfile = await getNetworkingProfileById(profileId, true);
 
@@ -517,6 +614,156 @@ export async function getNetworkingDiscovery(profileId: string) {
     similarProfiles: recommendedProfiles.slice(0, 8),
     otherProfiles: otherProfiles.slice(0, 24),
     message: buildDiscoveryMessage(recommendedProfiles.length, otherProfiles.length),
+    refreshedAt: new Date().toISOString()
+  };
+}
+
+export function isValidNetworkingInteractionAction(value: string): value is NetworkingInteractionAction {
+  return value === "like" || value === "pass";
+}
+
+export async function getNetworkingFeed(profileId: string): Promise<NetworkingFeedResponse | null> {
+  const currentProfile = await getNetworkingProfileById(profileId, true);
+
+  if (!currentProfile) {
+    return null;
+  }
+
+  const actorActions = await getNetworkingActionsForActor(profileId);
+  const actedTargetIds = actorActions.map((row) => row.target_profile_id);
+  const likesSentCount = actorActions.filter((row) => row.action === "like").length;
+  const matches = await getMutualMatchRecords(profileId, currentProfile);
+
+  const supabase = createSupabaseAdminClient();
+  let query = supabase
+    .from("networking_profiles")
+    .select(NETWORKING_PUBLIC_PROFILE_COLUMNS)
+    .neq("id", profileId)
+    .eq("is_visible", true)
+    .order("last_active_at", { ascending: false })
+    .limit(60);
+
+  if (actedTargetIds.length > 0) {
+    query = query.not(
+      "id",
+      "in",
+      `(${actedTargetIds.map((id) => `"${id}"`).join(",")})`
+    );
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Kart havuzu okunamadi: ${error.message}`);
+  }
+
+  const queue = ((data ?? []) as NetworkingProfileRow[])
+    .map(mapNetworkingProfileRow)
+    .map((candidate) => scoreProfileMatch(currentProfile, candidate))
+    .sort((first, second) => {
+      const scoreGap = (second.match_score ?? 0) - (first.match_score ?? 0);
+      if (scoreGap !== 0) {
+        return scoreGap;
+      }
+
+      return new Date(second.last_active_at).getTime() - new Date(first.last_active_at).getTime();
+    })
+    .slice(0, 24);
+
+  return {
+    status: queue.length > 0 ? "ready" : "empty",
+    currentProfile,
+    queue,
+    likesSentCount,
+    mutualMatchesCount: matches.length,
+    message: buildFeedMessage(queue.length, matches.length),
+    refreshedAt: new Date().toISOString()
+  };
+}
+
+export async function createNetworkingInteraction(input: {
+  actorProfileId: string;
+  targetProfileId: string;
+  action: NetworkingInteractionAction;
+}) {
+  const { actorProfileId, targetProfileId, action } = input;
+  const currentProfile = await getNetworkingProfileById(actorProfileId, true);
+
+  if (!currentProfile) {
+    throw new Error("Aksiyon sahibi profil bulunamadi.");
+  }
+
+  const targetProfile = await getNetworkingProfileById(targetProfileId);
+  if (!targetProfile || !targetProfile.is_visible) {
+    throw new Error("Etkilesime acik hedef profil bulunamadi.");
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("networking_profile_actions")
+    .upsert(
+      {
+        actor_profile_id: actorProfileId,
+        target_profile_id: targetProfileId,
+        action,
+        updated_at: new Date().toISOString()
+      },
+      {
+        onConflict: "actor_profile_id,target_profile_id"
+      }
+    );
+
+  if (error) {
+    throw new Error(`Profil aksiyonu kaydedilemedi: ${error.message}`);
+  }
+
+  let match: NetworkingMatchRecord | undefined;
+
+  if (action === "like") {
+    const { data: reverseLike, error: reverseLikeError } = await supabase
+      .from("networking_profile_actions")
+      .select("id, updated_at")
+      .eq("actor_profile_id", targetProfileId)
+      .eq("target_profile_id", actorProfileId)
+      .eq("action", "like")
+      .maybeSingle();
+
+    if (reverseLikeError) {
+      throw new Error(`Karsilikli ilgi kontrolu yapilamadi: ${reverseLikeError.message}`);
+    }
+
+    if (reverseLike?.id) {
+      match = buildMatchRecord(
+        scoreProfileMatch(currentProfile, targetProfile),
+        reverseLike.updated_at
+      );
+    }
+  }
+
+  return {
+    ok: true,
+    action,
+    actorProfileId,
+    targetProfileId,
+    matched: Boolean(match),
+    match
+  };
+}
+
+export async function getNetworkingMatches(profileId: string): Promise<NetworkingMatchesResponse | null> {
+  const currentProfile = await getNetworkingProfileById(profileId, true);
+
+  if (!currentProfile) {
+    return null;
+  }
+
+  const matches = await getMutualMatchRecords(profileId, currentProfile);
+
+  return {
+    ok: true,
+    currentProfile,
+    matches,
+    total: matches.length,
     refreshedAt: new Date().toISOString()
   };
 }

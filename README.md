@@ -1,11 +1,11 @@
-# Dent Co Future Canlı
+# DentLinkCo / Dent Co Future
 
-COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Next.js App Router + Supabase + OpenAI tabanlı gerçek zamanlı etkileşim uygulaması.
+COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart tabanli tanisma ve eslesme urunune evrilen Next.js + Expo + Supabase uygulamasi.
 
 ## Stack
 
 - Next.js 15 (App Router, TypeScript)
-- Expo SDK 53 tabanlı React Native istemci (`/mobile`)
+- Expo SDK 54 tabanlı React Native istemci (`/mobile`)
 - Tailwind CSS + Shadcn-style UI primitives
 - Supabase (PostgreSQL + Realtime)
 - OpenAI (`gpt-5-mini-2025-08-07`) for batch analytics
@@ -25,6 +25,9 @@ COMMUNITIVE DENTISTRY tarafından düzenlenen Dent Co Future etkinliği için Ne
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/networking/profile` networking profili oluşturma/okuma/güncelleme endpoint'i
 - `/api/networking/discovery` mobil discovery akışı endpoint'i
+- `/api/networking/feed` kart tabanli kesfet beslemesi
+- `/api/networking/interactions` `like/pass` aksiyonu endpoint'i
+- `/api/networking/matches` karsilikli eslesmeler endpoint'i
 - `/api/dashboard-auth` dashboard oturum endpoint'i
 - `/api/live-poll` canlı anket yayınlama/okuma endpoint'i
 - `/api/raffle/overview` çekiliş özet endpoint'i
@@ -79,6 +82,13 @@ Oluşan tablolar:
   - `question` text
   - `options` jsonb (2-6 seçenek)
   - `is_active` boolean
+  - `created_at` timestamptz
+  - `updated_at` timestamptz
+- `networking_profile_actions`
+  - `id` uuid (PK)
+  - `actor_profile_id` uuid
+  - `target_profile_id` uuid
+  - `action` text (`like` / `pass`)
   - `created_at` timestamptz
   - `updated_at` timestamptz
 - `raffle_participants`

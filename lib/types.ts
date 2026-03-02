@@ -177,6 +177,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      networking_profile_actions: {
+        Row: {
+          id: string;
+          actor_profile_id: string;
+          target_profile_id: string;
+          action: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_profile_id: string;
+          target_profile_id: string;
+          action: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          actor_profile_id?: string;
+          target_profile_id?: string;
+          action?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       raffle_participants: {
         Row: {
           id: string;
@@ -299,6 +326,8 @@ export type AnalyticsRow = Database["public"]["Tables"]["congress_analytics"]["R
 export type LivePollRow = Database["public"]["Tables"]["live_polls"]["Row"];
 export type LivePollPresetRow = Database["public"]["Tables"]["live_poll_presets"]["Row"];
 export type NetworkingProfileRow = Database["public"]["Tables"]["networking_profiles"]["Row"];
+export type NetworkingProfileActionRow =
+  Database["public"]["Tables"]["networking_profile_actions"]["Row"];
 export type RaffleParticipantRow = Database["public"]["Tables"]["raffle_participants"]["Row"];
 export type RafflePrizeRow = Database["public"]["Tables"]["raffle_prizes"]["Row"];
 export type RaffleDrawRow = Database["public"]["Tables"]["raffle_draws"]["Row"];

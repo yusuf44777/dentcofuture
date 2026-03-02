@@ -66,9 +66,9 @@ export function ProfileEditor({
       <View style={styles.overviewCard}>
         <View style={styles.overviewHeader}>
           <View style={styles.overviewTextBlock}>
-            <Text style={styles.overviewTitle}>Profil Gücü</Text>
+            <Text style={styles.overviewTitle}>Kart Gücü</Text>
             <Text style={styles.overviewSubtitle}>
-              Güçlü eşleşmeler için profesyonel detayları ve en az bir iletişim kanalını doldurun.
+              Profesyonel kimyanin dogru kisilere gitmesi icin detaylari doldur ve kartini guclendir.
             </Text>
           </View>
           <View style={styles.completenessBadge}>
@@ -79,9 +79,9 @@ export function ProfileEditor({
 
         <View style={styles.visibilityRow}>
           <View style={styles.visibilityTextBlock}>
-            <Text style={styles.visibilityTitle}>Profil görünürlüğü</Text>
+            <Text style={styles.visibilityTitle}>Discovery gorunurlugu</Text>
             <Text style={styles.visibilitySubtitle}>
-              Kapalı profiller discovery ekranında listelenmez.
+              Kapali kartlar kesfet akisinda baskalarina gosterilmez.
             </Text>
           </View>
           <Switch
@@ -98,7 +98,7 @@ export function ProfileEditor({
       <FormSection
         icon={<Stethoscope color={colors.accent} size={18} />}
         title="Temel Profil"
-        subtitle="Uzmanlık alanı, kariyer yönü ve profesyonel kimliğiniz."
+        subtitle="Kartin ilk izlenimini belirleyen profesyonel kimlik alanlari."
       >
         <Field
           label="Ad Soyad"
@@ -120,7 +120,7 @@ export function ProfileEditor({
 
         <SingleChoiceGroup
           label="Mesleki Rol"
-          helper="Profiliniz discovery kartlarında bu bağlamla görünür."
+          helper="Sana bakan kisiler kartini once bu baglamla gorur."
           options={networkingFilterOptions.professions}
           selectedValue={values.profession}
           onSelect={(nextValue) => {
@@ -150,7 +150,7 @@ export function ProfileEditor({
       <FormSection
         icon={<MapPinned color={colors.copper} size={18} />}
         title="Konum ve Kurum"
-        subtitle="Aynı şehirdeki veya aynı ekosistemdeki profilleri yukarı taşır."
+        subtitle="Ayni sehir ve benzer ekosistemlerdeki kisilerle yakalanma sansini artirir."
       >
         <Field
           label="Şehir"
@@ -187,7 +187,7 @@ export function ProfileEditor({
       <FormSection
         icon={<Users color={colors.accent} size={18} />}
         title="Networking Hedefleri"
-        subtitle="Sistem, ortak hedefleri eşleşme puanına dahil eder."
+        subtitle="Kimi neden tanimak istedigini sistemin anlamasini saglar."
       >
         <MultiChoiceGroup
           label="İşbirliği Hedefleri"
@@ -219,7 +219,7 @@ export function ProfileEditor({
       <FormSection
         icon={<NotebookTabs color={colors.copper} size={18} />}
         title="Uzmanlık Konuları"
-        subtitle="Benzer vaka, teknoloji ve eğitim odaklarını yakalamak için kullanılır."
+        subtitle="Vaka dili, teknoloji ilgisi ve ortak merak alanlari burada yakalanir."
       >
         <MultiChoiceGroup
           label="İlgi Başlıkları"
@@ -242,7 +242,7 @@ export function ProfileEditor({
       <FormSection
         icon={<Globe2 color={colors.accent} size={18} />}
         title="Dil ve Kısa Tanıtım"
-        subtitle="Kısa bio ve konuşulan diller discovery kartını güçlendirir."
+        subtitle="Bio tonu ve diller kartinin profesyonel cekimini belirler."
       >
         <MultiChoiceGroup
           label="Konuşulan Diller"
@@ -275,8 +275,8 @@ export function ProfileEditor({
 
       <FormSection
         icon={<BriefcaseBusiness color={colors.copper} size={18} />}
-        title="İletişim Kanalları"
-        subtitle="Kartınızda Instagram ve LinkedIn bağlantıları görünür."
+        title="Eslesme Sonrasi Kanallar"
+        subtitle="Iletisim butonlari ancak karsilikli ilgi olusunca acilir."
       >
         <Field
           label="Instagram"

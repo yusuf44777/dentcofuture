@@ -140,6 +140,13 @@ export type NetworkingProfileResponse = {
   profile: NetworkingPublicProfile;
 };
 
+export type NetworkingInteractionAction = "like" | "pass";
+
+export type NetworkingMatchRecord = {
+  profile: NetworkingPublicProfile;
+  matchedAt: string;
+};
+
 export type NetworkingDiscoveryResponse = {
   status: "found" | "waiting";
   currentProfile: NetworkingPublicProfile | null;
@@ -147,5 +154,32 @@ export type NetworkingDiscoveryResponse = {
   similarProfiles: NetworkingPublicProfile[];
   otherProfiles: NetworkingPublicProfile[];
   message: string;
+  refreshedAt: string;
+};
+
+export type NetworkingFeedResponse = {
+  status: "ready" | "empty";
+  currentProfile: NetworkingPublicProfile | null;
+  queue: NetworkingPublicProfile[];
+  likesSentCount: number;
+  mutualMatchesCount: number;
+  message: string;
+  refreshedAt: string;
+};
+
+export type NetworkingInteractionResponse = {
+  ok: boolean;
+  action: NetworkingInteractionAction;
+  actorProfileId: string;
+  targetProfileId: string;
+  matched: boolean;
+  match?: NetworkingMatchRecord;
+};
+
+export type NetworkingMatchesResponse = {
+  ok: boolean;
+  currentProfile: NetworkingPublicProfile | null;
+  matches: NetworkingMatchRecord[];
+  total: number;
   refreshedAt: string;
 };

@@ -42,8 +42,8 @@ export default function ProfileScreen() {
 
   return (
     <ScreenShell
-      title="Profili güncelle"
-      subtitle="Kartını canlı tut, görünürlüğünü yönet ve discovery puanını yükselt."
+      title="Profil vitrini"
+      subtitle="Kartinin tonu, gorunurlugu ve ilgi alanlari burada sekillenir."
       rightAction={
         <Pressable
           onPress={() => {
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
           initialValues={initialValues}
           busy={updateMutation.isPending}
           errorMessage={updateMutation.error instanceof Error ? updateMutation.error.message : undefined}
-          submitLabel="Değişiklikleri Kaydet"
+          submitLabel="Profili Guncelle"
           onSubmit={(values) => {
             updateMutation.mutate(values);
           }}
