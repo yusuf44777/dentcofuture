@@ -1,5 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
+const DEFAULT_API_BASE_URL = "https://dentcofuture.vercel.app";
+
 const config: ExpoConfig = {
   name: "DentLinkCo",
   slug: "dentlinkco",
@@ -23,7 +25,7 @@ const config: ExpoConfig = {
     "expo-secure-store"
   ],
   extra: {
-    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_BASE_URL,
     eas: {
       projectId: "03066288-4ace-49af-abd9-b6b82b1e7041"
     }

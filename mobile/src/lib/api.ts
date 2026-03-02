@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
 
+const DEFAULT_API_BASE_URL = "https://dentcofuture.vercel.app";
+
 function inferApiBaseUrlFromExpoHost() {
   const possibleHostValues = [
     Constants.expoConfig?.hostUri,
@@ -32,7 +34,7 @@ function getApiBaseUrl() {
       ? fromExpoConfig
       : typeof fromEnv === "string" && fromEnv.trim().length > 0
         ? fromEnv
-        : inferredFromExpoHost;
+        : inferredFromExpoHost || DEFAULT_API_BASE_URL;
 
   if (!rawBaseUrl || rawBaseUrl.trim().length === 0) {
     throw new Error(
