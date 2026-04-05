@@ -16,12 +16,12 @@ import {
 import { POINTS } from "@/lib/points";
 import type { AttendeeRole } from "@/lib/types";
 
-const ROLES: { value: AttendeeRole; label: string; icon: string; desc: string }[] = [
-  { value: "Student",       label: "Öğrenci",          icon: "🎓", desc: "Geleceği şekillendiren diş hekimliği öğrencisi" },
-  { value: "Clinician",     label: "Klinisyen",        icon: "🦷", desc: "Aktif çalışan diş hekimi veya uzman" },
-  { value: "Academic",      label: "Akademisyen",      icon: "🔬", desc: "Araştırmacı veya öğretim üyesi" },
-  { value: "Entrepreneur",  label: "Girişimci",        icon: "🚀", desc: "Kurucu veya startup geliştirici" },
-  { value: "Industry",      label: "Sektör Profesyoneli", icon: "🏭", desc: "Dental sektörde çalışan profesyonel" }
+const ROLES: { value: AttendeeRole; label: string; iconClass: string; desc: string }[] = [
+  { value: "Student",       label: "Öğrenci",            iconClass: "fa-solid fa-graduation-cap", desc: "Geleceği şekillendiren diş hekimliği öğrencisi" },
+  { value: "Clinician",     label: "Klinisyen",          iconClass: "fa-solid fa-tooth", desc: "Aktif çalışan diş hekimi veya uzman" },
+  { value: "Academic",      label: "Akademisyen",        iconClass: "fa-solid fa-flask", desc: "Araştırmacı veya öğretim üyesi" },
+  { value: "Entrepreneur",  label: "Girişimci",          iconClass: "fa-solid fa-rocket", desc: "Kurucu veya startup geliştirici" },
+  { value: "Industry",      label: "Sektör Profesyoneli", iconClass: "fa-solid fa-industry", desc: "Dental sektörde çalışan profesyonel" }
 ];
 
 const STEPS = ["Profil", "Rol", "Test", "Sonuç"] as const;
@@ -161,7 +161,9 @@ export default function JoinPage() {
                       ? "border-[#6C63FF] bg-[rgba(108,99,255,0.12)] shadow-[0_0_0_1px_rgba(108,99,255,0.4)]"
                       : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(108,99,255,0.3)]"
                   }`}>
-                  <span className="text-2xl">{r.icon}</span>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] text-base text-[#B8B4FF]">
+                    <i className={r.iconClass} aria-hidden="true" />
+                  </span>
                   <div>
                     <p className="text-sm font-semibold text-white">{r.label}</p>
                     <p className="text-xs text-[rgba(240,240,255,0.4)]">{r.desc}</p>

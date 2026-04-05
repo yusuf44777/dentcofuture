@@ -8,11 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getStoredAttendeeId } from "@/hooks/useAttendee";
 import { addPoints, POINTS } from "@/lib/points";
-import type { Question, Poll, Reaction, Attendee, AttendeeRole } from "@/lib/types";
+import type { Question, Poll, Reaction, Attendee, AttendeeRole, ReactionEmoji } from "@/lib/types";
 
 type Tab = "questions" | "polls" | "reactions" | "leaderboard";
 
-const EMOJI_LIST = ["🔥", "💡", "🤯", "👏", "❓"] as const;
+const REACTION_LIST: ReactionEmoji[] = ["🔥", "💡", "🤯", "👏", "❓"];
+const REACTION_ICON_MAP: Record<ReactionEmoji, { iconClass: string; label: string }> = {
+  "🔥": { iconClass: "fa-solid fa-fire", label: "Enerji" },
+  "💡": { iconClass: "fa-solid fa-lightbulb", label: "Fikir" },
+  "🤯": { iconClass: "fa-solid fa-brain", label: "Zihin Açıcı" },
+  "👏": { iconClass: "fa-solid fa-hands-clapping", label: "Alkış" },
+  "❓": { iconClass: "fa-solid fa-circle-question", label: "Soru" }
+};
 const ROLE_LABELS: Record<AttendeeRole, string> = {
   Student: "Öğrenci",
   Clinician: "Klinisyen",
@@ -21,8 +28,9 @@ const ROLE_LABELS: Record<AttendeeRole, string> = {
   Industry: "Sektör"
 };
 
-// ─── Floating emoji component ────────────────────────────────────────────────
-function FloatingEmoji({ emoji, id, x }: { emoji: string; id: number; x: number }) {
+// ─── Floating reaction component ─────────────────────────────────────────────
+function FloatingReaction({ reaction, id, x }: { reaction: ReactionEmoji; id: number; x: number }) {
+  const icon = REACTION_ICON_MAP[reaction];
   return (
     <motion.div
       key={id}
@@ -32,7 +40,7 @@ function FloatingEmoji({ emoji, id, x }: { emoji: string; id: number; x: number 
       className="pointer-events-none fixed bottom-24 z-[9999] text-3xl"
       style={{ left: x }}
     >
-      {emoji}
+      <i className={`${icon.iconClass} text-[#C9C6FF]`} aria-hidden="true" />
     </motion.div>
   );
 }
@@ -46,7 +54,7 @@ export default function LivePage() {
   const [upvoted, setUpvoted] = useState<Set<string>>(new Set());
   const [votedPoll, setVotedPoll] = useState<string | null>(null);
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
-  const [floaters, setFloaters] = useState<{ emoji: string; id: number; x: number }[]>([]);
+  const [floaters, setFloaters] = useState<{ reaction: ReactionEmoji; id: number; x: number }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [myUpvotes, setMyUpvotes] = useState(3); // 3 upvotes per session
   const floaterId = useRef(0);
@@ -189,14 +197,14 @@ export default function LivePage() {
   }
 
   // ── Send reaction ─────────────────────────────────────────────────────────────
-  const sendReaction = useCallback(async (emoji: string) => {
+  const sendReaction = useCallback(async (reaction: ReactionEmoji) => {
     if (!attendeeId) return;
-    await sb.from("reactions").insert({ emoji, attendee_id: attendeeId, session_id: null });
+    await sb.from("reactions").insert({ emoji: reaction, attendee_id: attendeeId, session_id: null });
 
     floaterId.current++;
     const x = Math.random() * (window.innerWidth * 0.6) + window.innerWidth * 0.2;
     const id = floaterId.current;
-    setFloaters(prev => [...prev, { emoji, id, x }]);
+    setFloaters(prev => [...prev, { reaction, id, x }]);
     setTimeout(() => setFloaters(prev => prev.filter(f => f.id !== id)), 1500);
   }, [attendeeId, sb]);
 
@@ -220,9 +228,9 @@ export default function LivePage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-[#0A0A0F] text-white">
-      {/* Floating emojis */}
+      {/* Floating reactions */}
       <AnimatePresence>
-        {floaters.map(f => <FloatingEmoji key={f.id} {...f} />)}
+        {floaters.map(f => <FloatingReaction key={f.id} {...f} />)}
       </AnimatePresence>
 
       {/* Header */}
@@ -403,15 +411,16 @@ export default function LivePage() {
                 </div>
               </div>
 
-              {/* Emoji buttons */}
+              {/* Reaction buttons */}
               {attendeeId ? (
                 <div className="grid grid-cols-5 gap-3">
-                  {EMOJI_LIST.map(emoji => (
-                    <button key={emoji} onClick={() => sendReaction(emoji)}
+                  {REACTION_LIST.map(reaction => (
+                    <button key={reaction} onClick={() => sendReaction(reaction)}
+                      aria-label={REACTION_ICON_MAP[reaction].label}
                       className="flex flex-col items-center gap-2 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] py-5 transition-all hover:border-[rgba(108,99,255,0.4)] hover:bg-[rgba(108,99,255,0.1)] active:scale-90">
-                      <span className="text-3xl">{emoji}</span>
+                      <i className={`${REACTION_ICON_MAP[reaction].iconClass} text-2xl text-[#C9C6FF]`} aria-hidden="true" />
                       <span className="text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">
-                        {reactionCounts[emoji] ?? 0}
+                        {reactionCounts[reaction] ?? 0}
                       </span>
                     </button>
                   ))}
@@ -419,11 +428,11 @@ export default function LivePage() {
               ) : (
                 <div className="space-y-3">
                   <div className="grid grid-cols-5 gap-3">
-                    {EMOJI_LIST.map(emoji => (
-                      <div key={emoji} className="flex flex-col items-center gap-2 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] py-5 opacity-40">
-                        <span className="text-3xl">{emoji}</span>
+                    {REACTION_LIST.map(reaction => (
+                      <div key={reaction} className="flex flex-col items-center gap-2 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] py-5 opacity-40">
+                        <i className={`${REACTION_ICON_MAP[reaction].iconClass} text-2xl text-[#C9C6FF]`} aria-hidden="true" />
                         <span className="text-xs tabular-nums text-[rgba(240,240,255,0.3)]">
-                          {reactionCounts[emoji] ?? 0}
+                          {reactionCounts[reaction] ?? 0}
                         </span>
                       </div>
                     ))}
@@ -456,7 +465,10 @@ export default function LivePage() {
                     <span className={`w-7 text-center text-sm font-extrabold ${
                       i === 0 ? "text-[#FFD700]" : i === 1 ? "text-[#C0C0C0]" : i === 2 ? "text-[#CD7F32]" : "text-[rgba(240,240,255,0.4)]"
                     }`}>
-                      {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
+                      {i === 0 ? <i className="fa-solid fa-trophy" aria-hidden="true" />
+                        : i === 1 ? <i className="fa-solid fa-medal" aria-hidden="true" />
+                        : i === 2 ? <i className="fa-solid fa-award" aria-hidden="true" />
+                        : `#${i + 1}`}
                     </span>
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-sm font-bold">
                       {a.name.charAt(0).toUpperCase()}

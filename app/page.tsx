@@ -55,15 +55,19 @@ const SCHEDULE = [
   { time: "14:00", title: "Diş Hekimliğinde Ürün Geliştirmek: Sahadan Dersler", speaker: "Barış Demirci", type: "talk" },
   { time: "14:45", title: "Panel: Outlier Yuvarlak Masa", speaker: "Tüm Konuşmacılar", type: "panel" },
   { time: "15:30", title: "Canlı Soru-Cevap + Anketler + Tepkiler", type: "interactive" },
-  { time: "16:00", title: "Ağ Kurma + Diş Savunucusu Turnuvası", type: "break" },
+  { time: "16:00", title: "Ağ Kurma + Molar Muhafızı Turnuvası", type: "break" },
   { time: "17:00", title: "Çekiliş ve Kapanış", type: "break" }
 ];
 
-const BADGE_MAP: Record<string, { label: string; variant: "innovator" | "artist" | "entrepreneur" | "ai-pioneer" }> = {
-  "Innovator":    { label: "🚀 Yenilikçi",       variant: "innovator" },
-  "Artist":       { label: "🎨 Sanatçı",         variant: "artist" },
-  "Entrepreneur": { label: "💼 Girişimci",       variant: "entrepreneur" },
-  "AI Pioneer":   { label: "🤖 Yapay Zeka Öncüsü", variant: "ai-pioneer" }
+const BADGE_MAP: Record<string, {
+  label: string;
+  iconClass: string;
+  variant: "innovator" | "artist" | "entrepreneur" | "ai-pioneer";
+}> = {
+  "Innovator":    { label: "Yenilikçi",         iconClass: "fa-solid fa-rocket", variant: "innovator" },
+  "Artist":       { label: "Sanatçı",           iconClass: "fa-solid fa-palette", variant: "artist" },
+  "Entrepreneur": { label: "Girişimci",         iconClass: "fa-solid fa-briefcase", variant: "entrepreneur" },
+  "AI Pioneer":   { label: "Yapay Zeka Öncüsü", iconClass: "fa-solid fa-robot", variant: "ai-pioneer" }
 };
 
 // ─── Countdown hook ─────────────────────────────────────────────────────────
@@ -249,7 +253,7 @@ export default function LandingPage() {
           {[
             { icon: <Zap className="h-4 w-4"/>, text: "Canlı Soru-Cevap + Anketler" },
             { icon: <Users className="h-4 w-4"/>, text: "Akıllı Ağ Kurma" },
-            { icon: <Gamepad2 className="h-4 w-4"/>, text: "Diş Savunucusu Oyunu" },
+            { icon: <Gamepad2 className="h-4 w-4"/>, text: "Molar Muhafızı Oyunu" },
             { icon: <Trophy className="h-4 w-4"/>, text: "Puan ve Çekiliş" }
           ].map(({ icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-sm text-[rgba(240,240,255,0.5)]">
@@ -273,7 +277,7 @@ export default function LandingPage() {
               whileHover={{ y: -4 }}
               className="card-surface-hover p-6 text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] border-2 border-[rgba(108,99,255,0.3)] text-3xl">
-                {speaker.badge === "AI Pioneer" ? "🤖" : speaker.badge === "Innovator" ? "🚀" : speaker.badge === "Artist" ? "🎨" : "💼"}
+                <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
               </div>
               <Badge variant={BADGE_MAP[speaker.badge].variant} className="mb-3">{BADGE_MAP[speaker.badge].label}</Badge>
               <h3 className="font-heading text-base font-bold">{speaker.name}</h3>
@@ -331,7 +335,7 @@ export default function LandingPage() {
           <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Katıl, puan topla, sınırları aş.</p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link href="/join"><Button size="xl">Deneyime Katıl</Button></Link>
-            <Link href="/game"><Button size="xl" variant="surface"><Gamepad2 className="h-5 w-5"/>Diş Savunucusu Oyna</Button></Link>
+            <Link href="/game"><Button size="xl" variant="surface"><Gamepad2 className="h-5 w-5"/>Molar Muhafızı Oyna</Button></Link>
           </div>
         </motion.div>
       </section>

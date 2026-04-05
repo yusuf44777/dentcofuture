@@ -63,7 +63,7 @@ export default function GamePage() {
         </Link>
         <div className="flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
-          <h1 className="font-heading text-lg font-extrabold">Diş Savunucusu</h1>
+          <h1 className="font-heading text-lg font-extrabold">Molar Muhafızı</h1>
         </div>
         {attendeeId && !pointsAwarded && (
           <div className="ml-auto rounded-full bg-[rgba(0,229,160,0.15)] px-3 py-1 text-xs font-semibold text-[#00E5A0]">
@@ -86,7 +86,7 @@ export default function GamePage() {
               className="h-full w-full border-0"
               style={{ minHeight: "calc(100vh - 64px)" }}
               allow="autoplay"
-              title="Diş Savunucusu Oyunu"
+              title="Molar Muhafızı Oyunu"
             />
           </motion.div>
         </div>
@@ -112,7 +112,10 @@ export default function GamePage() {
                 }`}
               >
                 <span className="w-6 text-center text-xs font-extrabold text-[rgba(240,240,255,0.4)]">
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                  {i === 0 ? <i className="fa-solid fa-trophy text-[#FFD700]" aria-hidden="true" />
+                    : i === 1 ? <i className="fa-solid fa-medal text-[#C0C0C0]" aria-hidden="true" />
+                    : i === 2 ? <i className="fa-solid fa-award text-[#CD7F32]" aria-hidden="true" />
+                    : `${i + 1}`}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-xs font-semibold text-white">

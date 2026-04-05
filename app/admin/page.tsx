@@ -417,7 +417,10 @@ export default function AdminPage() {
             {attendees.slice(0, 10).map((a, i) => (
               <div key={a.id} className="flex items-center gap-3 rounded-[8px] p-2">
                 <span className="w-6 text-center text-xs font-extrabold text-[rgba(240,240,255,0.4)]">
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                  {i === 0 ? <i className="fa-solid fa-trophy text-[#FFD700]" aria-hidden="true" />
+                    : i === 1 ? <i className="fa-solid fa-medal text-[#C0C0C0]" aria-hidden="true" />
+                    : i === 2 ? <i className="fa-solid fa-award text-[#CD7F32]" aria-hidden="true" />
+                    : `${i + 1}`}
                 </span>
                 <span className="flex-1 text-sm font-semibold truncate">{a.name}</span>
                 <span className="text-xs text-[rgba(240,240,255,0.4)]">{ROLE_LABELS[a.role] ?? a.role}</span>
