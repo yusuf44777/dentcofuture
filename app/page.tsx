@@ -9,7 +9,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Session } from "@/lib/types";
 
 // ─── Config ────────────────────────────────────────────────────────────────
-const EVENT_DATE = new Date("2026-05-15T09:00:00+03:00");
+const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
+const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
+const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 
 const SPEAKERS = [
   {
@@ -202,7 +204,15 @@ export default function LandingPage() {
           </motion.p>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
             className="mt-1 text-sm text-[rgba(240,240,255,0.4)]">
-            15 Mayıs 2026 • İstanbul
+            16 Mayıs 2026 • İstanbul
+          </motion.p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            className="mt-2 text-sm font-medium text-[rgba(240,240,255,0.6)]">
+            Düzenleyen: {EVENT_ORGANIZER}
+          </motion.p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }}
+            className="mx-auto mt-1 max-w-3xl text-xs leading-relaxed text-[rgba(240,240,255,0.5)] sm:text-sm">
+            Adres: {EVENT_ADDRESS}
           </motion.p>
 
           {/* Countdown */}
