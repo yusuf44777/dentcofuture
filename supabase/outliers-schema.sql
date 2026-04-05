@@ -167,6 +167,7 @@ alter table public.game_scores      enable row level security;
 -- Attendees: read all, insert own
 drop policy if exists "attendees_read_all"   on public.attendees;
 drop policy if exists "attendees_insert_own" on public.attendees;
+drop policy if exists "attendees_update_own" on public.attendees;
 create policy "attendees_read_all"   on public.attendees for select to anon, authenticated using (true);
 create policy "attendees_insert_own" on public.attendees for insert to anon, authenticated with check (true);
 create policy "attendees_update_own" on public.attendees for update to anon, authenticated using (true);
