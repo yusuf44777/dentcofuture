@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Instagram, Linkedin, ChevronDown, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
+import { ChevronDown, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,32 +14,34 @@ const IOS_APP_URL = "https://apps.apple.com";
 
 const SPEAKERS = [
   {
-    name: "Dr. Elif Arslan",
-    title: "Dijital Diş Hekimliği Öncüsü",
-    instagram: "drelarslan",
+    name: "Slot #1",
+    title: "Sürpriz İsim",
     badge: "AI Pioneer" as const,
-    bio: "İstanbul Üniversitesinde yapay zeka destekli tanı üzerine öncü araştırmalar yürütüyor."
+    bio: "Sahneye çıkacak ilk sürpriz isim etkinlik günü açıklanacak."
   },
   {
-    name: "Prof. Ahmet Yıldız",
-    title: "Ağız, Diş ve Çene Cerrahı",
-    instagram: "profyildiz",
+    name: "Slot #2",
+    title: "Sürpriz İsim",
     badge: "Innovator" as const,
-    bio: "20+ yıldır Avrupa genelinde cerrahi protokollerin dönüşümüne katkı sağlıyor."
+    bio: "Bu oturumdaki konuşmacı etkinlikten kısa süre önce duyurulacak."
   },
   {
-    name: "Dt. Selin Koç",
-    title: "Estetik Diş Hekimliği Uzmanı",
-    instagram: "dtselinkon",
+    name: "Slot #3",
+    title: "Sürpriz İsim",
     badge: "Artist" as const,
-    bio: "Gülüş tasarımı ve seramik alanında uluslararası ödül sahibi."
+    bio: "Üçüncü sürpriz konuşmacı için geri sayım başladı."
   },
   {
-    name: "Barış Demirci",
-    title: "DentTech Kurucusu ve CEO",
-    instagram: "bdemircitech",
+    name: "Slot #4",
+    title: "Sürpriz İsim",
     badge: "Entrepreneur" as const,
-    bio: "Yeni nesil dental SaaS ürünleri geliştiren seri girişimci."
+    bio: "Dördüncü konuşmacı slotu sürpriz isim için ayrıldı."
+  },
+  {
+    name: "Slot #5",
+    title: "Sürpriz İsim",
+    badge: "Innovator" as const,
+    bio: "Final konuşmacısı etkinlik günü sahnede açıklanacak."
   }
 ];
 
@@ -263,9 +265,9 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
-          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Outlier&apos;larla Tanışın</h2>
+          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Sürpriz Konuşmacılar</h2>
         </motion.div>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {SPEAKERS.map((speaker, i) => (
             <motion.div key={speaker.name}
               initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }}
@@ -276,23 +278,8 @@ export default function LandingPage() {
                 <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
               </div>
               <Badge variant={BADGE_MAP[speaker.badge].variant} className="mb-3">{BADGE_MAP[speaker.badge].label}</Badge>
-              <h3 className="font-heading text-base font-bold">{speaker.name}</h3>
-              <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.5)]">{speaker.title}</p>
-              <p className="mt-3 text-xs leading-relaxed text-[rgba(240,240,255,0.4)]">{speaker.bio}</p>
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <a href={`https://instagram.com/${speaker.instagram}`} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[rgba(240,240,255,0.35)] transition-colors hover:text-[#E1306C]">
-                  <Instagram className="h-3.5 w-3.5" />@{speaker.instagram}
-                </a>
-                <a
-                  href={`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(speaker.name)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[rgba(240,240,255,0.35)] transition-colors hover:text-[#0A66C2]"
-                >
-                  <Linkedin className="h-3.5 w-3.5" />LinkedIn
-                </a>
-              </div>
+              <h3 className="font-heading text-base font-bold">{speaker.title}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-[rgba(240,240,255,0.4)]">{speaker.bio}</p>
             </motion.div>
           ))}
         </div>
