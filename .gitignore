@@ -31,3 +31,6 @@ next-env.d.ts
 
 #csv
 *.csv
+
+# local game prototype
+/tooth-defenders-roguelike/

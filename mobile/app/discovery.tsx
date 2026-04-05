@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit3, Heart, RefreshCw, Users, X } from "lucide-react-native";
+import { Edit3, Gamepad2, Heart, RefreshCw, Users, X } from "lucide-react-native";
 import { DiscoveryProfileCard } from "../src/components/discovery-profile-card";
 import { ScreenShell } from "../src/components/screen-shell";
 import {
@@ -92,6 +92,15 @@ export default function DiscoveryScreen() {
           >
             <Edit3 color={colors.ink} size={16} />
             <Text style={styles.headerButtonText}>Profil</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              router.push("/game");
+            }}
+            style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
+          >
+            <Gamepad2 color={colors.copper} size={16} />
+            <Text style={[styles.headerButtonText, styles.gameButtonText]}>Oyun</Text>
           </Pressable>
         </View>
       }
@@ -454,5 +463,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     marginLeft: 8
+  },
+  gameButtonText: {
+    color: colors.copper
   }
 });
