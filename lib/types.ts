@@ -19,6 +19,7 @@ export interface Attendee {
   name: string;
   role: AttendeeRole;
   instagram: string | null;
+  linkedin: string | null;
   avatar_url: string | null;
   outlier_score: number;
   points: number;

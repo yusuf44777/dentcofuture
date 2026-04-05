@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, MessageSquare, QrCode, UserPlus, Check, Instagram, Send } from "lucide-react";
+import { Users, MessageSquare, QrCode, UserPlus, Check, Instagram, Linkedin, Send } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,12 @@ import { Modal } from "@/components/ui/modal";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getStoredAttendeeId } from "@/hooks/useAttendee";
 import { addPoints, POINTS } from "@/lib/points";
+import {
+  getInstagramDisplay,
+  getInstagramProfileUrl,
+  getLinkedinDisplay,
+  getLinkedinProfileUrl
+} from "@/lib/networking-contact";
 import type { Attendee, Match, Message, AttendeeRole } from "@/lib/types";
 
 type NetTab = "discover" | "matches" | "qr";
@@ -177,7 +183,7 @@ export default function NetworkingPage() {
     <main className="flex min-h-screen flex-col bg-[#0A0A0F] text-white">
       {/* Header */}
       <div className="border-b border-[rgba(255,255,255,0.08)] px-4 py-4 text-center">
-        <h1 className="font-heading text-lg font-extrabold">Ağ Kurma</h1>
+        <h1 className="font-heading text-lg font-extrabold">Networking</h1>
         {!attendeeId && (
           <p className="mt-1 text-xs text-[rgba(240,240,255,0.4)]">
             Bağlantı kurmak için önce <a href="/join" className="text-[#6C63FF] underline">katıl</a>
@@ -266,10 +272,16 @@ export default function NetworkingPage() {
                           <Badge variant={(ROLE_COLORS[a.role] as never) || "default"} className="mt-1">
                             {ROLE_LABELS[a.role] ?? a.role}
                           </Badge>
-                          {a.instagram && (
-                            <a href={`https://instagram.com/${a.instagram}`} target="_blank" rel="noreferrer"
+                          {a.instagram && getInstagramProfileUrl(a.instagram) && (
+                            <a href={getInstagramProfileUrl(a.instagram)} target="_blank" rel="noreferrer"
                               className="mt-2 flex items-center gap-1 text-xs text-[rgba(240,240,255,0.35)] hover:text-[#E1306C]">
-                              <Instagram className="h-3 w-3" />@{a.instagram}
+                              <Instagram className="h-3 w-3" />{getInstagramDisplay(a.instagram)}
+                            </a>
+                          )}
+                          {a.linkedin && getLinkedinProfileUrl(a.linkedin) && (
+                            <a href={getLinkedinProfileUrl(a.linkedin)} target="_blank" rel="noreferrer"
+                              className="mt-1 flex items-center gap-1 text-xs text-[rgba(240,240,255,0.35)] hover:text-[#0A66C2]">
+                              <Linkedin className="h-3 w-3" />{getLinkedinDisplay(a.linkedin)}
                             </a>
                           )}
                         </div>

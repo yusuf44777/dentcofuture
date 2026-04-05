@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Check, Instagram, User } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Instagram, Linkedin, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   getOutlierColor
 } from "@/lib/outlier-quiz";
 import { POINTS } from "@/lib/points";
+import { normalizeInstagramHandle, normalizeLinkedinPath } from "@/lib/networking-contact";
 import type { AttendeeRole } from "@/lib/types";
 
 const ROLES: { value: AttendeeRole; label: string; iconClass: string; desc: string }[] = [
@@ -31,6 +32,7 @@ export default function JoinPage() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [linkedin, setLinkedin] = useState("");
   const [role, setRole] = useState<AttendeeRole | null>(null);
   const [answers, setAnswers] = useState<number[]>(Array(5).fill(0));
   const [score, setScore] = useState(0);
@@ -57,19 +59,39 @@ export default function JoinPage() {
     setSubmitting(true);
     const finalScore = calculateOutlierScore(answers);
     setScore(finalScore);
+    const normalizedInstagram = normalizeInstagramHandle(instagram);
+    const normalizedLinkedin = normalizeLinkedinPath(linkedin);
 
     const sb = createSupabaseBrowserClient();
-    const { data, error: err } = await sb
+    const insertPayload = {
+      name: name.trim(),
+      role: role!,
+      instagram: normalizedInstagram || null,
+      linkedin: normalizedLinkedin || null,
+      outlier_score: finalScore,
+      points: POINTS.JOIN_PROFILE + POINTS.QUIZ_COMPLETE
+    };
+
+    let { data, error: err } = await sb
       .from("attendees")
-      .insert({
-        name: name.trim(),
-        role: role!,
-        instagram: instagram.replace("@", "") || null,
-        outlier_score: finalScore,
-        points: POINTS.JOIN_PROFILE + POINTS.QUIZ_COMPLETE
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    // Older DB schemas may not have linkedin yet; keep join flow working.
+    if (err?.message?.toLowerCase().includes("linkedin")) {
+      ({ data, error: err } = await sb
+        .from("attendees")
+        .insert({
+          name: insertPayload.name,
+          role: insertPayload.role,
+          instagram: insertPayload.instagram,
+          outlier_score: insertPayload.outlier_score,
+          points: insertPayload.points
+        })
+        .select()
+        .single());
+    }
 
     if (err || !data) {
       setError("Profil kaydedilemedi. Lütfen tekrar deneyin.");
@@ -140,6 +162,13 @@ export default function JoinPage() {
                 value={instagram}
                 onChange={e => setInstagram(e.target.value)}
                 inputPrefix={<Instagram className="h-4 w-4" />}
+              />
+              <Input
+                label="LinkedIn (opsiyonel)"
+                placeholder="linkedin.com/in/kullaniciadi"
+                value={linkedin}
+                onChange={e => setLinkedin(e.target.value)}
+                inputPrefix={<Linkedin className="h-4 w-4" />}
               />
               {error && <p className="text-xs text-[#FF4D6D]">{error}</p>}
               <Button onClick={handleProfileNext} className="w-full mt-2" size="lg">
@@ -343,7 +372,7 @@ export default function JoinPage() {
                   Canlı Merkeze Gir <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button onClick={() => router.push("/networking")} variant="outline" size="lg" className="w-full">
-                  Ağ Kurmaya Geç
+                  Networking&apos;e Geç
                 </Button>
               </div>
             </motion.div>

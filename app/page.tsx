@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Instagram, ChevronDown, Zap, Users, Gamepad2, Trophy } from "lucide-react";
+import { Instagram, Linkedin, ChevronDown, Zap, Users, Gamepad2, Trophy } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,14 +48,14 @@ const SCHEDULE = [
   { time: "09:00", title: "Kayıt ve Karşılama Kahvesi", type: "break" },
   { time: "09:30", title: "Açılış Konuşması: Outlier Zihniyeti", speaker: "Dr. Elif Arslan", type: "talk" },
   { time: "10:15", title: "Klinikte Yapay Zeka: Gerçekten İşe Yarayan Araçlar", speaker: "Dr. Elif Arslan", type: "talk" },
-  { time: "11:00", title: "Kahve Molası + Ağ Kurma", type: "break" },
+  { time: "11:00", title: "Kahve Molası + Networking", type: "break" },
   { time: "11:30", title: "Cerrahide İnovasyon: Araştırmadan Uygulamaya", speaker: "Prof. Ahmet Yıldız", type: "talk" },
   { time: "12:15", title: "Gülüşün Sanatı", speaker: "Dt. Selin Koç", type: "talk" },
   { time: "13:00", title: "Öğle Arası", type: "break" },
   { time: "14:00", title: "Diş Hekimliğinde Ürün Geliştirmek: Sahadan Dersler", speaker: "Barış Demirci", type: "talk" },
   { time: "14:45", title: "Panel: Outlier Yuvarlak Masa", speaker: "Tüm Konuşmacılar", type: "panel" },
   { time: "15:30", title: "Canlı Soru-Cevap + Anketler + Tepkiler", type: "interactive" },
-  { time: "16:00", title: "Ağ Kurma + Molar Muhafızı Turnuvası", type: "break" },
+  { time: "16:00", title: "Networking + Molar Muhafızı Turnuvası", type: "break" },
   { time: "17:00", title: "Çekiliş ve Kapanış", type: "break" }
 ];
 
@@ -252,7 +252,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-8 px-6">
           {[
             { icon: <Zap className="h-4 w-4"/>, text: "Canlı Soru-Cevap + Anketler" },
-            { icon: <Users className="h-4 w-4"/>, text: "Akıllı Ağ Kurma" },
+            { icon: <Users className="h-4 w-4"/>, text: "Akıllı Networking" },
             { icon: <Gamepad2 className="h-4 w-4"/>, text: "Molar Muhafızı Oyunu" },
             { icon: <Trophy className="h-4 w-4"/>, text: "Puan ve Çekiliş" }
           ].map(({ icon, text }) => (
@@ -283,10 +283,20 @@ export default function LandingPage() {
               <h3 className="font-heading text-base font-bold">{speaker.name}</h3>
               <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.5)]">{speaker.title}</p>
               <p className="mt-3 text-xs leading-relaxed text-[rgba(240,240,255,0.4)]">{speaker.bio}</p>
-              <a href={`https://instagram.com/${speaker.instagram}`} target="_blank" rel="noreferrer"
-                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[rgba(240,240,255,0.35)] transition-colors hover:text-[#E1306C]">
-                <Instagram className="h-3.5 w-3.5" />@{speaker.instagram}
-              </a>
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <a href={`https://instagram.com/${speaker.instagram}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[rgba(240,240,255,0.35)] transition-colors hover:text-[#E1306C]">
+                  <Instagram className="h-3.5 w-3.5" />@{speaker.instagram}
+                </a>
+                <a
+                  href={`https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(speaker.name)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[rgba(240,240,255,0.35)] transition-colors hover:text-[#0A66C2]"
+                >
+                  <Linkedin className="h-3.5 w-3.5" />LinkedIn
+                </a>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -344,7 +354,7 @@ export default function LandingPage() {
       <footer className="border-t border-[rgba(255,255,255,0.06)] py-8 text-center">
         <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
         <div className="mt-3 flex justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
-          {[["Canlı Merkez", "/live"], ["Ağ Kurma", "/networking"], ["Oyun", "/game"], ["Yönetim", "/admin"]].map(([l, h]) => (
+          {[["Canlı Merkez", "/live"], ["Networking", "/networking"], ["Oyun", "/game"], ["Yönetim", "/admin"]].map(([l, h]) => (
             <Link key={l} href={h} className="hover:text-white transition-colors">{l}</Link>
           ))}
         </div>

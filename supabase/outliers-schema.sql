@@ -9,11 +9,16 @@ create table if not exists public.attendees (
   name        text not null check (char_length(name) between 1 and 120),
   role        text not null check (role in ('Student','Clinician','Academic','Entrepreneur','Industry')),
   instagram   text,
+  linkedin    text,
   avatar_url  text,
   outlier_score integer not null default 0 check (outlier_score between 0 and 100),
   points      integer not null default 0,
   created_at  timestamptz not null default now()
 );
+
+-- Backfill for existing projects where attendees was created before linkedin column
+alter table public.attendees
+  add column if not exists linkedin text;
 
 -- ─── Sessions ───────────────────────────────────────────────────────────────
 create table if not exists public.sessions (

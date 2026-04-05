@@ -152,8 +152,8 @@ export default function AdminPage() {
 
   function exportCSV() {
     const rows = [
-      ["Ad Soyad", "Rol", "Instagram", "Outlier Puanı", "Puan", "Oluşturulma"],
-      ...attendees.map(a => [a.name, a.role, a.instagram ?? "", a.outlier_score, a.points, a.created_at])
+      ["Ad Soyad", "Rol", "Instagram", "LinkedIn", "Outlier Puanı", "Puan", "Oluşturulma"],
+      ...attendees.map(a => [a.name, a.role, a.instagram ?? "", a.linkedin ?? "", a.outlier_score, a.points, a.created_at])
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
