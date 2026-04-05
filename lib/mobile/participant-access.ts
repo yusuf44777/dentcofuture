@@ -6,7 +6,7 @@ type AllowedParticipant = {
 const DEFAULT_ALLOWED_PARTICIPANTS: AllowedParticipant[] = [
   {
     email: "deneme@gmail.com",
-    phone: "5541230393"
+    phone: "05541230393"
   }
 ];
 
@@ -15,19 +15,19 @@ function normalizeEmail(value: string) {
 }
 
 function normalizePhone(value: string) {
-  const digits = value.replace(/\D+/g, "");
+  let digits = value.replace(/\D+/g, "");
   if (!digits) return "";
 
   if (digits.startsWith("00")) {
-    return digits.slice(2);
+    digits = digits.slice(2);
   }
 
-  if (digits.length === 10) {
-    return `90${digits}`;
+  if (digits.startsWith("90") && digits.length === 12) {
+    digits = digits.slice(2);
   }
 
-  if (digits.length === 11 && digits.startsWith("0")) {
-    return `90${digits.slice(1)}`;
+  if (digits.startsWith("0") && digits.length === 11) {
+    digits = digits.slice(1);
   }
 
   return digits;

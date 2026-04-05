@@ -13,12 +13,18 @@ type Body = {
   phone?: string;
 };
 
+type MobileAllowedParticipantRow = {
+  email: string;
+  phone: string;
+  is_active: boolean;
+};
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function isValidPhone(value: string) {
-  return value.length >= 10 && value.length <= 15;
+  return value.length === 10;
 }
 
 function publicErrorMessage(error: unknown) {
@@ -102,6 +108,31 @@ async function ensureUserCanSignIn(email: string, password: string) {
   return data.user?.id ?? null;
 }
 
+async function isParticipantAllowedFromSupabase(email: string, phone: string) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("mobile_allowed_participants")
+    .select("email, phone, is_active")
+    .eq("is_active", true);
+
+  if (error) {
+    // Tablo yoksa env/default whitelist fallback'ine don.
+    if (error.code === "42P01") {
+      return null;
+    }
+    throw error;
+  }
+
+  const rows = (data ?? []) as MobileAllowedParticipantRow[];
+  if (rows.length === 0) {
+    return false;
+  }
+
+  return rows.some((row) => {
+    return normalizeEmail(row.email) === email && normalizePhone(row.phone) === phone;
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await readJsonBody<Body>(request);
@@ -116,7 +147,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Gecerli bir telefon numarasi girin." }, { status: 400 });
     }
 
-    if (!isParticipantAllowed(email, phone)) {
+    const allowedFromDb = await isParticipantAllowedFromSupabase(email, phone);
+    const allowed = allowedFromDb ?? isParticipantAllowed(email, phone);
+
+    if (!allowed) {
       return NextResponse.json(
         { error: "Bu e-posta/telefon katilimci listesinde bulunamadi." },
         { status: 403 }
