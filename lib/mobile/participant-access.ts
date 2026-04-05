@@ -5,7 +5,8 @@ type AllowedParticipant = {
 
 const DEFAULT_ALLOWED_PARTICIPANTS: AllowedParticipant[] = [
   {
-    email: "mahiryusuf531@gmail.com"
+    email: "deneme@gmail.com",
+    phone: "5541230393"
   }
 ];
 
@@ -77,13 +78,12 @@ export function isParticipantAllowed(emailInput: string, phoneInput: string) {
       return false;
     }
 
-    if (!participant.phone) {
-      // Geriye donuk olarak sadece e-posta kayitli katilimcilara izin verir.
-      // Tam cift-guvenlik icin MOBILE_ALLOWED_PARTICIPANTS icinde telefonu da girin.
-      return true;
+    const participantPhone = participant.phone;
+    if (!participantPhone) {
+      return false;
     }
 
-    return normalizePhone(participant.phone) === phone;
+    return normalizePhone(participantPhone) === phone;
   });
 }
 
