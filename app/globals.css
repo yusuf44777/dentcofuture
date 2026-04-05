@@ -3,50 +3,119 @@
 @tailwind utilities;
 
 :root {
-  --background: #eef7ff;
-  --foreground: #08253f;
-  --panel: #ffffff;
-  --panel-foreground: #0c2f4d;
-  --border: #d5e7f7;
-  --ring: #3ea0d8;
+  --bg: #0A0A0F;
+  --surface: #13131A;
+  --surface-2: #1A1A24;
+  --border: rgba(255, 255, 255, 0.08);
+  --purple: #6C63FF;
+  --mint: #00E5A0;
+  --danger: #FF4D6D;
+  --text: #F0F0FF;
+  --text-muted: rgba(240, 240, 255, 0.5);
 }
 
 * {
-  border-color: #d5e7f7;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: "Avenir Next", "Segoe UI Variable", "Nunito Sans", "Trebuchet MS", sans-serif;
-  background:
-    radial-gradient(circle at 10% 10%, rgba(146, 219, 246, 0.4) 0%, transparent 42%),
-    radial-gradient(circle at 90% 10%, rgba(191, 241, 233, 0.45) 0%, transparent 35%),
-    linear-gradient(170deg, #f5fbff 0%, #eaf6ff 55%, #f8fdff 100%);
-  color: var(--foreground);
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.dashboard-surface {
-  background:
-    radial-gradient(circle at 15% -10%, rgba(56, 189, 248, 0.14), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.18), transparent 35%),
-    linear-gradient(180deg, #031127 0%, #030c1c 100%);
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: rgba(108,99,255,0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(108,99,255,0.7); }
 
-.glass-panel {
-  background-color: rgba(7, 28, 52, 0.82);
-  border: 1px solid rgba(125, 211, 252, 0.18);
-  backdrop-filter: blur(10px);
-}
+/* Typography */
+.font-heading { font-family: var(--font-syne), system-ui, sans-serif; }
 
-.subtle-grid {
-  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.text-gradient {
-  background: linear-gradient(100deg, #f0f9ff 0%, #bae6fd 45%, #99f6e4 100%);
+.text-gradient-purple {
+  background: linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
+
+.text-gradient-mint {
+  background: linear-gradient(135deg, #00E5A0 0%, #00BCD4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-hero {
+  background: linear-gradient(135deg, #F0F0FF 0%, #6C63FF 50%, #00E5A0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Card */
+.card-surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.card-surface-hover {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.card-surface-hover:hover {
+  border-color: rgba(108,99,255,0.4);
+  box-shadow: 0 0 20px rgba(108,99,255,0.1);
+}
+
+/* Grid bg */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Live pulse dot */
+.live-dot {
+  width: 8px; height: 8px;
+  background: #FF4D6D;
+  border-radius: 50%;
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,77,109,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(255,77,109,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,77,109,0); }
+}
+
+/* Reaction float animation */
+@keyframes reaction-float {
+  0%   { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(-140px) scale(1.6) rotate(15deg); }
+}
+.reaction-floating {
+  animation: reaction-float 1.4s ease-out forwards;
+  pointer-events: none;
+  position: fixed;
+  z-index: 9999;
+  font-size: 2rem;
+}
+
+/* Vote bar */
+.vote-bar { transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* Input focus */
+input:focus, textarea:focus, select:focus { outline: none; }

@@ -86,7 +86,7 @@ export function AppPageSwitcher({
       {showSavedProfileButton && savedProfileId ? (
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           className="h-10 px-4 text-sm"
           onClick={() => router.push(`/networking/waiting-room?id=${savedProfileId}`)}
         >

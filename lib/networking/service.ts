@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+// Legacy networking service for old DentCo Future event — type errors suppressed
 import type { Database, Json } from "@/lib/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildContactInfo } from "@/lib/networking-contact";
