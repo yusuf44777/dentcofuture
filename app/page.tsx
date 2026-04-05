@@ -44,18 +44,16 @@ const SPEAKERS = [
 ];
 
 const SCHEDULE = [
-  { time: "09:00", title: "Kayıt ve Karşılama Kahvesi", type: "break" },
-  { time: "09:30", title: "Açılış Konuşması: Outlier Zihniyeti", speaker: "Dr. Elif Arslan", type: "talk" },
-  { time: "10:15", title: "Klinikte Yapay Zeka: Gerçekten İşe Yarayan Araçlar", speaker: "Dr. Elif Arslan", type: "talk" },
-  { time: "11:00", title: "Kahve Molası + Networking", type: "break" },
-  { time: "11:30", title: "Cerrahide İnovasyon: Araştırmadan Uygulamaya", speaker: "Prof. Ahmet Yıldız", type: "talk" },
-  { time: "12:15", title: "Gülüşün Sanatı", speaker: "Dt. Selin Koç", type: "talk" },
-  { time: "13:00", title: "Öğle Arası", type: "break" },
-  { time: "14:00", title: "Diş Hekimliğinde Ürün Geliştirmek: Sahadan Dersler", speaker: "Barış Demirci", type: "talk" },
-  { time: "14:45", title: "Panel: Outlier Yuvarlak Masa", speaker: "Tüm Konuşmacılar", type: "panel" },
-  { time: "15:30", title: "Canlı Soru-Cevap + Anketler + Tepkiler", type: "interactive" },
-  { time: "16:00", title: "Networking + Molar Muhafızı Turnuvası", type: "break" },
-  { time: "17:00", title: "Çekiliş ve Kapanış", type: "break" }
+  { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
+  { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
+  { time: "11:30-12:00", title: "1. Konuşmacı", type: "talk" },
+  { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
+  { time: "12:30-13:00", title: "2. Konuşmacı", type: "talk" },
+  { time: "13:00-13:30", title: "3. Konuşmacı", type: "talk" },
+  { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
+  { time: "14:20-14:50", title: "4. Konuşmacı", type: "talk" },
+  { time: "14:50-15:20", title: "5. Konuşmacı", type: "talk" },
+  { time: "15:20-15:40", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];
 
 const BADGE_MAP: Record<string, {
@@ -212,6 +210,11 @@ export default function LandingPage() {
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
             className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+            <div className="w-full sm:basis-full sm:flex sm:justify-center">
+              <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
+                Başvurular • Yakında Açılacak
+              </Button>
+            </div>
             <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
               <Button size="xl" variant="mint" className="w-full sm:w-auto">
                 <Smartphone className="h-5 w-5" />
@@ -224,9 +227,6 @@ export default function LandingPage() {
                 iOS Uygulamasını İndir
               </Button>
             </a>
-            <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
-              Başvurular • Yakında Açılacak
-            </Button>
           </motion.div>
         </motion.div>
 
@@ -310,7 +310,7 @@ export default function LandingPage() {
                   : item.type === "interactive" ? "border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.07)]"
                   : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(108,99,255,0.3)]"
                 }`}>
-                <span className="w-12 shrink-0 text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">{item.time}</span>
+                <span className="w-24 shrink-0 text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">{item.time}</span>
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-semibold ${item.type === "break" ? "text-[rgba(240,240,255,0.5)]" : "text-white"}`}>{item.title}</p>
                   {item.speaker && <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">{item.speaker}</p>}
@@ -333,6 +333,11 @@ export default function LandingPage() {
           </h2>
           <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Uygulamayı indir, etkinlik deneyimine mobilde katıl.</p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
+            <div className="w-full sm:basis-full sm:flex sm:justify-center">
+              <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
+                Başvurular • Yakında Açılacak
+              </Button>
+            </div>
             <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
               <Button size="xl" variant="mint">
                 <Smartphone className="h-5 w-5" />
@@ -345,9 +350,6 @@ export default function LandingPage() {
                 iOS Uygulamasını İndir
               </Button>
             </a>
-            <Button size="xl" variant="surface" disabled>
-              Başvurular • Yakında Açılacak
-            </Button>
           </div>
         </motion.div>
       </section>
