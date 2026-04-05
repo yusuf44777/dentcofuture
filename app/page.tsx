@@ -1,17 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Instagram, Linkedin, ChevronDown, Zap, Users, Gamepad2, Trophy } from "lucide-react";
-import Link from "next/link";
+import { Instagram, Linkedin, ChevronDown, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { Session } from "@/lib/types";
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
 const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
+const ANDROID_APP_URL = "https://play.google.com/store/apps";
+const IOS_APP_URL = "https://apps.apple.com";
 
 const SPEAKERS = [
   {
@@ -150,36 +149,13 @@ function ParticleField() {
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const { d, h, m, s, past } = useCountdown(EVENT_DATE);
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
 
-  useEffect(() => {
-    const sb = createSupabaseBrowserClient();
-    sb.from("sessions").select("*").eq("active", true).single()
-      .then(({ data }) => setActiveSession(data as Session | null));
-  }, []);
-
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white overflow-x-hidden">
-      {/* Live pill */}
-      {activeSession && (
-        <motion.div
-          initial={{ opacity: 0, y: -40 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed top-4 left-1/2 z-50 -translate-x-1/2"
-        >
-          <Link href="/live">
-            <div className="flex items-center gap-2 rounded-full border border-[rgba(255,77,109,0.3)] bg-[rgba(255,77,109,0.15)] px-4 py-2 backdrop-blur">
-              <span className="live-dot" />
-              <span className="text-xs font-semibold text-[#FF4D6D]">CANLI — {activeSession.title}</span>
-            </div>
-          </Link>
-        </motion.div>
-      )}
-
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section ref={heroRef} className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
@@ -235,9 +211,22 @@ export default function LandingPage() {
           )}
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/join"><Button size="xl" className="w-full sm:w-auto">Deneyime Katıl</Button></Link>
-            <Link href="/live"><Button size="xl" variant="outline" className="w-full sm:w-auto">Canlı Merkeze Gir</Button></Link>
+            className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+            <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
+              <Button size="xl" variant="mint" className="w-full sm:w-auto">
+                <Smartphone className="h-5 w-5" />
+                Android Uygulamasını İndir
+              </Button>
+            </a>
+            <a href={IOS_APP_URL} target="_blank" rel="noreferrer">
+              <Button size="xl" variant="outline" className="w-full sm:w-auto">
+                <Apple className="h-5 w-5" />
+                iOS Uygulamasını İndir
+              </Button>
+            </a>
+            <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
+              Başvurular • Yakında Açılacak
+            </Button>
           </motion.div>
         </motion.div>
 
@@ -342,10 +331,23 @@ export default function LandingPage() {
           <h2 className="font-heading text-4xl font-extrabold sm:text-6xl">
             Sen de bir <span className="text-gradient-purple">Outlier</span> mısın?
           </h2>
-          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Katıl, puan topla, sınırları aş.</p>
-          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link href="/join"><Button size="xl">Deneyime Katıl</Button></Link>
-            <Link href="/game"><Button size="xl" variant="surface"><Gamepad2 className="h-5 w-5"/>Molar Muhafızı Oyna</Button></Link>
+          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Uygulamayı indir, etkinlik deneyimine mobilde katıl.</p>
+          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
+            <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
+              <Button size="xl" variant="mint">
+                <Smartphone className="h-5 w-5" />
+                Android Uygulamasını İndir
+              </Button>
+            </a>
+            <a href={IOS_APP_URL} target="_blank" rel="noreferrer">
+              <Button size="xl" variant="outline">
+                <Apple className="h-5 w-5" />
+                iOS Uygulamasını İndir
+              </Button>
+            </a>
+            <Button size="xl" variant="surface" disabled>
+              Başvurular • Yakında Açılacak
+            </Button>
           </div>
         </motion.div>
       </section>
@@ -353,10 +355,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-[rgba(255,255,255,0.06)] py-8 text-center">
         <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
-        <div className="mt-3 flex justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
-          {[["Canlı Merkez", "/live"], ["Networking", "/networking"], ["Oyun", "/game"], ["Yönetim", "/admin"]].map(([l, h]) => (
-            <Link key={l} href={h} className="hover:text-white transition-colors">{l}</Link>
-          ))}
+        <div className="mt-3 flex flex-wrap justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
+          <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+            Android Uygulamasını İndir
+          </a>
+          <a href={IOS_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+            iOS Uygulamasını İndir
+          </a>
+          <span className="text-[rgba(240,240,255,0.45)]">Başvurular yakında açılacak</span>
         </div>
       </footer>
     </main>
