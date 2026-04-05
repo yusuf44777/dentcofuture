@@ -274,7 +274,7 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
-          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Sürpriz Konuşmacılar</h2>
+          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Outlier&apos;larla Tanışın</h2>
         </motion.div>
         <div className="relative mx-auto mt-12 max-w-3xl">
           <div className="overflow-hidden">
