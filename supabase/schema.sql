@@ -58,9 +58,30 @@ alter table public.networking_profiles
   add column if not exists collaboration_goals jsonb not null default '[]'::jsonb,
   add column if not exists languages jsonb not null default '[]'::jsonb,
   add column if not exists availability text,
+  add column if not exists attendee_id uuid,
   add column if not exists is_visible boolean not null default true,
   add column if not exists profile_completion_score integer not null default 0,
   add column if not exists last_active_at timestamptz not null default now();
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public' and table_name = 'attendees'
+  ) then
+    begin
+      alter table public.networking_profiles
+        add constraint networking_profiles_attendee_id_fkey
+        foreign key (attendee_id) references public.attendees(id) on delete set null;
+    exception when duplicate_object then null;
+    end;
+  end if;
+end $$;
+
+create unique index if not exists networking_profiles_attendee_id_uidx
+  on public.networking_profiles (attendee_id)
+  where attendee_id is not null;
 
 update public.networking_profiles
 set
@@ -96,6 +117,35 @@ create table if not exists public.networking_profile_actions (
   unique (actor_profile_id, target_profile_id),
   check (actor_profile_id <> target_profile_id)
 );
+
+create table if not exists public.staff_roles (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'moderator',
+  capabilities jsonb not null default '[]'::jsonb,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (auth_user_id)
+);
+
+create table if not exists public.staff_operation_audits (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid references auth.users(id) on delete set null,
+  attendee_id uuid,
+  operation text not null,
+  target_type text,
+  target_id text,
+  success boolean not null default false,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists staff_roles_active_idx
+  on public.staff_roles (is_active, role);
+
+create index if not exists staff_operation_audits_created_idx
+  on public.staff_operation_audits (created_at desc);
 
 create index if not exists networking_profile_actions_actor_action_idx
   on public.networking_profile_actions (actor_profile_id, action, updated_at desc);
@@ -354,6 +404,8 @@ alter table public.live_polls replica identity full;
 alter table public.live_poll_presets replica identity full;
 alter table public.networking_profiles replica identity full;
 alter table public.networking_profile_actions replica identity full;
+alter table public.staff_roles replica identity full;
+alter table public.staff_operation_audits replica identity full;
 alter table public.raffle_participants replica identity full;
 alter table public.raffle_prizes replica identity full;
 alter table public.raffle_draws replica identity full;
@@ -365,6 +417,8 @@ alter table public.live_polls enable row level security;
 alter table public.live_poll_presets enable row level security;
 alter table public.networking_profiles enable row level security;
 alter table public.networking_profile_actions enable row level security;
+alter table public.staff_roles enable row level security;
+alter table public.staff_operation_audits enable row level security;
 alter table public.raffle_participants enable row level security;
 alter table public.raffle_prizes enable row level security;
 alter table public.raffle_draws enable row level security;
@@ -409,6 +463,20 @@ create policy "public_can_read_networking_profiles"
 drop policy if exists "public_can_read_networking_profile_actions" on public.networking_profile_actions;
 drop policy if exists "public_can_insert_networking_profile_actions" on public.networking_profile_actions;
 
+drop policy if exists "staff_roles_read_self" on public.staff_roles;
+create policy "staff_roles_read_self"
+  on public.staff_roles
+  for select
+  to authenticated
+  using (auth.uid() = auth_user_id);
+
+drop policy if exists "staff_operation_audits_read_self" on public.staff_operation_audits;
+create policy "staff_operation_audits_read_self"
+  on public.staff_operation_audits
+  for select
+  to authenticated
+  using (auth.uid() = auth_user_id);
+
 drop policy if exists "public_can_read_raffle_participants" on public.raffle_participants;
 drop policy if exists "public_can_insert_raffle_participants" on public.raffle_participants;
 drop policy if exists "public_can_read_raffle_prizes" on public.raffle_prizes;
@@ -423,6 +491,8 @@ grant select, insert on public.attendee_feedbacks to anon, authenticated;
 grant select on public.congress_analytics to anon, authenticated;
 grant select, insert on public.networking_profiles to anon, authenticated;
 revoke all on public.networking_profile_actions from anon, authenticated;
+revoke all on public.staff_roles from anon, authenticated;
+revoke all on public.staff_operation_audits from anon, authenticated;
 revoke all on public.live_polls from anon, authenticated;
 revoke all on public.live_poll_presets from anon, authenticated;
 revoke all on public.raffle_participants from anon, authenticated;

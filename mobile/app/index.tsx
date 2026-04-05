@@ -1,31 +1,94 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { ScreenShell } from "../src/components/screen-shell";
-import { useNetworkingSessionStore } from "../src/store/networking-session";
+import { fetchMobileMe } from "../src/lib/mobile-api";
+import { useAuthSessionStore } from "../src/store/auth-session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function IndexScreen() {
-  const hydrated = useNetworkingSessionStore((state) => state.hydrated);
-  const profileId = useNetworkingSessionStore((state) => state.profileId);
+  const hydrated = useAuthSessionStore((state) => state.hydrated);
+  const session = useAuthSessionStore((state) => state.session);
+  const setMe = useAuthSessionStore((state) => state.setMe);
+  const clear = useAuthSessionStore((state) => state.clear);
+
+  const meQuery = useQuery({
+    queryKey: ["mobile-me", session?.accessToken],
+    queryFn: fetchMobileMe,
+    enabled: hydrated && Boolean(session),
+    retry: 1,
+    staleTime: 30_000
+  });
+
+  useEffect(() => {
+    if (meQuery.data) {
+      setMe(meQuery.data);
+    }
+  }, [meQuery.data, setMe]);
 
   if (!hydrated) {
     return (
       <ScreenShell
-        title="Klinik çevreni büyüt"
-        subtitle="Cihaz profili yüklenirken networking uygulaması seni hazır duruma getiriyor."
+        title="Communitive Super App"
+        subtitle="Uygulama güvenli oturum ve rol durumunu hazırlıyor."
       >
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loaderTitle}>Profil yükleniyor</Text>
-          <Text style={styles.loaderText}>
-            SecureStore içindeki son profil kontrol ediliyor.
-          </Text>
+          <Text style={styles.loaderTitle}>Oturum hazırlanıyor</Text>
+          <Text style={styles.loaderText}>Giriş bilgileri güvenli depodan okunuyor.</Text>
         </View>
       </ScreenShell>
     );
   }
 
-  return <Redirect href={profileId ? "/discovery" : "/onboarding"} />;
+  if (!session) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (meQuery.isLoading) {
+    return (
+      <ScreenShell
+        title="Communitive Super App"
+        subtitle="Rol bilgisi doğrulanıyor."
+      >
+        <View style={styles.loaderCard}>
+          <ActivityIndicator color={colors.accent} size="large" />
+          <Text style={styles.loaderTitle}>Profil kontrolü yapılıyor</Text>
+          <Text style={styles.loaderText}>Katılımcı ve staff yetkileri yükleniyor.</Text>
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  if (meQuery.isError || !meQuery.data) {
+    return (
+      <ScreenShell
+        title="Oturum Doğrulanamadı"
+        subtitle="Güvenli girişin devamı için tekrar oturum açmanız gerekiyor."
+      >
+        <View style={styles.errorCard}>
+          <Text style={styles.errorText}>
+            {meQuery.error instanceof Error ? meQuery.error.message : "Profil doğrulaması başarısız."}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.resetButton, pressed ? styles.resetButtonPressed : null]}
+            onPress={() => {
+              void clear();
+            }}
+          >
+            <Text style={styles.resetButtonText}>Tekrar Giriş Yap</Text>
+          </Pressable>
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  return (
+    <Redirect
+      href={(meQuery.data.role === "staff" ? "/(staff)" : "/(participant)") as never}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
@@ -49,5 +112,34 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: spacing.sm,
     textAlign: "center"
+  },
+  errorCard: {
+    backgroundColor: "#FDECEC",
+    borderRadius: radii.lg,
+    padding: spacing.lg
+  },
+  errorText: {
+    color: colors.danger,
+    fontFamily: typography.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  resetButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.danger,
+    borderRadius: radii.pill,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10
+  },
+  resetButtonPressed: {
+    opacity: 0.8
+  },
+  resetButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "800"
   }
 });

@@ -6,6 +6,7 @@ create extension if not exists pgcrypto;
 -- ─── Attendees ──────────────────────────────────────────────────────────────
 create table if not exists public.attendees (
   id          uuid primary key default gen_random_uuid(),
+  auth_user_id uuid references auth.users(id) on delete set null,
   name        text not null check (char_length(name) between 1 and 120),
   role        text not null check (role in ('Student','Clinician','Academic','Entrepreneur','Industry')),
   instagram   text,
@@ -18,7 +19,66 @@ create table if not exists public.attendees (
 
 -- Backfill for existing projects where attendees was created before linkedin column
 alter table public.attendees
-  add column if not exists linkedin text;
+  add column if not exists linkedin text,
+  add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
+
+create unique index if not exists attendees_auth_user_id_uidx
+  on public.attendees (auth_user_id)
+  where auth_user_id is not null;
+
+-- Optional bridge for legacy networking schema when table exists
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public' and table_name = 'networking_profiles'
+  ) then
+    alter table public.networking_profiles
+      add column if not exists attendee_id uuid references public.attendees(id) on delete set null;
+
+    create unique index if not exists networking_profiles_attendee_id_uidx
+      on public.networking_profiles (attendee_id)
+      where attendee_id is not null;
+
+    -- Backfill by exact person name (safe deterministic pass)
+    update public.networking_profiles np
+    set attendee_id = a.id
+    from public.attendees a
+    where np.attendee_id is null
+      and lower(btrim(np.full_name)) = lower(btrim(a.name));
+  end if;
+end $$;
+
+-- ─── Staff Authorization ────────────────────────────────────────────────────
+create table if not exists public.staff_roles (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'moderator',
+  capabilities jsonb not null default '[]'::jsonb,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (auth_user_id)
+);
+
+create table if not exists public.staff_operation_audits (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid references auth.users(id) on delete set null,
+  attendee_id uuid references public.attendees(id) on delete set null,
+  operation text not null,
+  target_type text,
+  target_id text,
+  success boolean not null default false,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists staff_roles_active_idx
+  on public.staff_roles (is_active, role);
+
+create index if not exists staff_operation_audits_created_idx
+  on public.staff_operation_audits (created_at desc);
 
 -- ─── Sessions ───────────────────────────────────────────────────────────────
 create table if not exists public.sessions (
@@ -150,6 +210,8 @@ alter table public.messages         replica identity full;
 alter table public.sessions         replica identity full;
 alter table public.stamps           replica identity full;
 alter table public.game_scores      replica identity full;
+alter table public.staff_roles      replica identity full;
+alter table public.staff_operation_audits replica identity full;
 
 -- ─── Row Level Security ──────────────────────────────────────────────────────
 alter table public.attendees        enable row level security;
@@ -163,6 +225,8 @@ alter table public.messages         enable row level security;
 alter table public.sessions         enable row level security;
 alter table public.stamps           enable row level security;
 alter table public.game_scores      enable row level security;
+alter table public.staff_roles      enable row level security;
+alter table public.staff_operation_audits enable row level security;
 
 -- Attendees: read all, insert own
 drop policy if exists "attendees_read_all"   on public.attendees;
@@ -230,6 +294,21 @@ drop policy if exists "game_scores_insert"   on public.game_scores;
 create policy "game_scores_read_all" on public.game_scores for select to anon, authenticated using (true);
 create policy "game_scores_insert"   on public.game_scores for insert to anon, authenticated with check (true);
 
+-- Staff auth/audit (only service-role and explicit app APIs should use writes)
+drop policy if exists "staff_roles_read_self" on public.staff_roles;
+create policy "staff_roles_read_self"
+  on public.staff_roles
+  for select
+  to authenticated
+  using (auth.uid() = auth_user_id);
+
+drop policy if exists "staff_operation_audits_read_self" on public.staff_operation_audits;
+create policy "staff_operation_audits_read_self"
+  on public.staff_operation_audits
+  for select
+  to authenticated
+  using (auth.uid() = auth_user_id);
+
 -- ─── Grants ─────────────────────────────────────────────────────────────────
 grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.attendees        to anon, authenticated;
@@ -243,6 +322,8 @@ grant select, insert         on public.messages         to anon, authenticated;
 grant select                 on public.sessions         to anon, authenticated;
 grant select, insert         on public.stamps           to anon, authenticated;
 grant select, insert         on public.game_scores      to anon, authenticated;
+revoke all                   on public.staff_roles      from anon, authenticated;
+revoke all                   on public.staff_operation_audits from anon, authenticated;
 
 -- ─── Realtime Publication ────────────────────────────────────────────────────
 do $$ begin

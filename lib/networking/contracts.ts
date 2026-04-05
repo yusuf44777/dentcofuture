@@ -112,6 +112,7 @@ export type NetworkingProfileInput = {
 
 export type NetworkingPublicProfile = {
   id: string;
+  attendee_id?: string | null;
   full_name: string;
   headline: string | null;
   interest_area: string;

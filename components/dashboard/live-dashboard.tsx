@@ -70,7 +70,8 @@ type LivePollPresetApiResponse = {
   error?: string;
 };
 
-const SUBMIT_TARGET_URL = "https://dentcofuture.vercel.app/submit";
+const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ?? "";
+const SUBMIT_TARGET_URL = appBaseUrl ? `${appBaseUrl}/submit` : "/submit";
 const DASHBOARD_RESET_CURSOR_STORAGE_KEY = "dentco_dashboard_reset_cursor";
 const DEFAULT_SUMMARY = "Analiz hazır olduğunda salonun genel duygu özeti burada görünecek.";
 const RESET_SUMMARY = "Sıfırlama sonrası yeni geri bildirimler bekleniyor.";

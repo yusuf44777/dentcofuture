@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "../src/theme/tokens";
 import { useNetworkingSessionStore } from "../src/store/networking-session";
+import { useAuthSessionStore } from "../src/store/auth-session";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,10 +19,12 @@ const queryClient = new QueryClient({
 
 function SessionBootstrap() {
   const hydrate = useNetworkingSessionStore((state) => state.hydrate);
+  const hydrateAuth = useAuthSessionStore((state) => state.hydrate);
 
   useEffect(() => {
     void hydrate();
-  }, [hydrate]);
+    void hydrateAuth();
+  }, [hydrate, hydrateAuth]);
 
   return null;
 }

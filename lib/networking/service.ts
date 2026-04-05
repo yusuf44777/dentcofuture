@@ -29,6 +29,7 @@ type NetworkingProfileUpdate = Database["public"]["Tables"]["networking_profiles
 
 const NETWORKING_PUBLIC_PROFILE_COLUMNS = `
   id,
+  attendee_id,
   full_name,
   headline,
   interest_area,
@@ -259,6 +260,7 @@ export function normalizeNetworkingProfileInput(raw: Record<string, unknown>) {
 export function mapNetworkingProfileRow(row: NetworkingProfileRow): NetworkingPublicProfile {
   return {
     id: row.id,
+    attendee_id: row.attendee_id,
     full_name: row.full_name,
     headline: row.headline,
     interest_area: row.interest_area,
@@ -739,6 +741,36 @@ export async function createNetworkingInteraction(input: {
         scoreProfileMatch(currentProfile, targetProfile),
         reverseLike.updated_at
       );
+
+      const actorAttendeeId = currentProfile.attendee_id ?? null;
+      const targetAttendeeId = targetProfile.attendee_id ?? null;
+      if (actorAttendeeId && targetAttendeeId && actorAttendeeId !== targetAttendeeId) {
+        const [attendeeA, attendeeB] = [actorAttendeeId, targetAttendeeId].sort((first, second) =>
+          first.localeCompare(second)
+        );
+
+        const { error: matchWriteError } = await supabase
+          .from("matches")
+          .upsert(
+            {
+              attendee_a: attendeeA,
+              attendee_b: attendeeB,
+              status: "accepted"
+            },
+            {
+              onConflict: "attendee_a,attendee_b"
+            }
+          );
+
+        if (
+          matchWriteError &&
+          !/relation \"matches\" does not exist|Could not find the .*matches|schema cache/i.test(
+            matchWriteError.message
+          )
+        ) {
+          throw new Error(`Eşleşme kaydı yazılamadı: ${matchWriteError.message}`);
+        }
+      }
     }
   }
 

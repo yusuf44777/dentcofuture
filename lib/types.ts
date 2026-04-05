@@ -16,6 +16,7 @@ export type OutlierBadge =
 
 export interface Attendee {
   id: string;
+  auth_user_id: string | null;
   name: string;
   role: AttendeeRole;
   instagram: string | null;
@@ -139,7 +140,11 @@ export interface Database {
     Tables: {
       attendees: {
         Row: Attendee;
-        Insert: Omit<Attendee, "id" | "created_at"> & { id?: string; created_at?: string };
+        Insert: Omit<Attendee, "id" | "created_at" | "auth_user_id"> & {
+          id?: string;
+          created_at?: string;
+          auth_user_id?: string | null;
+        };
         Update: Partial<Omit<Attendee, "id" | "created_at">>;
       };
       questions: {
@@ -211,6 +216,34 @@ export interface Database {
       congress_analytics: { Row: AnalyticsRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       live_polls: { Row: { id: string; question: string; options: Json; is_active: boolean; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       live_poll_presets: { Row: { id: string; question: string; options: Json; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      staff_roles: {
+        Row: {
+          id: string;
+          auth_user_id: string;
+          role: string;
+          capabilities: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      staff_operation_audits: {
+        Row: {
+          id: string;
+          auth_user_id: string | null;
+          attendee_id: string | null;
+          operation: string;
+          target_type: string | null;
+          target_id: string | null;
+          success: boolean;
+          details: Json;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: never;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -240,6 +273,7 @@ export interface NetworkingProfileRow {
   years_experience: number | null; bio: string | null;
   topics: Json; collaboration_goals: Json; languages: Json;
   availability: string | null; contact_info: string | null;
+  attendee_id: string | null;
   is_visible: boolean; profile_completion_score: number;
   last_active_at: string; is_matched: boolean; matched_with_id: string | null; created_at: string;
 }
