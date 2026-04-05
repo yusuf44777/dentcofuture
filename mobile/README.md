@@ -1,6 +1,8 @@
-# DentLinkCo Mobile
+# DentCo Outlier Mobile
 
 Dis hekimleri icin kart tabanli tanisma ve eslesme urunu.
+
+Giris akisi OTP yerine server-side whitelist kontrolu ile e-posta + telefon eslesmesi kullanir.
 
 ## Stack
 

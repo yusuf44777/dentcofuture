@@ -25,7 +25,7 @@ export default function OnboardingScreen() {
 
   return (
     <ScreenShell
-      title="DentLinkCo profilini kur"
+      title="DentCo Outlier profilini kur"
       subtitle="Diş hekimleri icin tasarlanmis profesyonel tanisma urunune giris yap. Uyumlu profilleri kart kart kesfet."
     >
       <ProfileEditor

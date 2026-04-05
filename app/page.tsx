@@ -191,7 +191,7 @@ export default function LandingPage() {
             className="font-heading text-5xl font-extrabold leading-tight tracking-tight sm:text-7xl lg:text-8xl">
             <span className="text-gradient-hero">DentCo</span>
             <br />
-            <span className="text-white">Outliers</span>
+            <span className="text-white">Outlier</span>
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
@@ -398,7 +398,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-[rgba(255,255,255,0.06)] py-8 text-center">
-        <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
+        <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outlier</p>
         <div className="mt-3 flex flex-wrap justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
           <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
             Android Uygulamasını İndir

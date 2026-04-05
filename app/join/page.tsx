@@ -119,7 +119,7 @@ export default function JoinPage() {
         <div className="mb-8 text-center">
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="text-xs font-semibold uppercase tracking-[0.3em] text-[rgba(240,240,255,0.4)]">
-            DentCo Outliers
+            DentCo Outlier
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="font-heading mt-2 text-3xl font-extrabold text-white">

@@ -87,23 +87,12 @@ async function staffWriteRequest<T>(capability: StaffCapability, path: string, i
   );
 }
 
-export function requestOtp(email: string) {
-  return apiRequest<{ ok: true; email: string }>(
+export function requestOtp(email: string, phone: string) {
+  return apiRequest<MobileOtpSession>(
     "/api/mobile/auth/request-otp",
     {
       method: "POST",
-      body: JSON.stringify({ email })
-    },
-    { auth: false, allowRefresh: false }
-  );
-}
-
-export function verifyOtp(email: string, token: string) {
-  return apiRequest<MobileOtpSession>(
-    "/api/mobile/auth/verify-otp",
-    {
-      method: "POST",
-      body: JSON.stringify({ email, token })
+      body: JSON.stringify({ email, phone })
     },
     { auth: false, allowRefresh: false }
   );

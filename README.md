@@ -1,4 +1,4 @@
-# DentLinkCo / Dent Co Future
+# DentCo Outlier / Dent Co Future
 
 COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart tabanli tanisma ve eslesme urunune evrilen Next.js + Expo + Supabase uygulamasi.
 
@@ -131,6 +131,8 @@ Gerekli:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `MOBILE_ALLOWED_PARTICIPANTS` (`email|phone` format, virgulle ayrılmış liste)
+- `MOBILE_LOGIN_SECRET` (mobil e-posta+telefon girişi için server-side parola türetme anahtarı)
 - `OPENAI_API_KEY`
 - `CRON_SECRET` (zorunlu, `/api/analyze` endpoint koruması için)
 - `RAFFLE_ADMIN_SECRET` (opsiyonel, çekiliş API'lerini dashboard cookie olmadan tetiklemek için)

@@ -16,10 +16,10 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "DentCo Outliers — Communitive Dentistry",
+  title: "DentCo Outlier — Communitive Dentistry",
   description: "Diş hekimliğinde sınırları zorlayan, İstanbul'un öncü dental inovasyon kongresi.",
   openGraph: {
-    title: "DentCo Outliers",
+    title: "DentCo Outlier",
     description: "Diş hekimliğinde sınırları zorluyoruz.",
     type: "website"
   }

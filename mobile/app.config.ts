@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const DEFAULT_API_BASE_URL = "";
 
 const config: ExpoConfig = {
-  name: "DentLinkCo",
+  name: "DentCo Outlier",
   slug: "dentlinkco",
   scheme: "dentlinkco",
   version: "1.0.0",

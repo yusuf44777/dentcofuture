@@ -198,7 +198,7 @@ export default function AdminPage() {
       <div className="border-b border-[rgba(255,255,255,0.08)] bg-[#13131A] px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div>
-            <h1 className="font-heading text-xl font-extrabold">DentCo Outliers — Yönetim</h1>
+            <h1 className="font-heading text-xl font-extrabold">DentCo Outlier — Yönetim</h1>
             <p className="text-xs text-[rgba(240,240,255,0.4)]">Canlı pano</p>
           </div>
           <Button onClick={exportCSV} variant="outline" size="sm">

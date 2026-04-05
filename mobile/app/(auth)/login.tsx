@@ -2,27 +2,30 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { requestOtp, verifyOtp } from "../../src/lib/mobile-api";
+import { requestOtp } from "../../src/lib/mobile-api";
 import { useAuthSessionStore } from "../../src/store/auth-session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
-
-type Step = "email" | "otp";
 
 export default function LoginScreen() {
   const router = useRouter();
   const setSession = useAuthSessionStore((state) => state.setSession);
 
-  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const sendOtp = async () => {
+  const loginWithEmailPhone = async () => {
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = phone.replace(/[^0-9+]/g, "").trim();
+
     if (!normalizedEmail || !normalizedEmail.includes("@")) {
       setError("Geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (!normalizedPhone || normalizedPhone.replace(/\D+/g, "").length < 10) {
+      setError("Geçerli bir telefon numarası girin.");
       return;
     }
 
@@ -31,36 +34,17 @@ export default function LoginScreen() {
     setMessage("");
 
     try {
-      await requestOtp(normalizedEmail);
-      setStep("otp");
-      setMessage("Doğrulama kodu e-posta adresinize gönderildi.");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "OTP gönderilemedi.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const confirmOtp = async () => {
-    if (otp.trim().length < 4) {
-      setError("Geçerli OTP kodunu girin.");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-
-    try {
-      const verified = await verifyOtp(email.trim().toLowerCase(), otp.trim());
+      const session = await requestOtp(normalizedEmail, normalizedPhone);
       await setSession({
-        accessToken: verified.accessToken,
-        refreshToken: verified.refreshToken,
-        expiresAt: verified.expiresAt,
-        email: verified.user?.email
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        expiresAt: session.expiresAt,
+        email: session.user?.email
       });
+      setMessage("Giriş başarılı, yönlendiriliyorsunuz...");
       router.replace("/");
-    } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "OTP doğrulanamadı.");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Giriş yapılamadı.");
     } finally {
       setBusy(false);
     }
@@ -69,7 +53,7 @@ export default function LoginScreen() {
   return (
     <ScreenShell
       title="Güvenli Giriş"
-      subtitle="Communitive Dentistry Super App için Supabase Email OTP ile oturum açın."
+      subtitle="DentCo Outlier için e-posta ve telefon eşleşmesi ile giriş yapın."
     >
       <View style={styles.card}>
         <Text style={styles.label}>E-posta</Text>
@@ -85,24 +69,18 @@ export default function LoginScreen() {
           value={email}
         />
 
-        {step === "otp" ? (
-          <>
-            <Text style={[styles.label, styles.otpLabel]}>OTP Kodu</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!busy}
-              keyboardType="number-pad"
-              onChangeText={(value) => {
-                setOtp(value.replace(/[^0-9]/g, "").slice(0, 8));
-              }}
-              placeholder="123456"
-              placeholderTextColor="#8D9895"
-              style={styles.input}
-              value={otp}
-            />
-          </>
-        ) : null}
+        <Text style={[styles.label, styles.phoneLabel]}>Telefon</Text>
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!busy}
+          keyboardType="phone-pad"
+          onChangeText={setPhone}
+          placeholder="+90 5xx xxx xx xx"
+          placeholderTextColor="#8D9895"
+          style={styles.input}
+          value={phone}
+        />
 
         {message ? <Text style={styles.messageText}>{message}</Text> : null}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -111,25 +89,11 @@ export default function LoginScreen() {
           disabled={busy}
           style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null, busy ? styles.disabled : null]}
           onPress={() => {
-            void (step === "email" ? sendOtp() : confirmOtp());
+            void loginWithEmailPhone();
           }}
         >
-          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>{step === "email" ? "Kodu Gönder" : "Doğrula ve Devam Et"}</Text>}
+          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Giriş Yap</Text>}
         </Pressable>
-
-        {step === "otp" ? (
-          <Pressable
-            disabled={busy}
-            style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
-            onPress={() => {
-              setStep("email");
-              setOtp("");
-              setError("");
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>E-postayı Değiştir</Text>
-          </Pressable>
-        ) : null}
       </View>
     </ScreenShell>
   );
@@ -148,7 +112,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: spacing.xs
   },
-  otpLabel: {
+  phoneLabel: {
     marginTop: spacing.md
   },
   input: {
@@ -189,17 +153,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 14,
     fontWeight: "800"
-  },
-  secondaryButton: {
-    alignItems: "center",
-    marginTop: spacing.sm,
-    paddingVertical: 8
-  },
-  secondaryButtonText: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "700"
   },
   disabled: {
     opacity: 0.7
