@@ -53,13 +53,13 @@ type ScheduleItem = {
 const SCHEDULE: ScheduleItem[] = [
   { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
   { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
-  { time: "11:30-12:00", title: "1. Konuşmacı", type: "talk" },
+  { time: "11:30-12:00", title: "Sürpriz Konuşmacı #1 (Yakında Açıklanacak)", type: "talk" },
   { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
-  { time: "12:30-13:00", title: "2. Konuşmacı", type: "talk" },
-  { time: "13:00-13:30", title: "3. Konuşmacı", type: "talk" },
+  { time: "12:30-13:00", title: "Sürpriz Konuşmacı #2 (Yakında Açıklanacak)", type: "talk" },
+  { time: "13:00-13:30", title: "Sürpriz Konuşmacı #3 (Yakında Açıklanacak)", type: "talk" },
   { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
-  { time: "14:20-14:50", title: "4. Konuşmacı", type: "talk" },
-  { time: "14:50-15:20", title: "5. Konuşmacı", type: "talk" },
+  { time: "14:20-14:50", title: "Sürpriz Konuşmacı #4 (Yakında Açıklanacak)", type: "talk" },
+  { time: "14:50-15:20", title: "Sürpriz Konuşmacı #5 (Yakında Açıklanacak)", type: "talk" },
   { time: "15:20-15:40", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];
 
