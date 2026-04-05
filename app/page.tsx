@@ -43,7 +43,14 @@ const SPEAKERS = [
   }
 ];
 
-const SCHEDULE = [
+type ScheduleItem = {
+  time: string;
+  title: string;
+  type: "talk" | "break" | "panel" | "interactive";
+  speaker?: string;
+};
+
+const SCHEDULE: ScheduleItem[] = [
   { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
   { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
   { time: "11:30-12:00", title: "1. Konuşmacı", type: "talk" },
