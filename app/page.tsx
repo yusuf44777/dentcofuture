@@ -1,9 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ChevronDown, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
@@ -156,10 +155,20 @@ function ParticleField() {
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const { d, h, m, s, past } = useCountdown(EVENT_DATE);
+  const [activeSpeaker, setActiveSpeaker] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
+  const totalSpeakers = SPEAKERS.length;
+
+  const handlePrevSpeaker = () => {
+    setActiveSpeaker((prev) => (prev - 1 + totalSpeakers) % totalSpeakers);
+  };
+
+  const handleNextSpeaker = () => {
+    setActiveSpeaker((prev) => (prev + 1) % totalSpeakers);
+  };
 
   return (
     <main className="min-h-screen bg-[#0A0A0F] text-white overflow-x-hidden">
@@ -267,21 +276,60 @@ export default function LandingPage() {
           <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
           <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Sürpriz Konuşmacılar</h2>
         </motion.div>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SPEAKERS.map((speaker, i) => (
-            <motion.div key={speaker.name}
-              initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -4 }}
-              className="card-surface-hover p-6 text-center">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] border-2 border-[rgba(108,99,255,0.3)] text-3xl">
-                <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
-              </div>
-              <Badge variant={BADGE_MAP[speaker.badge].variant} className="mb-3">{BADGE_MAP[speaker.badge].label}</Badge>
-              <h3 className="font-heading text-base font-bold">{speaker.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-[rgba(240,240,255,0.4)]">{speaker.bio}</p>
+        <div className="relative mx-auto mt-12 max-w-3xl">
+          <div className="overflow-hidden">
+            <motion.div
+              animate={{ x: `-${activeSpeaker * 100}%` }}
+              transition={{ type: "spring", stiffness: 260, damping: 28 }}
+              className="flex"
+            >
+              {SPEAKERS.map((speaker) => (
+                <div key={speaker.name} className="w-full shrink-0 px-1">
+                  <div className="card-surface-hover min-h-[280px] p-6 text-center sm:p-8">
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] border-2 border-[rgba(108,99,255,0.3)] text-3xl">
+                      <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
+                    </div>
+                    <h3 className="font-heading text-2xl font-bold">{speaker.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-[rgba(240,240,255,0.45)]">{speaker.bio}</p>
+                  </div>
+                </div>
+              ))}
             </motion.div>
-          ))}
+          </div>
+
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handlePrevSpeaker}
+              aria-label="Önceki konuşmacı"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              {SPEAKERS.map((speaker, i) => (
+                <button
+                  key={speaker.name}
+                  type="button"
+                  onClick={() => setActiveSpeaker(i)}
+                  aria-label={`${i + 1}. konuşmacı slaytı`}
+                  className={`h-2.5 rounded-full transition-all ${
+                    activeSpeaker === i ? "w-8 bg-[#6C63FF]" : "w-2.5 bg-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.4)]"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextSpeaker}
+              aria-label="Sonraki konuşmacı"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </section>
 
