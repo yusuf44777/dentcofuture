@@ -14,54 +14,54 @@ const EVENT_DATE = new Date("2026-05-15T09:00:00+03:00");
 const SPEAKERS = [
   {
     name: "Dr. Elif Arslan",
-    title: "Digital Dentistry Pioneer",
+    title: "Dijital Diş Hekimliği Öncüsü",
     instagram: "drelarslan",
     badge: "AI Pioneer" as const,
-    bio: "Leading research in AI-assisted diagnostics at Istanbul University."
+    bio: "İstanbul Üniversitesinde yapay zeka destekli tanı üzerine öncü araştırmalar yürütüyor."
   },
   {
     name: "Prof. Ahmet Yıldız",
-    title: "Oral & Maxillofacial Surgeon",
+    title: "Ağız, Diş ve Çene Cerrahı",
     instagram: "profyildiz",
     badge: "Innovator" as const,
-    bio: "20+ years transforming surgical protocols across Europe."
+    bio: "20+ yıldır Avrupa genelinde cerrahi protokollerin dönüşümüne katkı sağlıyor."
   },
   {
     name: "Dt. Selin Koç",
-    title: "Aesthetic Dentistry Artist",
+    title: "Estetik Diş Hekimliği Uzmanı",
     instagram: "dtselinkon",
     badge: "Artist" as const,
-    bio: "International award-winner in smile design and ceramics."
+    bio: "Gülüş tasarımı ve seramik alanında uluslararası ödül sahibi."
   },
   {
     name: "Barış Demirci",
-    title: "DentTech Founder & CEO",
+    title: "DentTech Kurucusu ve CEO",
     instagram: "bdemircitech",
     badge: "Entrepreneur" as const,
-    bio: "Serial founder building the next generation of dental SaaS."
+    bio: "Yeni nesil dental SaaS ürünleri geliştiren seri girişimci."
   }
 ];
 
 const SCHEDULE = [
-  { time: "09:00", title: "Registration & Welcome Coffee", type: "break" },
-  { time: "09:30", title: "Opening Keynote: The Outlier Mindset", speaker: "Dr. Elif Arslan", type: "talk" },
-  { time: "10:15", title: "AI in the Clinic: Tools That Actually Work", speaker: "Dr. Elif Arslan", type: "talk" },
-  { time: "11:00", title: "Coffee Break + Networking", type: "break" },
-  { time: "11:30", title: "Surgical Innovation: From Research to Reality", speaker: "Prof. Ahmet Yıldız", type: "talk" },
-  { time: "12:15", title: "The Art of the Smile", speaker: "Dt. Selin Koç", type: "talk" },
-  { time: "13:00", title: "Lunch", type: "break" },
-  { time: "14:00", title: "Building in Dentistry: Lessons from the Trenches", speaker: "Barış Demirci", type: "talk" },
-  { time: "14:45", title: "Panel: Outliers Roundtable", speaker: "All Speakers", type: "panel" },
-  { time: "15:30", title: "Live Q&A + Polls + Reactions", type: "interactive" },
-  { time: "16:00", title: "Networking + Tooth Defender Tournament", type: "break" },
-  { time: "17:00", title: "Raffle & Closing", type: "break" }
+  { time: "09:00", title: "Kayıt ve Karşılama Kahvesi", type: "break" },
+  { time: "09:30", title: "Açılış Konuşması: Outlier Zihniyeti", speaker: "Dr. Elif Arslan", type: "talk" },
+  { time: "10:15", title: "Klinikte Yapay Zeka: Gerçekten İşe Yarayan Araçlar", speaker: "Dr. Elif Arslan", type: "talk" },
+  { time: "11:00", title: "Kahve Molası + Ağ Kurma", type: "break" },
+  { time: "11:30", title: "Cerrahide İnovasyon: Araştırmadan Uygulamaya", speaker: "Prof. Ahmet Yıldız", type: "talk" },
+  { time: "12:15", title: "Gülüşün Sanatı", speaker: "Dt. Selin Koç", type: "talk" },
+  { time: "13:00", title: "Öğle Arası", type: "break" },
+  { time: "14:00", title: "Diş Hekimliğinde Ürün Geliştirmek: Sahadan Dersler", speaker: "Barış Demirci", type: "talk" },
+  { time: "14:45", title: "Panel: Outlier Yuvarlak Masa", speaker: "Tüm Konuşmacılar", type: "panel" },
+  { time: "15:30", title: "Canlı Soru-Cevap + Anketler + Tepkiler", type: "interactive" },
+  { time: "16:00", title: "Ağ Kurma + Diş Savunucusu Turnuvası", type: "break" },
+  { time: "17:00", title: "Çekiliş ve Kapanış", type: "break" }
 ];
 
 const BADGE_MAP: Record<string, { label: string; variant: "innovator" | "artist" | "entrepreneur" | "ai-pioneer" }> = {
-  "Innovator":    { label: "🚀 Innovator",    variant: "innovator" },
-  "Artist":       { label: "🎨 Artist",        variant: "artist" },
-  "Entrepreneur": { label: "💼 Entrepreneur",  variant: "entrepreneur" },
-  "AI Pioneer":   { label: "🤖 AI Pioneer",    variant: "ai-pioneer" }
+  "Innovator":    { label: "🚀 Yenilikçi",       variant: "innovator" },
+  "Artist":       { label: "🎨 Sanatçı",         variant: "artist" },
+  "Entrepreneur": { label: "💼 Girişimci",       variant: "entrepreneur" },
+  "AI Pioneer":   { label: "🤖 Yapay Zeka Öncüsü", variant: "ai-pioneer" }
 };
 
 // ─── Countdown hook ─────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ export default function LandingPage() {
           <Link href="/live">
             <div className="flex items-center gap-2 rounded-full border border-[rgba(255,77,109,0.3)] bg-[rgba(255,77,109,0.15)] px-4 py-2 backdrop-blur">
               <span className="live-dot" />
-              <span className="text-xs font-semibold text-[#FF4D6D]">LIVE — {activeSession.title}</span>
+              <span className="text-xs font-semibold text-[#FF4D6D]">CANLI — {activeSession.title}</span>
             </div>
           </Link>
         </motion.div>
@@ -186,7 +186,7 @@ export default function LandingPage() {
         <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative z-10 px-6 text-center">
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-[rgba(240,240,255,0.5)]">
-            Communitive Dentistry • Istanbul 2026
+            Communitive Dentistry • İstanbul 2026
           </motion.p>
 
           <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
@@ -198,18 +198,18 @@ export default function LandingPage() {
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
             className="mt-4 text-lg text-[rgba(240,240,255,0.6)] sm:text-xl">
-            Breaking boundaries in dentistry
+            Diş hekimliğinde sınırları zorluyoruz
           </motion.p>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
             className="mt-1 text-sm text-[rgba(240,240,255,0.4)]">
-            May 15, 2026 • Istanbul
+            15 Mayıs 2026 • İstanbul
           </motion.p>
 
           {/* Countdown */}
           {!past && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
               className="mt-10 flex justify-center gap-3 sm:gap-6">
-              {[{ l: "Days", v: d }, { l: "Hours", v: h }, { l: "Min", v: m }, { l: "Sec", v: s }].map(({ l, v }) => (
+              {[{ l: "Gün", v: d }, { l: "Saat", v: h }, { l: "Dk", v: m }, { l: "Sn", v: s }].map(({ l, v }) => (
                 <div key={l} className="flex flex-col items-center">
                   <div className="flex h-16 w-14 items-center justify-center rounded-[12px] border border-[rgba(108,99,255,0.3)] bg-[rgba(108,99,255,0.1)] sm:h-20 sm:w-20">
                     <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2,"0")}</span>
@@ -222,8 +222,8 @@ export default function LandingPage() {
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
             className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/join"><Button size="xl" className="w-full sm:w-auto">Join the Experience</Button></Link>
-            <Link href="/live"><Button size="xl" variant="outline" className="w-full sm:w-auto">Enter Live Hub</Button></Link>
+            <Link href="/join"><Button size="xl" className="w-full sm:w-auto">Deneyime Katıl</Button></Link>
+            <Link href="/live"><Button size="xl" variant="outline" className="w-full sm:w-auto">Canlı Merkeze Gir</Button></Link>
           </motion.div>
         </motion.div>
 
@@ -237,10 +237,10 @@ export default function LandingPage() {
       <section className="border-y border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] py-6">
         <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-8 px-6">
           {[
-            { icon: <Zap className="h-4 w-4"/>, text: "Live Q&A + Polls" },
-            { icon: <Users className="h-4 w-4"/>, text: "Smart Networking" },
-            { icon: <Gamepad2 className="h-4 w-4"/>, text: "Tooth Defender Game" },
-            { icon: <Trophy className="h-4 w-4"/>, text: "Points & Raffle" }
+            { icon: <Zap className="h-4 w-4"/>, text: "Canlı Soru-Cevap + Anketler" },
+            { icon: <Users className="h-4 w-4"/>, text: "Akıllı Ağ Kurma" },
+            { icon: <Gamepad2 className="h-4 w-4"/>, text: "Diş Savunucusu Oyunu" },
+            { icon: <Trophy className="h-4 w-4"/>, text: "Puan ve Çekiliş" }
           ].map(({ icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-sm text-[rgba(240,240,255,0.5)]">
               <span className="text-[#6C63FF]">{icon}</span>{text}
@@ -252,8 +252,8 @@ export default function LandingPage() {
       {/* ── Speakers ─────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-6 py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Speakers</p>
-          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Meet the Outliers</h2>
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
+          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Outlier&apos;larla Tanışın</h2>
         </motion.div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {SPEAKERS.map((speaker, i) => (
@@ -283,8 +283,8 @@ export default function LandingPage() {
         <div className="absolute inset-0 grid-bg opacity-20" />
         <div className="relative mx-auto max-w-3xl px-6">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#00E5A0]">Schedule</p>
-            <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Day at a Glance</h2>
+            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#00E5A0]">Program</p>
+            <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Günün Akışı</h2>
           </motion.div>
           <div className="mt-12 space-y-3">
             {SCHEDULE.map((item, i) => (
@@ -302,7 +302,7 @@ export default function LandingPage() {
                   <p className={`text-sm font-semibold ${item.type === "break" ? "text-[rgba(240,240,255,0.5)]" : "text-white"}`}>{item.title}</p>
                   {item.speaker && <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">{item.speaker}</p>}
                 </div>
-                {item.type === "interactive" && <span className="shrink-0 text-xs font-semibold text-[#00E5A0]">Interactive</span>}
+                {item.type === "interactive" && <span className="shrink-0 text-xs font-semibold text-[#00E5A0]">Etkileşimli</span>}
                 {item.type === "panel" && <span className="shrink-0 text-xs font-semibold text-[#A78BFA]">Panel</span>}
               </motion.div>
             ))}
@@ -316,12 +316,12 @@ export default function LandingPage() {
         <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="relative z-10 px-6">
           <h2 className="font-heading text-4xl font-extrabold sm:text-6xl">
-            Are you an <span className="text-gradient-purple">Outlier?</span>
+            Sen de bir <span className="text-gradient-purple">Outlier</span> mısın?
           </h2>
-          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Join, earn points, break boundaries.</p>
+          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Katıl, puan topla, sınırları aş.</p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link href="/join"><Button size="xl">Join the Experience</Button></Link>
-            <Link href="/game"><Button size="xl" variant="surface"><Gamepad2 className="h-5 w-5"/>Play Tooth Defender</Button></Link>
+            <Link href="/join"><Button size="xl">Deneyime Katıl</Button></Link>
+            <Link href="/game"><Button size="xl" variant="surface"><Gamepad2 className="h-5 w-5"/>Diş Savunucusu Oyna</Button></Link>
           </div>
         </motion.div>
       </section>
@@ -330,7 +330,7 @@ export default function LandingPage() {
       <footer className="border-t border-[rgba(255,255,255,0.06)] py-8 text-center">
         <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
         <div className="mt-3 flex justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
-          {[["Live Hub", "/live"], ["Networking", "/networking"], ["Game", "/game"], ["Admin", "/admin"]].map(([l, h]) => (
+          {[["Canlı Merkez", "/live"], ["Ağ Kurma", "/networking"], ["Oyun", "/game"], ["Yönetim", "/admin"]].map(([l, h]) => (
             <Link key={l} href={h} className="hover:text-white transition-colors">{l}</Link>
           ))}
         </div>

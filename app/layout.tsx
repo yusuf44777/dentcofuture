@@ -17,10 +17,10 @@ const syne = Syne({
 
 export const metadata: Metadata = {
   title: "DentCo Outliers — Communitive Dentistry",
-  description: "Breaking boundaries in dentistry. Istanbul's premier dental innovation congress.",
+  description: "Diş hekimliğinde sınırları zorlayan, İstanbul'un öncü dental inovasyon kongresi.",
   openGraph: {
     title: "DentCo Outliers",
-    description: "Breaking boundaries in dentistry.",
+    description: "Diş hekimliğinde sınırları zorluyoruz.",
     type: "website"
   }
 };
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${syne.variable}`}>
+    <html lang="tr" className={`${inter.variable} ${syne.variable}`}>
       <body className="antialiased bg-bg text-[var(--text)]">{children}</body>
     </html>
   );

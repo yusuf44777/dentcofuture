@@ -17,14 +17,14 @@ import { POINTS } from "@/lib/points";
 import type { AttendeeRole } from "@/lib/types";
 
 const ROLES: { value: AttendeeRole; label: string; icon: string; desc: string }[] = [
-  { value: "Student",       label: "Student",       icon: "🎓", desc: "Dental student shaping the future" },
-  { value: "Clinician",     label: "Clinician",     icon: "🦷", desc: "Practicing dentist or specialist" },
-  { value: "Academic",      label: "Academic",      icon: "🔬", desc: "Researcher or faculty member" },
-  { value: "Entrepreneur",  label: "Entrepreneur",  icon: "🚀", desc: "Founder or startup builder" },
-  { value: "Industry",      label: "Industry",      icon: "🏭", desc: "Dental industry professional" }
+  { value: "Student",       label: "Öğrenci",          icon: "🎓", desc: "Geleceği şekillendiren diş hekimliği öğrencisi" },
+  { value: "Clinician",     label: "Klinisyen",        icon: "🦷", desc: "Aktif çalışan diş hekimi veya uzman" },
+  { value: "Academic",      label: "Akademisyen",      icon: "🔬", desc: "Araştırmacı veya öğretim üyesi" },
+  { value: "Entrepreneur",  label: "Girişimci",        icon: "🚀", desc: "Kurucu veya startup geliştirici" },
+  { value: "Industry",      label: "Sektör Profesyoneli", icon: "🏭", desc: "Dental sektörde çalışan profesyonel" }
 ];
 
-const STEPS = ["Profile", "Role", "Quiz", "Result"] as const;
+const STEPS = ["Profil", "Rol", "Test", "Sonuç"] as const;
 
 export default function JoinPage() {
   const router = useRouter();
@@ -40,14 +40,14 @@ export default function JoinPage() {
 
   // Step 1 → Step 2
   async function handleProfileNext() {
-    if (!name.trim()) { setError("Please enter your name"); return; }
+    if (!name.trim()) { setError("Lütfen adınızı girin."); return; }
     setError("");
     setStep(1);
   }
 
   // Step 2 → Step 3
   function handleRoleNext() {
-    if (!role) { setError("Please select your role"); return; }
+    if (!role) { setError("Lütfen rolünüzü seçin."); return; }
     setError("");
     setStep(2);
   }
@@ -72,7 +72,7 @@ export default function JoinPage() {
       .single();
 
     if (err || !data) {
-      setError("Failed to save profile. Try again.");
+      setError("Profil kaydedilemedi. Lütfen tekrar deneyin.");
       setSubmitting(false);
       return;
     }
@@ -101,7 +101,7 @@ export default function JoinPage() {
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="font-heading mt-2 text-3xl font-extrabold text-white">
-            {step === 3 ? "You're an Outlier!" : "Join the Experience"}
+            {step === 3 ? "Sen bir Outlier'sın!" : "Deneyime Katıl"}
           </motion.h1>
         </div>
 
@@ -126,8 +126,8 @@ export default function JoinPage() {
               initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
               className="space-y-4 rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
               <Input
-                label="Full Name"
-                placeholder="Dr. Jane Smith"
+                label="Ad Soyad"
+                placeholder="Dr. Ayşe Yılmaz"
                 value={name}
                 onChange={e => { setName(e.target.value); setError(""); }}
                 inputPrefix={<User className="h-4 w-4" />}
@@ -135,15 +135,15 @@ export default function JoinPage() {
                 autoFocus
               />
               <Input
-                label="Instagram (optional)"
-                placeholder="@yourhandle"
+                label="Instagram (opsiyonel)"
+                placeholder="@kullaniciadi"
                 value={instagram}
                 onChange={e => setInstagram(e.target.value)}
                 inputPrefix={<Instagram className="h-4 w-4" />}
               />
               {error && <p className="text-xs text-[#FF4D6D]">{error}</p>}
               <Button onClick={handleProfileNext} className="w-full mt-2" size="lg">
-                Continue <ArrowRight className="h-4 w-4" />
+                Devam Et <ArrowRight className="h-4 w-4" />
               </Button>
             </motion.div>
           )}
@@ -153,7 +153,7 @@ export default function JoinPage() {
             <motion.div key="step1"
               initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
               className="space-y-3">
-              <p className="text-sm text-[rgba(240,240,255,0.5)]">Who are you in dentistry?</p>
+              <p className="text-sm text-[rgba(240,240,255,0.5)]">Diş hekimliğinde kendini nasıl tanımlarsın?</p>
               {ROLES.map(r => (
                 <button key={r.value} onClick={() => { setRole(r.value); setError(""); }}
                   className={`w-full flex items-center gap-4 rounded-[12px] border p-4 text-left transition-all ${
@@ -174,10 +174,10 @@ export default function JoinPage() {
               {error && <p className="text-xs text-[#FF4D6D]">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setStep(0)} className="flex-1" size="lg">
-                  <ArrowLeft className="h-4 w-4" /> Back
+                  <ArrowLeft className="h-4 w-4" /> Geri
                 </Button>
                 <Button onClick={handleRoleNext} className="flex-1" size="lg">
-                  Continue <ArrowRight className="h-4 w-4" />
+                  Devam Et <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </motion.div>
@@ -190,9 +190,9 @@ export default function JoinPage() {
               className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
               <div className="mb-6 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#6C63FF]">
-                  Question {quizQ.id} of 5
+                  Soru {quizQ.id} / 5
                 </span>
-                <span className="text-xs text-[rgba(240,240,255,0.3)]">Outlier Quiz</span>
+                <span className="text-xs text-[rgba(240,240,255,0.3)]">Outlier Testi</span>
               </div>
 
               <h3 className="font-heading text-lg font-bold text-white leading-snug mb-6">
@@ -254,17 +254,17 @@ export default function JoinPage() {
                       setStep(step + 1);
                     }}
                     className="flex-2 flex-1" size="lg">
-                    {step === 6 ? "See My Score" : "Next"} <ArrowRight className="h-4 w-4" />
+                    {step === 6 ? "Puanımı Gör" : "Sonraki"} <ArrowRight className="h-4 w-4" />
                   </Button>
                 ) : (
                   <Button onClick={handleQuizSubmit} disabled={submitting} className="flex-1" size="lg">
-                    {submitting ? "Calculating..." : "Get My Score"} <ArrowRight className="h-4 w-4" />
+                    {submitting ? "Hesaplanıyor..." : "Puanımı Hesapla"} <ArrowRight className="h-4 w-4" />
                   </Button>
                 )}
               </div>
               {step === 6 && (
                 <Button onClick={handleQuizSubmit} disabled={submitting} className="w-full mt-3" size="lg">
-                  {submitting ? "Calculating..." : "Reveal My Outlier Score"}
+                  {submitting ? "Hesaplanıyor..." : "Outlier Puanımı Göster"}
                 </Button>
               )}
             </motion.div>
@@ -307,7 +307,7 @@ export default function JoinPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-widest text-[rgba(240,240,255,0.4)]">Your Outlier Type</p>
+                <p className="text-xs uppercase tracking-widest text-[rgba(240,240,255,0.4)]">Outlier Tipin</p>
                 <h2 className="font-heading mt-1 text-3xl font-extrabold" style={{ color: getOutlierColor(score) }}>
                   {getOutlierTitle(score)}
                 </h2>
@@ -316,7 +316,7 @@ export default function JoinPage() {
 
               <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[rgba(240,240,255,0.4)]">
-                  Your Profile QR
+                  Profil QR Kodun
                 </p>
                 <div className="flex justify-center rounded-[8px] bg-white p-3">
                   <QRCode
@@ -325,23 +325,23 @@ export default function JoinPage() {
                   />
                 </div>
                 <p className="mt-2 text-xs text-[rgba(240,240,255,0.3)]">
-                  Others can scan this to connect with you
+                  Diğer katılımcılar bu kodu okutarak seninle bağlantı kurabilir
                 </p>
               </div>
 
               <div className="rounded-[12px] border border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.08)] p-4">
                 <p className="text-sm font-semibold text-[#00E5A0]">
-                  +{POINTS.JOIN_PROFILE + POINTS.QUIZ_COMPLETE} points earned!
+                  +{POINTS.JOIN_PROFILE + POINTS.QUIZ_COMPLETE} puan kazandın!
                 </p>
-                <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">Profile + Quiz complete</p>
+                <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">Profil + Test tamamlandı</p>
               </div>
 
               <div className="flex flex-col gap-3">
                 <Button onClick={() => router.push("/live")} size="lg" className="w-full">
-                  Enter Live Hub <ArrowRight className="h-4 w-4" />
+                  Canlı Merkeze Gir <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button onClick={() => router.push("/networking")} variant="outline" size="lg" className="w-full">
-                  Explore Networking
+                  Ağ Kurmaya Geç
                 </Button>
               </div>
             </motion.div>

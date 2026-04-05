@@ -63,11 +63,11 @@ export default function GamePage() {
         </Link>
         <div className="flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
-          <h1 className="font-heading text-lg font-extrabold">Tooth Defender</h1>
+          <h1 className="font-heading text-lg font-extrabold">Diş Savunucusu</h1>
         </div>
         {attendeeId && !pointsAwarded && (
           <div className="ml-auto rounded-full bg-[rgba(0,229,160,0.15)] px-3 py-1 text-xs font-semibold text-[#00E5A0]">
-            +{POINTS.GAME_PLAY} pts for playing!
+            +{POINTS.GAME_PLAY} puan oyun bonusu!
           </div>
         )}
       </div>
@@ -86,7 +86,7 @@ export default function GamePage() {
               className="h-full w-full border-0"
               style={{ minHeight: "calc(100vh - 64px)" }}
               allow="autoplay"
-              title="Tooth Defender Game"
+              title="Diş Savunucusu Oyunu"
             />
           </motion.div>
         </div>
@@ -95,7 +95,7 @@ export default function GamePage() {
         <div className="w-full border-t border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4 lg:w-72 lg:border-l lg:border-t-0">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-[#FFD700]" />
-            <h2 className="font-heading text-sm font-bold">Top Scores</h2>
+            <h2 className="font-heading text-sm font-bold">En İyi Skorlar</h2>
           </div>
 
           <div className="space-y-2">
@@ -116,10 +116,10 @@ export default function GamePage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-xs font-semibold text-white">
-                    {(entry.attendee as { name?: string } | undefined)?.name ?? "Anonymous"}
-                    {entry.attendee_id === attendeeId && " (you)"}
+                    {(entry.attendee as { name?: string } | undefined)?.name ?? "Anonim"}
+                    {entry.attendee_id === attendeeId && " (sen)"}
                   </p>
-                  <p className="text-[10px] text-[rgba(240,240,255,0.3)]">Wave {entry.wave}</p>
+                  <p className="text-[10px] text-[rgba(240,240,255,0.3)]">Dalga {entry.wave}</p>
                 </div>
                 <span className="text-sm font-extrabold text-[#6C63FF]">
                   {entry.score.toLocaleString()}
@@ -129,15 +129,15 @@ export default function GamePage() {
 
             {leaderboard.length === 0 && (
               <p className="py-8 text-center text-xs text-[rgba(240,240,255,0.3)]">
-                No scores yet — be the first!
+                Henüz skor yok, ilk skoru sen yap!
               </p>
             )}
           </div>
 
           <div className="mt-6 rounded-[8px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-3 text-xs text-[rgba(240,240,255,0.4)]">
-            <p className="font-semibold text-white">Points</p>
-            <p className="mt-1">+10 for playing</p>
-            <p>+score÷100 bonus pts</p>
+            <p className="font-semibold text-white">Puanlar</p>
+            <p className="mt-1">+10 oynama bonusu</p>
+            <p>+skor÷100 ek puan</p>
           </div>
         </div>
       </div>

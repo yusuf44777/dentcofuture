@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { Attendee, Question, Poll, Session } from "@/lib/types";
+import type { Attendee, Question, Poll, Session, AttendeeRole } from "@/lib/types";
+
+const ROLE_LABELS: Record<AttendeeRole, string> = {
+  Student: "Öğrenci",
+  Clinician: "Klinisyen",
+  Academic: "Akademisyen",
+  Entrepreneur: "Girişimci",
+  Industry: "Sektör"
+};
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
@@ -47,7 +55,7 @@ export default function AdminPage() {
     if (password === expected) {
       setAuthed(true);
     } else {
-      setPwError("Incorrect password");
+      setPwError("Şifre hatalı");
     }
   }
 
@@ -144,14 +152,14 @@ export default function AdminPage() {
 
   function exportCSV() {
     const rows = [
-      ["Name", "Role", "Instagram", "Outlier Score", "Points", "Created"],
+      ["Ad Soyad", "Rol", "Instagram", "Outlier Puanı", "Puan", "Oluşturulma"],
       ...attendees.map(a => [a.name, a.role, a.instagram ?? "", a.outlier_score, a.points, a.created_at])
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "dentco-outliers-attendees.csv"; a.click();
+    a.href = url; a.download = "dentco-outliers-katilimcilar.csv"; a.click();
   }
 
   const roleCounts = attendees.reduce<Record<string, number>>((acc, a) => {
@@ -167,17 +175,17 @@ export default function AdminPage() {
           className="w-full max-w-sm space-y-4 rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-8 text-center"
         >
           <Lock className="mx-auto h-8 w-8 text-[rgba(240,240,255,0.3)]" />
-          <h1 className="font-heading text-xl font-extrabold text-white">Admin Access</h1>
+          <h1 className="font-heading text-xl font-extrabold text-white">Yönetim Erişimi</h1>
           <Input
             type="password"
-            placeholder="Password"
+            placeholder="Şifre"
             value={password}
             onChange={e => { setPassword(e.target.value); setPwError(""); }}
             onKeyDown={e => e.key === "Enter" && checkPassword()}
             error={pwError}
             autoFocus
           />
-          <Button onClick={checkPassword} className="w-full" size="lg">Enter Dashboard</Button>
+          <Button onClick={checkPassword} className="w-full" size="lg">Panoya Gir</Button>
         </motion.div>
       </main>
     );
@@ -190,11 +198,11 @@ export default function AdminPage() {
       <div className="border-b border-[rgba(255,255,255,0.08)] bg-[#13131A] px-6 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div>
-            <h1 className="font-heading text-xl font-extrabold">DentCo Outliers — Admin</h1>
-            <p className="text-xs text-[rgba(240,240,255,0.4)]">Live dashboard</p>
+            <h1 className="font-heading text-xl font-extrabold">DentCo Outliers — Yönetim</h1>
+            <p className="text-xs text-[rgba(240,240,255,0.4)]">Canlı pano</p>
           </div>
           <Button onClick={exportCSV} variant="outline" size="sm">
-            <Download className="h-3.5 w-3.5" /> Export CSV
+            <Download className="h-3.5 w-3.5" /> CSV Dışa Aktar
           </Button>
         </div>
       </div>
@@ -204,10 +212,10 @@ export default function AdminPage() {
         {/* ── Stats row ───────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            { label: "Attendees", value: attendees.length, icon: <Users className="h-5 w-5" />, color: "#6C63FF" },
-            { label: "Questions", value: questions.length, icon: <MessageSquare className="h-5 w-5" />, color: "#00E5A0" },
-            { label: "Reactions", value: reactionTotal, icon: <Zap className="h-5 w-5" />, color: "#FF4D6D" },
-            { label: "Active Poll", value: polls.filter(p=>p.active).length ? "Yes" : "No", icon: <BarChart3 className="h-5 w-5" />, color: "#F59E0B" }
+            { label: "Katılımcılar", value: attendees.length, icon: <Users className="h-5 w-5" />, color: "#6C63FF" },
+            { label: "Sorular", value: questions.length, icon: <MessageSquare className="h-5 w-5" />, color: "#00E5A0" },
+            { label: "Tepkiler", value: reactionTotal, icon: <Zap className="h-5 w-5" />, color: "#FF4D6D" },
+            { label: "Aktif Anket", value: polls.filter(p=>p.active).length ? "Evet" : "Hayır", icon: <BarChart3 className="h-5 w-5" />, color: "#F59E0B" }
           ].map(stat => (
             <div key={stat.label} className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4">
               <div className="flex items-center gap-2" style={{ color: stat.color }}>
@@ -221,11 +229,11 @@ export default function AdminPage() {
 
         {/* ── Role breakdown ──────────────────────────────────── */}
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
-          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Attendees by Role</h2>
+          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Rollere Göre Katılımcılar</h2>
           <div className="flex flex-wrap gap-3">
             {Object.entries(roleCounts).map(([role, count]) => (
               <div key={role} className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-2">
-                <span className="text-sm font-semibold text-white">{role}</span>
+                <span className="text-sm font-semibold text-white">{ROLE_LABELS[role as AttendeeRole] ?? role}</span>
                 <span className="rounded-full bg-[#6C63FF] px-2 py-0.5 text-xs font-bold text-white">{count}</span>
               </div>
             ))}
@@ -234,7 +242,7 @@ export default function AdminPage() {
 
         {/* ── Reaction energy ──────────────────────────────────── */}
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
-          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Reaction Energy Meter</h2>
+          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Tepki Enerji Ölçeri</h2>
           <div className="mb-4 h-3 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[#6C63FF] to-[#00E5A0] transition-all duration-500"
@@ -253,12 +261,12 @@ export default function AdminPage() {
 
         {/* ── Sessions control ─────────────────────────────────── */}
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
-          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Sessions</h2>
+          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Oturumlar</h2>
 
           <div className="mb-4 flex gap-3">
-            <Input placeholder="New session title..." value={sessionTitle} onChange={e => setSessionTitle(e.target.value)}
+            <Input placeholder="Yeni oturum başlığı..." value={sessionTitle} onChange={e => setSessionTitle(e.target.value)}
               onKeyDown={e => e.key === "Enter" && createSession()} className="flex-1" />
-            <Button onClick={createSession} size="default"><Plus className="h-4 w-4" />Add</Button>
+            <Button onClick={createSession} size="default"><Plus className="h-4 w-4" />Ekle</Button>
           </div>
 
           <div className="space-y-2">
@@ -272,34 +280,34 @@ export default function AdminPage() {
                 </div>
                 {sess.active ? (
                   <>
-                    <Badge variant="mint">LIVE</Badge>
+                    <Badge variant="mint">CANLI</Badge>
                     <Button variant="danger" size="sm" onClick={() => deactivateSession(sess.id)}>
-                      <Square className="h-3.5 w-3.5" /> End
+                      <Square className="h-3.5 w-3.5" /> Bitir
                     </Button>
                   </>
                 ) : (
                   <Button variant="mint" size="sm" onClick={() => activateSession(sess.id)}>
-                    <Play className="h-3.5 w-3.5" /> Start
+                    <Play className="h-3.5 w-3.5" /> Başlat
                   </Button>
                 )}
               </div>
             ))}
             {sessions.length === 0 && (
-              <p className="text-xs text-[rgba(240,240,255,0.3)]">No sessions. Add one above.</p>
+              <p className="text-xs text-[rgba(240,240,255,0.3)]">Henüz oturum yok. Yukarıdan ekleyin.</p>
             )}
           </div>
         </div>
 
         {/* ── Poll creator ─────────────────────────────────────── */}
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
-          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Polls</h2>
+          <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Anketler</h2>
 
           <div className="mb-6 space-y-3 rounded-[10px] border border-[rgba(108,99,255,0.2)] bg-[rgba(108,99,255,0.06)] p-4">
-            <Textarea placeholder="Poll question..." value={pollQuestion}
+            <Textarea placeholder="Anket sorusu..." value={pollQuestion}
               onChange={e => setPollQuestion(e.target.value)} rows={2} />
             {pollOptions.map((opt, i) => (
               <div key={i} className="flex gap-2">
-                <Input placeholder={`Option ${i + 1}`} value={opt}
+                <Input placeholder={`Seçenek ${i + 1}`} value={opt}
                   onChange={e => { const next = [...pollOptions]; next[i] = e.target.value; setPollOptions(next); }} />
                 {pollOptions.length > 2 && (
                   <Button variant="ghost" size="icon" onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}>
@@ -310,9 +318,9 @@ export default function AdminPage() {
             ))}
             <div className="flex gap-3">
               <Button variant="outline" size="sm" onClick={() => setPollOptions([...pollOptions, ""])}>
-                <Plus className="h-3.5 w-3.5" /> Add Option
+                <Plus className="h-3.5 w-3.5" /> Seçenek Ekle
               </Button>
-              <Button size="sm" onClick={createPoll}>Create Poll</Button>
+              <Button size="sm" onClick={createPoll}>Anket Oluştur</Button>
             </div>
           </div>
 
@@ -326,14 +334,14 @@ export default function AdminPage() {
                   <div className="mb-3 flex items-start gap-3">
                     <div className="flex-1">
                       <p className="text-sm font-semibold">{poll.question}</p>
-                      <p className="text-xs text-[rgba(240,240,255,0.4)]">{total} votes</p>
+                      <p className="text-xs text-[rgba(240,240,255,0.4)]">{total} oy</p>
                     </div>
                     <div className="flex gap-2">
                       {poll.active ? (
-                        <Button variant="danger" size="sm" onClick={() => deactivatePoll(poll.id)}>Deactivate</Button>
+                        <Button variant="danger" size="sm" onClick={() => deactivatePoll(poll.id)}>Kapat</Button>
                       ) : (
                         <Button variant="mint" size="sm" onClick={() => activatePoll(poll.id)}>
-                          <Play className="h-3.5 w-3.5" /> Activate
+                          <Play className="h-3.5 w-3.5" /> Yayına Al
                         </Button>
                       )}
                       <Button variant="ghost" size="icon" onClick={() => deletePoll(poll.id)}>
@@ -365,7 +373,7 @@ export default function AdminPage() {
         {/* ── Question queue ───────────────────────────────────── */}
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
           <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">
-            Question Queue ({questions.filter(q => !q.answered).length} pending)
+            Soru Kuyruğu ({questions.filter(q => !q.answered).length} beklemede)
           </h2>
           <div className="space-y-2">
             {questions.map(q => (
@@ -377,7 +385,7 @@ export default function AdminPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white leading-snug">{q.text}</p>
                   <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">
-                    {(q.attendee as { name?: string } | undefined)?.name} · {q.votes} votes
+                    {(q.attendee as { name?: string } | undefined)?.name} · {q.votes} oy
                   </p>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
@@ -394,7 +402,7 @@ export default function AdminPage() {
               </div>
             ))}
             {questions.length === 0 && (
-              <p className="text-xs text-[rgba(240,240,255,0.3)]">No questions yet</p>
+              <p className="text-xs text-[rgba(240,240,255,0.3)]">Henüz soru yok</p>
             )}
           </div>
         </div>
@@ -403,7 +411,7 @@ export default function AdminPage() {
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-[#FFD700]" />
-            <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Leaderboard</h2>
+            <h2 className="font-heading text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Liderlik Tablosu</h2>
           </div>
           <div className="space-y-2">
             {attendees.slice(0, 10).map((a, i) => (
@@ -412,8 +420,8 @@ export default function AdminPage() {
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
                 </span>
                 <span className="flex-1 text-sm font-semibold truncate">{a.name}</span>
-                <span className="text-xs text-[rgba(240,240,255,0.4)]">{a.role}</span>
-                <span className="text-sm font-extrabold text-[#6C63FF]">{a.points} pts</span>
+                <span className="text-xs text-[rgba(240,240,255,0.4)]">{ROLE_LABELS[a.role] ?? a.role}</span>
+                <span className="text-sm font-extrabold text-[#6C63FF]">{a.points} puan</span>
               </div>
             ))}
           </div>

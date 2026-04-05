@@ -10,46 +10,46 @@ export interface QuizQuestion {
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: 1,
-    text: "When did you last do something outside your comfort zone?",
+    text: "Konfor alanının dışına en son ne zaman çıktın?",
     type: "scale",
-    scaleMin: "Years ago",
-    scaleMax: "This week"
+    scaleMin: "Yıllar önce",
+    scaleMax: "Bu hafta"
   },
   {
     id: 2,
-    text: "You have a groundbreaking dental idea. Your first move?",
+    text: "Çığır açacak bir diş hekimliği fikrin var. İlk adımın ne olur?",
     type: "choice",
     options: [
-      { label: "Research it thoroughly first", value: 2 },
-      { label: "Talk to colleagues", value: 3 },
-      { label: "Build a prototype / pitch it", value: 5 },
-      { label: "Apply for a grant immediately", value: 4 }
+      { label: "Önce detaylıca araştırırım", value: 2 },
+      { label: "Meslektaşlarımla konuşurum", value: 3 },
+      { label: "Prototip çıkarır / sunarım", value: 5 },
+      { label: "Hemen fon başvurusu yaparım", value: 4 }
     ]
   },
   {
     id: 3,
-    text: "Biggest threat to dentistry in the next 10 years?",
+    text: "Önümüzdeki 10 yılda diş hekimliği için en büyük tehdit nedir?",
     type: "choice",
     options: [
-      { label: "AI replacing diagnostics", value: 4 },
-      { label: "Regulatory stagnation", value: 3 },
-      { label: "Talent shortage", value: 3 },
-      { label: "Patient disengagement", value: 4 }
+      { label: "Yapay zekanın tanıda insanı geri plana itmesi", value: 4 },
+      { label: "Mevzuatın yavaş kalması", value: 3 },
+      { label: "Yetenek açığı", value: 3 },
+      { label: "Hastanın süreçten kopması", value: 4 }
     ]
   },
   {
     id: 4,
-    text: "How many non-dentistry books have you read this year?",
+    text: "Bu yıl diş hekimliği dışındaki kaç kitap okudun?",
     type: "scale",
-    scaleMin: "Zero",
+    scaleMin: "Hiç",
     scaleMax: "10+"
   },
   {
     id: 5,
-    text: "Rate your entrepreneurial spirit",
+    text: "Girişimcilik ruhunu değerlendir",
     type: "scale",
-    scaleMin: "Pure clinician",
-    scaleMax: "Serial founder"
+    scaleMin: "Klinik odaklıyım",
+    scaleMax: "Seri girişimciyim"
   }
 ];
 
@@ -69,11 +69,11 @@ export function calculateOutlierScore(answers: number[]): number {
 }
 
 export function getOutlierTitle(score: number): string {
-  if (score >= 85) return "The Disruptor";
-  if (score >= 70) return "The Innovator";
-  if (score >= 55) return "The Challenger";
-  if (score >= 40) return "The Explorer";
-  return "The Learner";
+  if (score >= 85) return "Dönüştürücü";
+  if (score >= 70) return "Yenilikçi";
+  if (score >= 55) return "Meydan Okuyan";
+  if (score >= 40) return "Kaşif";
+  return "Öğrenen";
 }
 
 export function getOutlierColor(score: number): string {

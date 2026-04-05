@@ -4,7 +4,7 @@ import { NetworkingWaitingRoom } from "@/components/networking/networking-waitin
 export const metadata: Metadata = {
   title: "Benzer Profiller",
   description:
-    "Kahve molasında ilgi alanına göre benzer katılımcı profillerini gerçek zamanlı listeleyen networking ekranı."
+    "Kahve molasında ilgi alanına göre benzer katılımcı profillerini gerçek zamanlı listeleyen ağ kurma ekranı."
 };
 
 interface WaitingRoomPageProps {

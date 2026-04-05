@@ -22,6 +22,14 @@ const ROLE_COLORS: Record<AttendeeRole, string> = {
   Industry: "surface"
 } as Record<AttendeeRole, string>;
 
+const ROLE_LABELS: Record<AttendeeRole, string> = {
+  Student: "Öğrenci",
+  Clinician: "Klinisyen",
+  Academic: "Akademisyen",
+  Entrepreneur: "Girişimci",
+  Industry: "Sektör"
+};
+
 export default function NetworkingPage() {
   const [tab, setTab] = useState<NetTab>("discover");
   const [attendee, setAttendee] = useState<Attendee | null>(null);
@@ -159,8 +167,8 @@ export default function NetworkingPage() {
   const acceptedMatches = matches.filter(m => m.status === "accepted");
 
   const TABS: { id: NetTab; label: string; icon: React.ReactNode }[] = [
-    { id: "discover", label: "Discover", icon: <Users className="h-4 w-4" /> },
-    { id: "matches",  label: `Matches ${acceptedMatches.length > 0 ? `(${acceptedMatches.length})` : ""}`,
+    { id: "discover", label: "Keşfet", icon: <Users className="h-4 w-4" /> },
+    { id: "matches",  label: `Eşleşmeler ${acceptedMatches.length > 0 ? `(${acceptedMatches.length})` : ""}`,
       icon: <UserPlus className="h-4 w-4" /> },
     { id: "qr",       label: "QR",       icon: <QrCode className="h-4 w-4" /> }
   ];
@@ -169,10 +177,10 @@ export default function NetworkingPage() {
     <main className="flex min-h-screen flex-col bg-[#0A0A0F] text-white">
       {/* Header */}
       <div className="border-b border-[rgba(255,255,255,0.08)] px-4 py-4 text-center">
-        <h1 className="font-heading text-lg font-extrabold">Networking</h1>
+        <h1 className="font-heading text-lg font-extrabold">Ağ Kurma</h1>
         {!attendeeId && (
           <p className="mt-1 text-xs text-[rgba(240,240,255,0.4)]">
-            <a href="/join" className="text-[#6C63FF] underline">Join first</a> to connect
+            Bağlantı kurmak için önce <a href="/join" className="text-[#6C63FF] underline">katıl</a>
           </p>
         )}
       </div>
@@ -198,7 +206,7 @@ export default function NetworkingPage() {
               {incomingRequests.length > 0 && (
                 <div className="mb-6 rounded-[12px] border border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.06)] p-4">
                   <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#00E5A0]">
-                    {incomingRequests.length} Connection Request{incomingRequests.length > 1 ? "s" : ""}
+                    {incomingRequests.length} Bağlantı İsteği
                   </p>
                   {incomingRequests.map(req => {
                     const requester = others.find(a => a.id === req.attendee_a);
@@ -207,10 +215,10 @@ export default function NetworkingPage() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-sm font-bold">
                           {requester?.name?.charAt(0) ?? "?"}
                         </div>
-                        <span className="flex-1 text-sm font-semibold">{requester?.name ?? "Someone"}</span>
+                        <span className="flex-1 text-sm font-semibold">{requester?.name ?? "Bir katılımcı"}</span>
                         <button onClick={() => acceptMatch(req.id, req.attendee_a)}
                           className="rounded-full bg-[#00E5A0] px-3 py-1 text-xs font-bold text-[#0A0A0F]">
-                          Accept
+                          Kabul Et
                         </button>
                       </div>
                     );
@@ -227,7 +235,7 @@ export default function NetworkingPage() {
                         ? "bg-[#6C63FF] text-white"
                         : "border border-[rgba(255,255,255,0.1)] text-[rgba(240,240,255,0.5)] hover:border-[#6C63FF]"
                     }`}>
-                    {r || "All"}
+                    {r ? ROLE_LABELS[r] : "Tümü"}
                   </button>
                 ))}
               </div>
@@ -256,7 +264,7 @@ export default function NetworkingPage() {
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-sm font-bold">{a.name}</p>
                           <Badge variant={(ROLE_COLORS[a.role] as never) || "default"} className="mt-1">
-                            {a.role}
+                            {ROLE_LABELS[a.role] ?? a.role}
                           </Badge>
                           {a.instagram && (
                             <a href={`https://instagram.com/${a.instagram}`} target="_blank" rel="noreferrer"
@@ -267,7 +275,7 @@ export default function NetworkingPage() {
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs text-[rgba(240,240,255,0.35)]">{a.points} pts</span>
+                        <span className="text-xs text-[rgba(240,240,255,0.35)]">{a.points} puan</span>
                         {attendeeId && (
                           <Button
                             onClick={() => sendConnect(a.id)}
@@ -275,7 +283,7 @@ export default function NetworkingPage() {
                             variant={isConnected ? "ghost" : "outline"}
                             size="sm"
                           >
-                            {isConnected ? <><Check className="h-3 w-3" /> Sent</> : <><UserPlus className="h-3 w-3" /> Connect</>}
+                            {isConnected ? <><Check className="h-3 w-3" /> Gönderildi</> : <><UserPlus className="h-3 w-3" /> Bağlan</>}
                           </Button>
                         )}
                       </div>
@@ -286,7 +294,7 @@ export default function NetworkingPage() {
 
               {filteredOthers.length === 0 && (
                 <p className="py-16 text-center text-sm text-[rgba(240,240,255,0.3)]">
-                  No attendees found
+                  Katılımcı bulunamadı
                 </p>
               )}
             </motion.div>
@@ -298,8 +306,8 @@ export default function NetworkingPage() {
               {acceptedMatches.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <Users className="mb-4 h-10 w-10 text-[rgba(240,240,255,0.2)]" />
-                  <p className="text-sm text-[rgba(240,240,255,0.4)]">No connections yet</p>
-                  <p className="mt-1 text-xs text-[rgba(240,240,255,0.25)]">Go to Discover and connect!</p>
+                  <p className="text-sm text-[rgba(240,240,255,0.4)]">Henüz bağlantın yok</p>
+                  <p className="mt-1 text-xs text-[rgba(240,240,255,0.25)]">Keşfet sekmesine geçip bağlantı kur!</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -315,10 +323,10 @@ export default function NetworkingPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-sm font-bold">{other?.name ?? "..."}</p>
-                          <p className="text-xs text-[rgba(240,240,255,0.4)]">{other?.role ?? ""}</p>
+                          <p className="text-xs text-[rgba(240,240,255,0.4)]">{other?.role ? (ROLE_LABELS[other.role] ?? other.role) : ""}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => openChat(otherId)}>
-                          <MessageSquare className="h-3.5 w-3.5" /> Chat
+                          <MessageSquare className="h-3.5 w-3.5" /> Sohbet
                         </Button>
                       </motion.div>
                     );
@@ -334,7 +342,7 @@ export default function NetworkingPage() {
               className="flex flex-col items-center justify-center py-8 text-center">
               {!attendeeId ? (
                 <p className="text-sm text-[rgba(240,240,255,0.4)]">
-                  <a href="/join" className="text-[#6C63FF] underline">Join first</a> to get your QR code
+                  QR kodunu almak için önce <a href="/join" className="text-[#6C63FF] underline">katıl</a>
                 </p>
               ) : (
                 <>
@@ -346,14 +354,14 @@ export default function NetworkingPage() {
                   </div>
                   <div className="mt-6 space-y-1">
                     <p className="font-heading text-xl font-bold">{attendee?.name}</p>
-                    <p className="text-sm text-[rgba(240,240,255,0.4)]">{attendee?.role}</p>
+                    <p className="text-sm text-[rgba(240,240,255,0.4)]">{attendee?.role ? (ROLE_LABELS[attendee.role] ?? attendee.role) : ""}</p>
                     <div className="mt-2 flex items-center justify-center gap-2">
                       <span className="text-sm font-bold text-[#6C63FF]">{attendee?.outlier_score}</span>
-                      <span className="text-xs text-[rgba(240,240,255,0.4)]">Outlier Score</span>
+                      <span className="text-xs text-[rgba(240,240,255,0.4)]">Outlier Puanı</span>
                     </div>
                   </div>
                   <p className="mt-4 text-xs text-[rgba(240,240,255,0.3)]">
-                    Others scan this to connect with you instantly
+                    Diğerleri bu kodu okutup seninle anında bağlantı kurabilir
                   </p>
                 </>
               )}
@@ -366,7 +374,7 @@ export default function NetworkingPage() {
       <Modal
         open={!!chatOpen}
         onClose={() => setChatOpen(null)}
-        title={`Chat — ${matchedAttendees[chatOpen ?? ""]?.name ?? ""}`}
+        title={`Sohbet — ${matchedAttendees[chatOpen ?? ""]?.name ?? ""}`}
         size="md"
       >
         <div className="flex flex-col gap-3" style={{ height: "360px" }}>
@@ -384,13 +392,13 @@ export default function NetworkingPage() {
             ))}
             {messages.length === 0 && (
               <p className="py-8 text-center text-xs text-[rgba(240,240,255,0.3)]">
-                Say hello!
+                Bir mesajla başlayın!
               </p>
             )}
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="Type a message..."
+              placeholder="Bir mesaj yaz..."
               value={msgText}
               onChange={e => setMsgText(e.target.value)}
               onKeyDown={e => e.key === "Enter" && sendMsg()}

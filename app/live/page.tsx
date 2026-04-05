@@ -8,11 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getStoredAttendeeId } from "@/hooks/useAttendee";
 import { addPoints, POINTS } from "@/lib/points";
-import type { Question, Poll, Reaction, Attendee } from "@/lib/types";
+import type { Question, Poll, Reaction, Attendee, AttendeeRole } from "@/lib/types";
 
 type Tab = "questions" | "polls" | "reactions" | "leaderboard";
 
 const EMOJI_LIST = ["🔥", "💡", "🤯", "👏", "❓"] as const;
+const ROLE_LABELS: Record<AttendeeRole, string> = {
+  Student: "Öğrenci",
+  Clinician: "Klinisyen",
+  Academic: "Akademisyen",
+  Entrepreneur: "Girişimci",
+  Industry: "Sektör"
+};
 
 // ─── Floating emoji component ────────────────────────────────────────────────
 function FloatingEmoji({ emoji, id, x }: { emoji: string; id: number; x: number }) {
@@ -205,10 +212,10 @@ export default function LivePage() {
   }
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "questions",   label: "Q&A",        icon: <MessageSquare className="h-4 w-4" /> },
-    { id: "polls",       label: "Polls",       icon: <BarChart3 className="h-4 w-4" /> },
-    { id: "reactions",   label: "Reactions",   icon: <Zap className="h-4 w-4" /> },
-    { id: "leaderboard", label: "Leaderboard", icon: <Trophy className="h-4 w-4" /> }
+    { id: "questions",   label: "Soru-Cevap", icon: <MessageSquare className="h-4 w-4" /> },
+    { id: "polls",       label: "Anketler",   icon: <BarChart3 className="h-4 w-4" /> },
+    { id: "reactions",   label: "Tepkiler",   icon: <Zap className="h-4 w-4" /> },
+    { id: "leaderboard", label: "Liderlik",   icon: <Trophy className="h-4 w-4" /> }
   ];
 
   return (
@@ -222,11 +229,11 @@ export default function LivePage() {
       <div className="border-b border-[rgba(255,255,255,0.08)] bg-[#0A0A0F] px-4 py-4 text-center">
         <div className="flex items-center justify-center gap-2">
           <span className="live-dot" />
-          <h1 className="font-heading text-lg font-extrabold text-white">Live Session Hub</h1>
+          <h1 className="font-heading text-lg font-extrabold text-white">Canlı Oturum Merkezi</h1>
         </div>
         {!attendeeId && (
           <p className="mt-1 text-xs text-[rgba(240,240,255,0.4)]">
-            <a href="/join" className="text-[#6C63FF] underline">Join first</a> to participate
+            Katılmak için önce <a href="/join" className="text-[#6C63FF] underline">kayıt ol</a>
           </p>
         )}
       </div>
@@ -254,7 +261,7 @@ export default function LivePage() {
               {attendeeId && (
                 <div className="mb-6 space-y-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4">
                   <Textarea
-                    placeholder="Ask the speaker a question..."
+                    placeholder="Konuşmacıya bir soru sor..."
                     value={questionText}
                     onChange={e => setQuestionText(e.target.value)}
                     rows={3}
@@ -263,9 +270,9 @@ export default function LivePage() {
                     className="resize-none"
                   />
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-[rgba(240,240,255,0.3)]">{myUpvotes} upvotes left</p>
+                    <p className="text-xs text-[rgba(240,240,255,0.3)]">{myUpvotes} oy hakkın kaldı</p>
                     <Button onClick={submitQuestion} disabled={submitting || !questionText.trim()} size="sm">
-                      <Send className="h-3.5 w-3.5" /> Submit
+                      <Send className="h-3.5 w-3.5" /> Gönder
                     </Button>
                   </div>
                 </div>
@@ -275,7 +282,7 @@ export default function LivePage() {
               <div className="space-y-3">
                 {questions.length === 0 && (
                   <p className="py-12 text-center text-sm text-[rgba(240,240,255,0.3)]">
-                    No questions yet. Be the first!
+                    Henüz soru yok. İlk soruyu sen sor!
                   </p>
                 )}
                 <AnimatePresence>
@@ -305,10 +312,10 @@ export default function LivePage() {
                           <p className="text-sm text-white leading-snug">{q.text}</p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <span className="text-xs text-[rgba(240,240,255,0.4)]">
-                              {(q.attendee as { name?: string } | undefined)?.name ?? "Anonymous"}
+                              {(q.attendee as { name?: string } | undefined)?.name ?? "Anonim"}
                             </span>
-                            {q.pinned && <span className="flex items-center gap-1 text-xs text-[#A78BFA]"><Pin className="h-3 w-3"/> Pinned</span>}
-                            {q.answered && <span className="flex items-center gap-1 text-xs text-[#00E5A0]"><Check className="h-3 w-3"/> Answered</span>}
+                            {q.pinned && <span className="flex items-center gap-1 text-xs text-[#A78BFA]"><Pin className="h-3 w-3"/> Sabitlendi</span>}
+                            {q.answered && <span className="flex items-center gap-1 text-xs text-[#00E5A0]"><Check className="h-3 w-3"/> Yanıtlandı</span>}
                           </div>
                         </div>
                       </div>
@@ -325,8 +332,8 @@ export default function LivePage() {
               {!activePoll ? (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <BarChart3 className="mb-4 h-10 w-10 text-[rgba(240,240,255,0.2)]" />
-                  <p className="text-sm text-[rgba(240,240,255,0.4)]">No active poll right now</p>
-                  <p className="mt-1 text-xs text-[rgba(240,240,255,0.25)]">Check back when the session starts</p>
+                  <p className="text-sm text-[rgba(240,240,255,0.4)]">Şu anda aktif anket yok</p>
+                  <p className="mt-1 text-xs text-[rgba(240,240,255,0.25)]">Oturum başlayınca tekrar kontrol et</p>
                 </div>
               ) : (
                 <div className="mx-auto max-w-lg space-y-4">
@@ -334,8 +341,8 @@ export default function LivePage() {
                     {activePoll.question}
                   </h2>
                   <p className="text-xs text-[rgba(240,240,255,0.4)]">
-                    {getPollTotal(activePoll)} votes
-                    {votedPoll === activePoll.id && " · You voted"}
+                    {getPollTotal(activePoll)} oy
+                    {votedPoll === activePoll.id && " · Oy verdin"}
                   </p>
 
                   <div className="space-y-3">
@@ -381,7 +388,7 @@ export default function LivePage() {
               {/* Energy bar */}
               <div className="mb-8 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[rgba(240,240,255,0.4)]">
-                  Session Energy
+                  Oturum Enerjisi
                 </p>
                 <div className="h-3 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                   <motion.div
@@ -392,7 +399,7 @@ export default function LivePage() {
                   />
                 </div>
                 <div className="mt-2 flex justify-between text-xs text-[rgba(240,240,255,0.3)]">
-                  <span>{Object.values(reactionCounts).reduce((a,b)=>a+b,0)} total reactions</span>
+                  <span>{Object.values(reactionCounts).reduce((a,b)=>a+b,0)} toplam tepki</span>
                 </div>
               </div>
 
@@ -422,7 +429,7 @@ export default function LivePage() {
                     ))}
                   </div>
                   <p className="text-center text-xs text-[rgba(240,240,255,0.4)]">
-                    <a href="/join" className="text-[#6C63FF]">Join</a> to send reactions
+                    Tepki göndermek için <a href="/join" className="text-[#6C63FF]">katıl</a>
                   </p>
                 </div>
               )}
@@ -433,8 +440,8 @@ export default function LivePage() {
           {tab === "leaderboard" && (
             <motion.div key="leaderboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-heading text-lg font-bold">Top Outliers</h2>
-                <Badge variant="mint">Live</Badge>
+                <h2 className="font-heading text-lg font-bold">En İyi Outlier&apos;lar</h2>
+                <Badge variant="mint">Canlı</Badge>
               </div>
               <div className="space-y-2">
                 {leaderboard.map((a, i) => (
@@ -456,16 +463,16 @@ export default function LivePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-sm font-semibold text-white">
-                        {a.name}{a.id === attendeeId && " (you)"}
+                        {a.name}{a.id === attendeeId && " (sen)"}
                       </p>
-                      <p className="text-xs text-[rgba(240,240,255,0.4)]">{a.role}</p>
+                      <p className="text-xs text-[rgba(240,240,255,0.4)]">{ROLE_LABELS[a.role] ?? a.role}</p>
                     </div>
                     <span className="text-sm font-extrabold text-[#6C63FF]">{a.points}</span>
                   </motion.div>
                 ))}
                 {leaderboard.length === 0 && (
                   <p className="py-12 text-center text-sm text-[rgba(240,240,255,0.3)]">
-                    No participants yet
+                    Henüz katılımcı yok
                   </p>
                 )}
               </div>

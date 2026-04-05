@@ -223,9 +223,9 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
     <main className="min-h-screen px-4 py-8">
       <section className="mx-auto flex w-full max-w-md flex-col gap-5">
         <div className="text-center">
-          <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY • Networking</Badge>
+          <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY • Ağ Kurma</Badge>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-            Networking Katılımcıları
+            Ağ Kurma Katılımcıları
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             Eşleşme önerilerini ve diğer katılımcıları tek ekranda görüntüleyin.

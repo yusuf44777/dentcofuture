@@ -40,7 +40,7 @@ export default async function PrivateDashboardLoginPage({ params }: PrivateDashb
             className="h-auto w-[154px] object-contain sm:w-[184px]"
           />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Dashboard Erişimi</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Panel Erişimi</h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Bu alan sadece yetkili ekip erişimine açıktır.
             </p>
