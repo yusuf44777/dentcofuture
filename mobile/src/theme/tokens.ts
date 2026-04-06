@@ -1,20 +1,22 @@
 import { Platform } from "react-native";
 
 export const colors = {
-  background: "#F2ECE1",
-  backgroundDeep: "#E5DDD0",
-  surface: "#FFFDF8",
-  surfaceMuted: "#F8F2E8",
-  ink: "#102B2D",
-  inkMuted: "#5F7575",
-  accent: "#0E7770",
-  accentSoft: "#D9F2EE",
-  copper: "#BE6D45",
-  copperSoft: "#F5E2D7",
-  line: "#D9D0C1",
-  positive: "#24715E",
-  warning: "#A06A18",
-  danger: "#A04444"
+  background: "#040B1E",
+  backgroundDeep: "#020714",
+  surface: "#0C1833",
+  surfaceMuted: "#132447",
+  ink: "#F1F6FF",
+  inkMuted: "#95A8CB",
+  accent: "#2F7BFF",
+  accentSoft: "#1A2F5A",
+  copper: "#5ED4FF",
+  copperSoft: "#17324A",
+  line: "#243960",
+  positive: "#35D7A5",
+  warning: "#FFBE55",
+  warningSoft: "rgba(255, 190, 85, 0.18)",
+  danger: "#FF6E9B",
+  dangerSoft: "rgba(255, 110, 155, 0.18)"
 } as const;
 
 export const spacing = {
@@ -48,13 +50,13 @@ export const typography = {
 
 export const shadows = Platform.select({
   ios: {
-    shadowColor: "#102B2D",
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 }
+    shadowColor: "#01040B",
+    shadowOpacity: 0.3,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 }
   },
   android: {
-    elevation: 5
+    elevation: 8
   },
   default: {}
 });

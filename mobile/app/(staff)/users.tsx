@@ -90,21 +90,21 @@ export default function StaffUsersScreen() {
         <TextInput
           style={styles.input}
           placeholder="Ad Soyad"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           value={fullName}
           onChangeText={setFullName}
         />
         <TextInput
           style={styles.input}
           placeholder="Katılımcı kodu"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           value={participantCode}
           onChangeText={setParticipantCode}
         />
         <TextInput
           style={styles.input}
           placeholder="Harici referans"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           value={externalRef}
           onChangeText={setExternalRef}
         />
@@ -135,7 +135,7 @@ export default function StaffUsersScreen() {
           <TextInput
             style={[styles.input, styles.searchInput]}
             placeholder="Ad, kod veya referans ile ara"
-            placeholderTextColor="#8D9895"
+            placeholderTextColor={colors.inkMuted}
             value={searchDraft}
             onChangeText={setSearchDraft}
           />

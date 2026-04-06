@@ -105,7 +105,7 @@ export default function ParticipantMoreScreen() {
           value={name}
           onChangeText={(value) => setName(value)}
           placeholder="Ad Soyad"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
         />
         <View style={styles.roleRow}>
           {ROLES.map((candidateRole) => (
@@ -131,7 +131,7 @@ export default function ParticipantMoreScreen() {
           value={instagram}
           onChangeText={(value) => setInstagram(value)}
           placeholder="Instagram kullanıcı adı"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />
         <TextInput
@@ -139,7 +139,7 @@ export default function ParticipantMoreScreen() {
           value={linkedin}
           onChangeText={(value) => setLinkedin(value)}
           placeholder="LinkedIn profil linki"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />
         <TextInput
@@ -147,7 +147,7 @@ export default function ParticipantMoreScreen() {
           value={outlierScore}
           onChangeText={(value) => setOutlierScore(value.replace(/[^0-9]/g, "").slice(0, 3))}
           placeholder="Outlier puanı (0-100)"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           keyboardType="number-pad"
         />
         {onboardingMutation.error ? (
@@ -188,7 +188,7 @@ export default function ParticipantMoreScreen() {
           value={feedbackMessage}
           onChangeText={(value) => setFeedbackMessage(value.slice(0, 500))}
           placeholder="Etkinlik deneyimini paylaş..."
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
         />
         <Pressable
           disabled={feedbackMutation.isPending || feedbackMessage.trim().length < 2}

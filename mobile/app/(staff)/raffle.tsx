@@ -127,14 +127,14 @@ export default function StaffRaffleScreen() {
         <TextInput
           style={styles.input}
           placeholder="Ödül başlığı"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           value={title}
           onChangeText={setTitle}
         />
         <TextInput
           style={styles.input}
           placeholder="Adet"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           keyboardType="number-pad"
           value={quantity}
           onChangeText={(value) => setQuantity(value.replace(/[^0-9]/g, "").slice(0, 3))}
@@ -142,7 +142,7 @@ export default function StaffRaffleScreen() {
         <TextInput
           style={[styles.input, styles.descriptionInput]}
           placeholder="Açıklama"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           value={description}
           onChangeText={setDescription}
           multiline

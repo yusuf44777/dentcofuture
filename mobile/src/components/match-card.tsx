@@ -111,7 +111,7 @@ function ContactButton({ icon, label, url }: ContactButtonProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderColor: "rgba(255,255,255,0.75)",
+    borderColor: colors.line,
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.md,
@@ -119,10 +119,10 @@ const styles = StyleSheet.create({
     ...shadows
   },
   cardTeal: {
-    backgroundColor: "rgba(250, 255, 254, 0.92)"
+    backgroundColor: colors.surface
   },
   cardSand: {
-    backgroundColor: "rgba(255, 249, 243, 0.92)"
+    backgroundColor: colors.surface
   },
   topRow: {
     alignItems: "flex-start",

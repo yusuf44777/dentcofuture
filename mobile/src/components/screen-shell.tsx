@@ -22,16 +22,16 @@ export function ScreenShell({
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={["#FAF4E9", "#E6F3F0", "#F6E2D6"]}
+        colors={["#030816", "#07132B", "#0A1C3D"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       />
 
       <Svg pointerEvents="none" style={styles.blobLayer}>
-        <Circle cx="14%" cy="9%" r="110" fill="rgba(14, 119, 112, 0.10)" />
-        <Circle cx="88%" cy="15%" r="84" fill="rgba(190, 109, 69, 0.12)" />
-        <Circle cx="78%" cy="88%" r="128" fill="rgba(16, 43, 45, 0.07)" />
+        <Circle cx="14%" cy="9%" r="118" fill="rgba(94, 212, 255, 0.13)" />
+        <Circle cx="88%" cy="15%" r="92" fill="rgba(47, 123, 255, 0.14)" />
+        <Circle cx="78%" cy="88%" r="132" fill="rgba(32, 66, 123, 0.34)" />
       </Svg>
 
       <SafeAreaView style={styles.safeArea}>
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm
   },
   heroCard: {
-    backgroundColor: "rgba(255, 253, 248, 0.84)",
-    borderColor: "rgba(255,255,255,0.72)",
+    backgroundColor: "rgba(10, 24, 51, 0.84)",
+    borderColor: "rgba(94, 212, 255, 0.2)",
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.lg,

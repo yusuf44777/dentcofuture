@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   warningCard: {
-    backgroundColor: "#FFF3D6",
+    backgroundColor: colors.warningSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg

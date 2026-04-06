@@ -64,7 +64,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
           onChangeText={setEmail}
           placeholder="ornek@eposta.com"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           style={styles.input}
           value={email}
         />
@@ -77,7 +77,7 @@ export default function LoginScreen() {
           keyboardType="phone-pad"
           onChangeText={setPhone}
           placeholder="+90 5xx xxx xx xx"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
           style={styles.input}
           value={phone}
         />

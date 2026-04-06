@@ -297,7 +297,7 @@ export default function ParticipantNetworkingScreen() {
             <TextInput
               style={styles.composerInput}
               placeholder="Mesaj yaz..."
-              placeholderTextColor="#8D9895"
+              placeholderTextColor={colors.inkMuted}
               value={draftMessage}
               onChangeText={(value) => setDraftMessage(value.slice(0, 500))}
             />
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm
   },
   errorCard: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.md,
     padding: spacing.md
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   warningCard: {
-    backgroundColor: "#FFF3D6",
+    backgroundColor: colors.warningSoft,
     borderRadius: radii.lg,
     padding: spacing.md
   },
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   },
   passButton: {
     alignItems: "center",
-    backgroundColor: "#FFF1F1",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.pill,
     flex: 1,
     flexDirection: "row",

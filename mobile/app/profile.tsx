@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md
   },
   errorCard: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg

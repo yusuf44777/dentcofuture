@@ -282,7 +282,9 @@ const styles = StyleSheet.create({
     marginLeft: 6
   },
   metricsCard: {
-    backgroundColor: "rgba(255,253,248,0.88)",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderWidth: 1,
     borderRadius: radii.lg,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -306,7 +308,7 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   matchBanner: {
-    backgroundColor: "#102B2D",
+    backgroundColor: colors.backgroundDeep,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg
@@ -318,7 +320,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   matchBannerText: {
-    color: "#D7ECE8",
+    color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20,
@@ -361,7 +363,7 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   errorCard: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     padding: spacing.lg
@@ -412,7 +414,7 @@ const styles = StyleSheet.create({
   },
   passButton: {
     backgroundColor: colors.surface,
-    borderColor: "#F3C4C4",
+    borderColor: colors.danger,
     borderWidth: 1
   },
   actionButtonDisabled: {

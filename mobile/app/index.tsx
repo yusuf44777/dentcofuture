@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   errorCard: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.lg,
     padding: spacing.lg
   },

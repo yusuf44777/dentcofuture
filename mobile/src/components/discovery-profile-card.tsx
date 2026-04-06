@@ -79,8 +79,8 @@ export function DiscoveryProfileCard({ profile }: DiscoveryProfileCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(255,253,248,0.95)",
-    borderColor: "rgba(255,255,255,0.82)",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
     borderRadius: 34,
     borderWidth: 1,
     padding: spacing.xl,
@@ -216,13 +216,13 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   footer: {
-    backgroundColor: "#102B2D",
+    backgroundColor: colors.backgroundDeep,
     borderRadius: radii.md,
     marginTop: spacing.xl,
     padding: spacing.md
   },
   footerText: {
-    color: "#D6F2EE",
+    color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 18

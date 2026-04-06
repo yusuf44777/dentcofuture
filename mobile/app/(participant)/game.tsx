@@ -8,7 +8,7 @@ import { fetchGameScores, submitGameScore } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
-const GAME_URL = "https://itch.io/embed-upload/15862237?color=333333";
+const GAME_URL = "https://itch.io/embed-upload/15862237?color=0A1C3D";
 
 export default function ParticipantGameScreen() {
   const queryClient = useQueryClient();
@@ -79,7 +79,7 @@ export default function ParticipantGameScreen() {
             onChangeText={(value) => setScoreInput(value.replace(/[^0-9]/g, ""))}
             style={styles.input}
             placeholder="Skor"
-            placeholderTextColor="#8D9895"
+            placeholderTextColor={colors.inkMuted}
           />
           <TextInput
             keyboardType="number-pad"
@@ -87,7 +87,7 @@ export default function ParticipantGameScreen() {
             onChangeText={(value) => setWaveInput(value.replace(/[^0-9]/g, ""))}
             style={styles.input}
             placeholder="Dalga"
-            placeholderTextColor="#8D9895"
+            placeholderTextColor={colors.inkMuted}
           />
           <Pressable
             disabled={!canSubmit || submitMutation.isPending}
@@ -143,7 +143,7 @@ export default function ParticipantGameScreen() {
 
 const styles = StyleSheet.create({
   webViewCard: {
-    backgroundColor: "#333333",
+    backgroundColor: colors.backgroundDeep,
     borderRadius: radii.lg,
     height: 260,
     marginBottom: spacing.md,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   webLoader: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "#333333",
+    backgroundColor: colors.backgroundDeep,
     justifyContent: "center",
     zIndex: 10
   },

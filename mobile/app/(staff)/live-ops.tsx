@@ -125,7 +125,7 @@ export default function StaffLiveOpsScreen() {
           value={pollQuestion}
           onChangeText={(value) => setPollQuestion(value.slice(0, 200))}
           placeholder="Anket sorusu"
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
         />
         <TextInput
           multiline
@@ -134,7 +134,7 @@ export default function StaffLiveOpsScreen() {
           value={pollOptionsRaw}
           onChangeText={setPollOptionsRaw}
           placeholder={"Seçenekleri satır satır yaz\nSeçenek 1\nSeçenek 2"}
-          placeholderTextColor="#8D9895"
+          placeholderTextColor={colors.inkMuted}
         />
         <Text style={styles.helpText}>Seçenek sayısı: {parsedOptions.length}</Text>
         <Pressable

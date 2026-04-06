@@ -89,7 +89,7 @@ export function ProfileEditor({
             onValueChange={(nextValue) => {
               setValues((currentValues) => ({ ...currentValues, isVisible: nextValue }));
             }}
-            trackColor={{ false: "#D9D0C1", true: "#0E7770" }}
+            trackColor={{ false: colors.line, true: colors.accent }}
             thumbColor="#FFFFFF"
           />
         </View>
@@ -374,7 +374,7 @@ function Field({
           numberOfLines={numberOfLines}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#8E9A98"
+          placeholderTextColor={colors.inkMuted}
           style={[styles.input, multiline ? styles.inputMultiline : null]}
           textAlignVertical={multiline ? "top" : "center"}
           value={value}
@@ -456,8 +456,8 @@ function MultiChoiceGroup({
 
 const styles = StyleSheet.create({
   overviewCard: {
-    backgroundColor: "rgba(255, 253, 248, 0.88)",
-    borderColor: "rgba(255,255,255,0.76)",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.lg,
@@ -529,8 +529,8 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
   sectionCard: {
-    backgroundColor: "rgba(255, 253, 248, 0.9)",
-    borderColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.lg,
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md
   },
   errorText: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.md,
     color: colors.danger,
     fontFamily: typography.body,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     alignItems: "center",
-    backgroundColor: colors.ink,
+    backgroundColor: colors.backgroundDeep,
     borderRadius: radii.md,
     flexDirection: "row",
     justifyContent: "center",

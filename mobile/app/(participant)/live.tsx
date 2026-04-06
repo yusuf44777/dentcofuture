@@ -109,7 +109,7 @@ export default function ParticipantLiveScreen() {
             multiline
             numberOfLines={3}
             placeholder="Sahneye iletilecek sorunu yaz..."
-            placeholderTextColor="#8D9895"
+            placeholderTextColor={colors.inkMuted}
             style={styles.textarea}
             value={questionText}
             onChangeText={(value) => setQuestionText(value.slice(0, 200))}
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm
   },
   errorCard: {
-    backgroundColor: "#FDECEC",
+    backgroundColor: colors.dangerSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.md,
     padding: spacing.md
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     lineHeight: 19
   },
   warningCard: {
-    backgroundColor: "#FFF3D6",
+    backgroundColor: colors.warningSoft,
     borderRadius: radii.lg,
     marginBottom: spacing.md,
     padding: spacing.md

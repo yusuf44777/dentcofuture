@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { useState } from "react";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
-const GAME_URL = "https://itch.io/embed-upload/15862237?color=333333";
+const GAME_URL = "https://itch.io/embed-upload/15862237?color=0A1C3D";
 
 export default function GameScreen() {
   const router = useRouter();
@@ -123,16 +123,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
-    backgroundColor: "#333333"
+    backgroundColor: colors.backgroundDeep
   },
   webview: {
     flex: 1,
-    backgroundColor: "#333333"
+    backgroundColor: colors.backgroundDeep
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "#333333",
+    backgroundColor: colors.backgroundDeep,
     justifyContent: "center",
     zIndex: 10
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   errorText: {
-    color: "#AAAAAA",
+    color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 14,
     lineHeight: 20,
