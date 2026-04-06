@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth/dashboard";
 
 type SpeakerDashboardLoginPageProps = {
-  searchParams?: Promise<{ next?: string | string[] }> | { next?: string | string[] };
+  searchParams?: Promise<{ next?: string | string[] }>;
 };
 
 export default async function SpeakerDashboardLoginPage({

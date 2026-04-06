@@ -12,7 +12,7 @@ import {
 
 interface PrivateDashboardLoginPageProps {
   params: Promise<{ token: string }>;
-  searchParams?: Promise<{ next?: string | string[] }> | { next?: string | string[] };
+  searchParams?: Promise<{ next?: string | string[] }>;
 }
 
 export default async function PrivateDashboardLoginPage({
