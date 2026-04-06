@@ -21,7 +21,8 @@ export default async function PrivateRafflePage({ params }: PrivateRafflePagePro
   const sessionToken = cookieStore.get(DASHBOARD_AUTH_COOKIE_NAME)?.value;
 
   if (!isDashboardSessionValid(sessionToken)) {
-    redirect("/konusmacipanel/login");
+    const nextPath = encodeURIComponent("/cekilispanel");
+    redirect(`/panel/${encodeURIComponent(token)}/login?next=${nextPath}`);
   }
 
   redirect("/cekilispanel");

@@ -21,7 +21,8 @@ export default async function PrivateDashboardPage({ params }: PrivateDashboardP
   const sessionToken = cookieStore.get(DASHBOARD_AUTH_COOKIE_NAME)?.value;
 
   if (!isDashboardSessionValid(sessionToken)) {
-    redirect("/konusmacipanel/login");
+    const nextPath = encodeURIComponent("/konusmacipanel");
+    redirect(`/panel/${encodeURIComponent(token)}/login?next=${nextPath}`);
   }
 
   redirect("/konusmacipanel");

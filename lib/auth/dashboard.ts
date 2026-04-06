@@ -57,6 +57,24 @@ export function getDashboardPrivatePath() {
   return "/konusmacipanel";
 }
 
+export function resolveSafeDashboardRedirectPath(path?: string, fallback = getDashboardPrivatePath()) {
+  if (!path) {
+    return fallback;
+  }
+
+  const trimmed = path.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return fallback;
+  }
+
+  try {
+    const url = new URL(trimmed, "http://localhost");
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export function isDashboardPrivateTokenValid(token?: string) {
   if (!token) {
     return false;

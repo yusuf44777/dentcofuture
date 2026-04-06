@@ -11,12 +11,12 @@ interface DashboardLoginFormProps {
 
 export function DashboardLoginForm({ redirectPath = "/konusmacipanel" }: DashboardLoginFormProps) {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = username.trim().length > 0 && password.length > 0 && !isSubmitting;
+  const canSubmit = identifier.trim().length > 0 && password.length > 0 && !isSubmitting;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,12 +28,18 @@ export function DashboardLoginForm({ redirectPath = "/konusmacipanel" }: Dashboa
     setIsSubmitting(true);
 
     try {
+      const normalizedIdentifier = identifier.trim();
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier);
+      const payload = isEmail
+        ? { email: normalizedIdentifier.toLowerCase(), password }
+        : { username: normalizedIdentifier, password };
+
       const response = await fetch("/api/dashboard-auth", {
         method: "POST",
         headers: {
           "content-type": "application/json"
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -53,19 +59,25 @@ export function DashboardLoginForm({ redirectPath = "/konusmacipanel" }: Dashboa
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <label htmlFor="dashboard-username" className="text-sm font-medium text-slate-700">
-          Kullanıcı Adı
+        <label htmlFor="dashboard-identifier" className="text-sm font-medium text-slate-700">
+          E-posta veya Kullanıcı Adı
         </label>
         <input
-          id="dashboard-username"
+          id="dashboard-identifier"
           type="text"
-          autoComplete="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-4 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
-          placeholder="Kullanıcı adını girin"
+          autoComplete="username email"
+          autoCapitalize="none"
+          spellCheck={false}
+          inputMode="email"
+          value={identifier}
+          onChange={(event) => setIdentifier(event.target.value)}
+          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/30"
+          placeholder="ornek@firma.com"
           required
         />
+        <p className="text-xs text-slate-500">
+          Supabase e-posta hesabınızla giriş yapabilirsiniz. Legacy kullanıcı adı da desteklenir.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -78,7 +90,7 @@ export function DashboardLoginForm({ redirectPath = "/konusmacipanel" }: Dashboa
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-4 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
+          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/30"
           placeholder="Şifreyi girin"
           required
         />

@@ -21,6 +21,7 @@ COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart
 - `/cekilis` public çekiliş sonuç ekranı
 - `/konusmacipanel` özel konuşmacı canlı analiz panosu
 - `/konusmacipanel/login` konuşmacı panel giriş ekranı
+- `/konusmacipanel/admin` konuşmacı oturumu ile korunan yönetim ekranı (`/admin` buraya yönlenir)
 - `/cekilispanel` özel çekiliş yönetim ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/networking/profile` networking profili oluşturma/okuma/güncelleme endpoint'i
@@ -138,6 +139,8 @@ Gerekli:
 - `RAFFLE_ADMIN_SECRET` (opsiyonel, çekiliş API'lerini dashboard cookie olmadan tetiklemek için)
 - `DASHBOARD_USERNAME` (dashboard kullanıcı adı)
 - `DASHBOARD_PASSWORD` (dashboard şifresi)
+- `DASHBOARD_SUPABASE_USERNAME` (opsiyonel: legacy kullanıcı adı -> Supabase e-posta eşlemesi)
+- `DASHBOARD_SUPABASE_EMAIL` (opsiyonel: panel için kullanılacak Supabase e-posta hesabı)
 - `DASHBOARD_AUTH_SECRET` (opsiyonel, dashboard cookie imzası için; boşsa `CRON_SECRET` kullanılır)
 - `NEXT_PUBLIC_APP_URL` (QR URL üretimi için)
 
@@ -216,6 +219,9 @@ Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
 
 - Dashboard URL'i: `/konusmacipanel`
 - Panelde oturum yoksa `/konusmacipanel/login` sayfasına yönlenir.
+- Login endpoint'i (`/api/dashboard-auth`) önce Supabase Auth (`signInWithPassword`) dener.
+- Supabase girişlerinde kullanıcı `staff_roles` tablosunda `is_active = true` olmalıdır.
+- Supabase konfigürasyonu olmayan ortamlarda legacy `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` fallback'i devam eder.
 - Çekiliş paneli (`/cekilispanel`) ayrı login istemez; aynı dashboard oturumunu kullanır.
 - Giriş doğrulaması `/api/dashboard-auth` üzerinden server-side yapılır.
 - Varsayılan kullanıcı adı/şifre:
