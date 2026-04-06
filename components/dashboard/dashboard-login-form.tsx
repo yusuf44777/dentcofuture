@@ -9,7 +9,7 @@ interface DashboardLoginFormProps {
   redirectPath?: string;
 }
 
-export function DashboardLoginForm({ redirectPath = "/konusmacipanel" }: DashboardLoginFormProps) {
+export function DashboardLoginForm({ redirectPath = "/admin" }: DashboardLoginFormProps) {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");

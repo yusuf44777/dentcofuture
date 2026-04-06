@@ -54,7 +54,7 @@ export function getDashboardCookieMaxAge() {
 }
 
 export function getDashboardPrivatePath() {
-  return "/konusmacipanel";
+  return "/admin";
 }
 
 export function resolveSafeDashboardRedirectPath(path?: string, fallback = getDashboardPrivatePath()) {

@@ -11,7 +11,7 @@ export default async function RafflePanelPage() {
   const sessionToken = cookieStore.get(DASHBOARD_AUTH_COOKIE_NAME)?.value;
 
   if (!isDashboardSessionValid(sessionToken)) {
-    redirect("/konusmacipanel/login?next=%2Fcekilispanel");
+    redirect("/admin/login?next=%2Fcekilispanel");
   }
 
   return <RaffleAdminConsole />;

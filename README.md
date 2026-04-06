@@ -19,9 +19,9 @@ COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart
 - `/networking` networking formu
 - `/networking/waiting-room` benzer profil listesi
 - `/cekilis` public çekiliş sonuç ekranı
-- `/konusmacipanel` özel konuşmacı canlı analiz panosu
-- `/konusmacipanel/login` konuşmacı panel giriş ekranı
-- `/konusmacipanel/admin` konuşmacı oturumu ile korunan yönetim ekranı (`/admin` buraya yönlenir)
+- `/admin` canlı analiz yönetim panosu
+- `/admin/login` yönetim panel giriş ekranı
+- `/konusmacipanel` ve alt rotalar legacy uyumluluk için `/admin` altına yönlenir
 - `/cekilispanel` özel çekiliş yönetim ekranı
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/networking/profile` networking profili oluşturma/okuma/güncelleme endpoint'i
@@ -191,7 +191,7 @@ curl -X POST "http://localhost:3000/api/analyze?force=true" \
 
 ## 5. Realtime Davranış
 
-Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
+Admin panel (`/admin`), `postgres_changes` eventlerini dinler:
 
 - `attendee_feedbacks` insert -> `Toplam Yanıt` + son 5 yorum güncellenir
 - `congress_analytics` insert -> duygu grafiği + top konular + özet güncellenir
@@ -200,8 +200,8 @@ Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
 
 - `/submit` ekranında iki mod vardır:
   - `Serbest Yanıt` (açık uçlu metin)
-  - `Çoktan Seçmeli` (tek seçimli anket; konuşmacı panelinden canlı güncellenir)
-- Konuşmacı panelindeki canlı anket yönetim alanı üzerinden yeni soru/seçenek yayınlanabilir ve aktif anket kapatılabilir.
+  - `Çoktan Seçmeli` (tek seçimli anket; admin panelden canlı güncellenir)
+- Admin paneldeki canlı anket yönetim alanı üzerinden yeni soru/seçenek yayınlanabilir ve aktif anket kapatılabilir.
 - Aynı panelde hazır soru havuzu oluşturulabilir; kayıtlı sorular taslağa doldurulabilir veya tek tıkla yayına alınabilir.
 - Çoktan seçmeli yanıtlar `attendee_feedbacks.message` alanına `ANKET: ...` formatında yazılır.
 - Özel panel anket kartı aktif ankete ait yanıtları canlı olarak sayar.
@@ -217,8 +217,8 @@ Konuşmacı paneli (`/konusmacipanel`), `postgres_changes` eventlerini dinler:
 
 ## 7. Dashboard Erişim Koruması
 
-- Dashboard URL'i: `/konusmacipanel`
-- Panelde oturum yoksa `/konusmacipanel/login` sayfasına yönlenir.
+- Dashboard URL'i: `/admin`
+- Panelde oturum yoksa `/admin/login` sayfasına yönlenir.
 - Login endpoint'i (`/api/dashboard-auth`) önce Supabase Auth (`signInWithPassword`) dener.
 - Supabase girişlerinde kullanıcı `staff_roles` tablosunda `is_active = true` olmalıdır.
 - Supabase konfigürasyonu olmayan ortamlarda legacy `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` fallback'i devam eder.

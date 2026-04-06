@@ -121,7 +121,7 @@ interface RaffleAdminConsoleProps {
   speakerPanelPath?: string;
 }
 
-export function RaffleAdminConsole({ speakerPanelPath = "/konusmacipanel" }: RaffleAdminConsoleProps) {
+export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminConsoleProps) {
   const [overview, setOverview] = useState<RaffleOverviewResponse | null>(null);
   const [overviewState, setOverviewState] = useState<RequestState>("loading");
   const [overviewMessage, setOverviewMessage] = useState("");

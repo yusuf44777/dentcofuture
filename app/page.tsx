@@ -1,8 +1,10 @@
 "use client";
+import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Trophy, Smartphone, Apple } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
@@ -10,6 +12,8 @@ const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
+const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
+const LUMA_CHECKOUT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
 
 const SPEAKERS = [
   {
@@ -152,6 +156,19 @@ function ParticleField() {
   return <canvas ref={ref} className="pointer-events-none absolute inset-0 opacity-60" />;
 }
 
+function ApplicationCheckoutButton() {
+  return (
+    <a
+      href={LUMA_CHECKOUT_URL}
+      className={cn("luma-checkout--button", buttonVariants({ size: "xl", variant: "surface" }), "w-full sm:w-auto")}
+      data-luma-action="checkout"
+      data-luma-event-id={LUMA_EVENT_ID}
+    >
+      Etkinliğe Kaydol
+    </a>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const { d, h, m, s, past } = useCountdown(EVENT_DATE);
@@ -229,9 +246,7 @@ export default function LandingPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
             className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
             <div className="w-full sm:basis-full sm:flex sm:justify-center">
-              <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
-                Başvurular • Yakında Açılacak
-              </Button>
+              <ApplicationCheckoutButton />
             </div>
             <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
               <Button size="xl" variant="mint" className="w-full sm:w-auto">
@@ -376,9 +391,7 @@ export default function LandingPage() {
           <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Uygulamayı indir, etkinlik deneyimine mobilde katıl.</p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
             <div className="w-full sm:basis-full sm:flex sm:justify-center">
-              <Button size="xl" variant="surface" className="w-full sm:w-auto" disabled>
-                Başvurular • Yakında Açılacak
-              </Button>
+              <ApplicationCheckoutButton />
             </div>
             <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer">
               <Button size="xl" variant="mint">
@@ -409,6 +422,12 @@ export default function LandingPage() {
           <span className="text-[rgba(240,240,255,0.45)]">Başvurular yakında açılacak</span>
         </div>
       </footer>
+
+      <Script
+        id="luma-checkout"
+        src="https://embed.lu.ma/checkout-button.js"
+        strategy="afterInteractive"
+      />
     </main>
   );
 }
