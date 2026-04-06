@@ -91,9 +91,11 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
+    const diagnosed = diagnoseUploadSessionError(error);
     return NextResponse.json(
       {
-        error: getErrorMessage(error, "Yükleme oturumu oluşturulamadı.")
+        error: diagnosed.message,
+        code: diagnosed.code
       },
       { status: 500 }
     );
@@ -116,4 +118,52 @@ async function ensureGalleryBucket(supabase: SupabaseClient) {
   if (createError && !createError.message.toLowerCase().includes("already exists")) {
     throw new Error(`Galeri bucket oluşturulamadı: ${createError.message}`);
   }
+}
+
+function diagnoseUploadSessionError(error: unknown) {
+  const rawMessage = error instanceof Error ? error.message.trim() : "";
+  const normalized = rawMessage.toLowerCase();
+
+  if (
+    normalized.includes("missing supabase_url") ||
+    normalized.includes("supabase_service_role_key")
+  ) {
+    return {
+      code: "MISSING_SUPABASE_SERVER_ENV",
+      message:
+        "Sunucu ayarı eksik: Vercel'de SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY tanımlı olmalı."
+    };
+  }
+
+  if (
+    normalized.includes("invalid api key") ||
+    normalized.includes("jwt") ||
+    normalized.includes("not authorized")
+  ) {
+    return {
+      code: "INVALID_SUPABASE_SERVICE_ROLE_KEY",
+      message:
+        "Supabase servis anahtarı geçersiz veya yetkisiz. SUPABASE_SERVICE_ROLE_KEY değerini kontrol edin."
+    };
+  }
+
+  if (normalized.includes("bucket")) {
+    return {
+      code: "STORAGE_BUCKET_ERROR",
+      message:
+        "Supabase Storage bucket erişimi başarısız. Storage servisinin açık olduğundan ve anahtarın yetkili olduğundan emin olun."
+    };
+  }
+
+  if (process.env.NODE_ENV !== "production" && rawMessage) {
+    return {
+      code: "UPLOAD_SESSION_ERROR",
+      message: rawMessage
+    };
+  }
+
+  return {
+    code: "UPLOAD_SESSION_ERROR",
+    message: getErrorMessage(error, "Yükleme oturumu oluşturulamadı.")
+  };
 }

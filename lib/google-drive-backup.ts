@@ -69,16 +69,18 @@ export async function backupBytesToGoogleDrive(input: BackupInput): Promise<Goog
 }
 
 function getGoogleDriveConfig(): GoogleDriveConfig | null {
-  const clientEmail = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "";
+  const clientEmail = stripWrappingQuotes(
+    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? ""
+  );
   const privateKeyRaw = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
   const folderId =
-    process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() || DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
+    stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
+    DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
+  const privateKey = normalizePrivateKey(privateKeyRaw);
 
-  if (!clientEmail || !privateKeyRaw) {
+  if (!clientEmail || !privateKey) {
     return null;
   }
-
-  const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
 
   return {
     clientEmail,
@@ -234,6 +236,40 @@ function base64UrlEncode(value: Buffer) {
 }
 
 function normalizeErrorMessage(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : fallback;
-  return message.trim().slice(0, 400) || fallback;
+  const message = error instanceof Error ? error.message.trim() : "";
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("private key") ||
+    lower.includes("pem") ||
+    lower.includes("decoder routines")
+  ) {
+    return "Google Drive private key formatı geçersiz. Vercel env'de anahtarı tırnaksız ekleyin ve satır sonlarının doğru olduğundan emin olun.";
+  }
+
+  if (lower.includes("invalid_grant") || lower.includes("oauth")) {
+    return "Google OAuth doğrulaması başarısız. Service account e-postası, private key ve Drive paylaşım izinlerini kontrol edin.";
+  }
+
+  if (lower.includes("insufficient") || lower.includes("permission")) {
+    return "Google Drive klasörüne yazma izni yok. Klasörü service account e-postasıyla Editor olarak paylaşın.";
+  }
+
+  return message.slice(0, 400) || fallback;
+}
+
+function normalizePrivateKey(value: string) {
+  const unwrapped = stripWrappingQuotes(value.trim());
+  return unwrapped.replace(/\\n/g, "\n");
+}
+
+function stripWrappingQuotes(value: string) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }

@@ -132,6 +132,9 @@ Gerekli:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL` (service account e-postası)
+- `GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY` (özel anahtar, `\n` formatı desteklenir)
+- `GOOGLE_DRIVE_FOLDER_ID` (opsiyonel, boşsa varsayılan klasör kullanılır)
 - `MOBILE_ALLOWED_PARTICIPANTS` (`email|phone` format, virgulle ayrılmış liste)
 - `MOBILE_LOGIN_SECRET` (mobil e-posta+telefon girişi için server-side parola türetme anahtarı)
 - `OPENAI_API_KEY`
