@@ -9,8 +9,8 @@ import {
   Bot,
   ChartColumnBig,
   Download,
-  Gift,
   Hash,
+  Images,
   ListChecks,
   LoaderCircle,
   MessageSquareMore,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/engagement";
 import type { AnalyticsRow, FeedbackRow, Json } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { MobileStaffParityPanel } from "@/components/dashboard/mobile-staff-parity-panel";
 
 type Sentiment = {
   positive: number;
@@ -1068,11 +1069,11 @@ export function LiveDashboard() {
                 priority
               />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">
                   Canlı Etkileşim Panosu
                 </p>
                 <h1 className="text-xl font-semibold tracking-tight md:text-3xl">Dent Co Future</h1>
-                <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200/80">
+                <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-200/80">
                   COMMUNITIVE DENTISTRY
                 </p>
               </div>
@@ -1083,11 +1084,11 @@ export function LiveDashboard() {
                 zamanlı olarak toplanır, yapay zeka ile analiz edilir ve anında güncellenir.
               </p>
               <Link
-                href="/cekilispanel"
-                className="inline-flex w-fit items-center gap-2 rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-200/20"
+                href="/galeri"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-amber-200/35 bg-amber-200/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-200/20"
               >
-                <Gift className="h-4 w-4" />
-                Çekiliş Merkezi
+                <Images className="h-4 w-4" />
+                Etkinlik Galerisi
               </Link>
             </div>
           </div>
@@ -1095,7 +1096,7 @@ export function LiveDashboard() {
 
         <section className="grid items-start gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
           <aside className="glass-panel rounded-3xl p-6 xl:sticky xl:top-6">
-            <div className="mb-5 flex items-center gap-2 text-cyan-200">
+            <div className="mb-5 flex items-center gap-2 text-amber-200">
               <Sparkles className="h-5 w-5" />
               <h2 className="text-lg font-semibold">Anında Katılım</h2>
             </div>
@@ -1105,7 +1106,7 @@ export function LiveDashboard() {
 
             <div
               ref={qrContainerRef}
-              className="mx-auto w-fit rounded-3xl bg-white p-5 shadow-2xl shadow-cyan-300/15"
+              className="mx-auto w-fit rounded-3xl bg-white p-5 shadow-2xl shadow-amber-300/15"
             >
               <QRCode
                 value={submitUrl || "https://example.com/submit"}
@@ -1115,13 +1116,13 @@ export function LiveDashboard() {
               />
             </div>
 
-            <p className="mt-6 text-center text-sm uppercase tracking-[0.18em] text-cyan-100/70">Kısa URL</p>
-            <p className="mt-2 text-center text-2xl font-semibold tracking-tight text-cyan-100">{shortUrl}</p>
+            <p className="mt-6 text-center text-sm uppercase tracking-[0.18em] text-amber-100/70">Kısa URL</p>
+            <p className="mt-2 text-center text-2xl font-semibold tracking-tight text-amber-100">{shortUrl}</p>
             <div className="mt-4 flex flex-col items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20"
+                className="border-amber-200/30 bg-amber-200/10 text-amber-50 hover:bg-amber-200/20"
                 onClick={handleDownloadQr}
                 disabled={qrDownloadState === "loading"}
               >
@@ -1131,7 +1132,7 @@ export function LiveDashboard() {
               {qrDownloadMessage ? (
                 <p
                   className={`text-xs ${
-                    qrDownloadState === "error" ? "text-rose-300" : "text-cyan-100/80"
+                    qrDownloadState === "error" ? "text-rose-300" : "text-amber-100/80"
                   }`}
                 >
                   {qrDownloadMessage}
@@ -1145,14 +1146,14 @@ export function LiveDashboard() {
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-slate-300">
-                    <Activity className="h-4 w-4 text-cyan-300" />
+                    <Activity className="h-4 w-4 text-amber-300" />
                     Toplam Yanıt
                   </p>
                   <p className="mt-2 text-4xl font-semibold text-white md:text-6xl">{totalResponses}</p>
                 </div>
                 <div className="w-full max-w-2xl space-y-3">
-                  <div className="rounded-2xl border border-cyan-200/20 bg-cyan-300/5 px-4 py-3">
-                    <p className="text-sm text-cyan-50">{summary}</p>
+                  <div className="rounded-2xl border border-amber-200/20 bg-amber-300/5 px-4 py-3">
+                    <p className="text-sm text-amber-50">{summary}</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Button
@@ -1177,7 +1178,7 @@ export function LiveDashboard() {
                       type="button"
                       variant="outline"
                       onClick={handleResetDashboardView}
-                      className="h-10 border-cyan-200/30 bg-cyan-200/10 px-4 text-cyan-50 hover:bg-cyan-200/20"
+                      className="h-10 border-amber-200/30 bg-amber-200/10 px-4 text-amber-50 hover:bg-amber-200/20"
                     >
                       <RotateCcw className="h-4 w-4" />
                       Mesajları Sıfırla
@@ -1204,19 +1205,19 @@ export function LiveDashboard() {
                     {analyzeUiMessage ? (
                       <p
                         className={`text-xs font-medium ${
-                          analyzeUiState === "error" ? "text-rose-300" : "text-cyan-100"
+                          analyzeUiState === "error" ? "text-rose-300" : "text-amber-100"
                         }`}
                       >
                         {analyzeUiMessage}
                       </p>
                     ) : (
-                      <p className="text-xs text-cyan-200/75">
+                      <p className="text-xs text-amber-200/75">
                         Moderatörler için güncel içgörü oluşturmak üzere istediğiniz an manuel tetikleyin.
                       </p>
                     )}
                   </div>
                   {resetUiMessage ? (
-                    <p className="text-xs text-cyan-100/80">{resetUiMessage}</p>
+                    <p className="text-xs text-amber-100/80">{resetUiMessage}</p>
                   ) : null}
                   {hardResetUiMessage ? (
                     <p
@@ -1228,14 +1229,14 @@ export function LiveDashboard() {
                     </p>
                   ) : null}
                   {resetCursorLabel ? (
-                    <p className="text-xs text-cyan-200/75">
+                    <p className="text-xs text-amber-200/75">
                       Sıfırlama aktif. Bu panel {resetCursorLabel} sonrasındaki verileri gösteriyor.
                     </p>
                   ) : null}
 
-                  <div className="space-y-3 rounded-2xl border border-cyan-200/20 bg-cyan-200/5 p-4">
+                  <div className="space-y-3 rounded-2xl border border-amber-200/20 bg-amber-200/5 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-cyan-100">Canlı Anket Yönetimi</p>
+                      <p className="text-sm font-semibold text-amber-100">Canlı Anket Yönetimi</p>
                       <p
                         className={`text-xs font-medium ${
                           activePoll ? "text-emerald-200" : "text-slate-300"
@@ -1246,20 +1247,20 @@ export function LiveDashboard() {
                     </div>
 
                     {pollConfigUiState === "loading" ? (
-                      <p className="text-xs text-cyan-200/80">Canlı anket durumu yükleniyor...</p>
+                      <p className="text-xs text-amber-200/80">Canlı anket durumu yükleniyor...</p>
                     ) : null}
                     {pollConfigUiMessage ? (
                       <p
                         className={`text-xs ${
-                          pollConfigUiState === "error" ? "text-rose-300" : "text-cyan-200/80"
+                          pollConfigUiState === "error" ? "text-rose-300" : "text-amber-200/80"
                         }`}
                       >
                         {pollConfigUiMessage}
                       </p>
                     ) : null}
                     {activePoll ? (
-                      <div className="rounded-xl border border-cyan-200/20 bg-slate-900/30 px-3 py-2">
-                        <p className="text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+                      <div className="rounded-xl border border-amber-200/20 bg-slate-900/30 px-3 py-2">
+                        <p className="text-xs font-medium uppercase tracking-wide text-amber-200/80">
                           Yayındaki Soru
                         </p>
                         <p className="mt-1 text-sm text-slate-100">{activePoll.question}</p>
@@ -1267,7 +1268,7 @@ export function LiveDashboard() {
                     ) : null}
 
                     <div className="space-y-1">
-                      <label htmlFor="live-poll-question" className="text-xs font-medium text-cyan-100">
+                      <label htmlFor="live-poll-question" className="text-xs font-medium text-amber-100">
                         Yeni anket sorusu
                       </label>
                       <textarea
@@ -1277,18 +1278,18 @@ export function LiveDashboard() {
                           setPollQuestionDraft(event.target.value.slice(0, POLL_QUESTION_MAX_CHARS))
                         }
                         rows={2}
-                        className="w-full resize-none rounded-xl border border-cyan-200/25 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
+                        className="w-full resize-none rounded-xl border border-amber-200/25 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
                         placeholder="Örn: Bugün en çok hangi başlığı derinleştirelim?"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-cyan-100">Seçenekler</p>
+                        <p className="text-xs font-medium text-amber-100">Seçenekler</p>
                         <Button
                           type="button"
                           variant="outline"
-                          className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
+                          className="h-8 border-amber-200/30 bg-amber-200/10 px-3 text-xs text-amber-50 hover:bg-amber-200/20"
                           onClick={handleAddPollOptionDraft}
                           disabled={pollOptionDrafts.length >= MAX_POLL_OPTIONS}
                         >
@@ -1304,7 +1305,7 @@ export function LiveDashboard() {
                             onChange={(event) =>
                               handlePollOptionDraftChange(index, event.target.value)
                             }
-                            className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
+                            className="h-9 w-full rounded-lg border border-amber-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
                             placeholder={`Seçenek ${index + 1}`}
                           />
                           <Button
@@ -1339,7 +1340,7 @@ export function LiveDashboard() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-9 border-cyan-200/30 bg-cyan-200/10 px-4 text-cyan-50 hover:bg-cyan-200/20"
+                        className="h-9 border-amber-200/30 bg-amber-200/10 px-4 text-amber-50 hover:bg-amber-200/20"
                         onClick={handleSavePollPreset}
                         disabled={presetSaveUiState === "loading"}
                       >
@@ -1392,29 +1393,29 @@ export function LiveDashboard() {
                     {presetSaveUiMessage ? (
                       <p
                         className={`text-xs ${
-                          presetSaveUiState === "error" ? "text-rose-300" : "text-cyan-100"
+                          presetSaveUiState === "error" ? "text-rose-300" : "text-amber-100"
                         }`}
                       >
                         {presetSaveUiMessage}
                       </p>
                     ) : null}
 
-                    <div className="space-y-2 rounded-xl border border-cyan-200/15 bg-slate-900/25 p-3">
+                    <div className="space-y-2 rounded-xl border border-amber-200/15 bg-slate-900/25 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                           Hazır Sorular
                         </p>
-                        <p className="text-xs text-cyan-100/70">{pollPresets.length} kayıt</p>
+                        <p className="text-xs text-amber-100/70">{pollPresets.length} kayıt</p>
                       </div>
 
                       {pollPresetUiState === "loading" ? (
-                        <p className="text-xs text-cyan-100/75">Hazır sorular yükleniyor...</p>
+                        <p className="text-xs text-amber-100/75">Hazır sorular yükleniyor...</p>
                       ) : null}
 
                       {pollPresetUiMessage ? (
                         <p
                           className={`text-xs ${
-                            pollPresetUiState === "error" ? "text-rose-300" : "text-cyan-100"
+                            pollPresetUiState === "error" ? "text-rose-300" : "text-amber-100"
                           }`}
                         >
                           {pollPresetUiMessage}
@@ -1432,17 +1433,17 @@ export function LiveDashboard() {
                           {pollPresets.map((preset) => (
                             <div
                               key={preset.id}
-                              className="rounded-xl border border-cyan-200/15 bg-slate-900/35 p-3"
+                              className="rounded-xl border border-amber-200/15 bg-slate-900/35 p-3"
                             >
                               <p className="text-sm font-medium text-white">{preset.question}</p>
-                              <p className="mt-1 text-xs text-cyan-100/70">
+                              <p className="mt-1 text-xs text-amber-100/70">
                                 {preset.options.join(" • ")}
                               </p>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
+                                  className="h-8 border-amber-200/30 bg-amber-200/10 px-3 text-xs text-amber-50 hover:bg-amber-200/20"
                                   onClick={() => applyPresetToDraft(preset)}
                                 >
                                   Taslağa Doldur
@@ -1490,7 +1491,7 @@ export function LiveDashboard() {
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <ChartColumnBig className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Duygu Dağılımı</h3>
               </div>
@@ -1524,11 +1525,11 @@ export function LiveDashboard() {
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <ListChecks className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Canlı Anket Sonuçları</h3>
               </div>
-              <p className="text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+              <p className="text-xs font-medium uppercase tracking-wide text-amber-200/80">
                 {activePoll ? "Yayındaki anket" : "Varsayılan anket"}
               </p>
               <p className="mb-3 mt-1 text-sm text-slate-300">{activePollPrompt}</p>
@@ -1537,16 +1538,16 @@ export function LiveDashboard() {
                   const percent = pollTotal > 0 ? Math.round((entry.count / pollTotal) * 100) : 0;
 
                   return (
-                    <div key={entry.option} className="rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-3">
+                    <div key={entry.option} className="rounded-xl border border-amber-200/15 bg-amber-200/5 p-3">
                       <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                         <p className="font-medium text-white">{entry.option}</p>
-                        <p className="font-semibold text-cyan-100">
-                          {entry.count} <span className="text-cyan-200/70">({percent}%)</span>
+                        <p className="font-semibold text-amber-100">
+                          {entry.count} <span className="text-amber-200/70">({percent}%)</span>
                         </p>
                       </div>
                       <div className="h-2 rounded-full bg-slate-800/80">
                         <div
-                          className="h-2 rounded-full bg-gradient-to-r from-cyan-400 to-teal-400 transition-all duration-500"
+                          className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-500"
                           style={{ width: `${percent}%` }}
                         />
                       </div>
@@ -1554,13 +1555,13 @@ export function LiveDashboard() {
                   );
                 })}
               </div>
-              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-amber-200/80">
                 Toplam anket yanıtı: {pollTotal}
               </p>
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Hash className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">En Çok Konuşulan 3 Konu</h3>
               </div>
@@ -1568,10 +1569,10 @@ export function LiveDashboard() {
                 {topTopics.slice(0, 3).map((topic, index) => (
                   <li
                     key={`${topic}-${index}`}
-                    className="animate-fade-in-up rounded-xl border border-cyan-200/15 bg-cyan-200/5 px-4 py-3 text-sm text-slate-100"
+                    className="animate-fade-in-up rounded-xl border border-amber-200/15 bg-amber-200/5 px-4 py-3 text-sm text-slate-100"
                     style={{ animationDelay: `${index * 120}ms` }}
                   >
-                    <span className="text-xs uppercase tracking-wider text-cyan-200/70">Konu {index + 1}</span>
+                    <span className="text-xs uppercase tracking-wider text-amber-200/70">Konu {index + 1}</span>
                     <p className="mt-1 text-base font-medium text-white">{topic}</p>
                   </li>
                 ))}
@@ -1579,25 +1580,25 @@ export function LiveDashboard() {
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:col-span-2 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Bot className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Moderatör İçgörüleri</h3>
               </div>
 
-              <div className="mb-4 rounded-xl border border-cyan-200/20 bg-cyan-300/5 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">Salon Modu</p>
+              <div className="mb-4 rounded-xl border border-amber-200/20 bg-amber-300/5 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">Salon Modu</p>
                 <p className="mt-1 text-sm font-medium text-white">
                   {moderatorBrief.roomMood || "AI analizi sonrası salon modu burada görünecek."}
                 </p>
-                <p className="mt-2 text-xs text-cyan-200/75">
+                <p className="mt-2 text-xs text-amber-200/75">
                   Güven skoru:{" "}
                   {typeof moderatorBrief.confidence === "number" ? `%${moderatorBrief.confidence}` : "Henüz yok"}
                 </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                <div className="rounded-xl border border-amber-200/15 bg-amber-200/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                     Öncelikli Beklentiler
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-slate-100">
@@ -1609,8 +1610,8 @@ export function LiveDashboard() {
                   </ul>
                 </div>
 
-                <div className="rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                <div className="rounded-xl border border-amber-200/15 bg-amber-200/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                     Kritik Sorular
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-slate-100">
@@ -1622,8 +1623,8 @@ export function LiveDashboard() {
                   </ul>
                 </div>
 
-                <div className="rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                <div className="rounded-xl border border-amber-200/15 bg-amber-200/5 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                     Önerilen Aksiyonlar
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-slate-100">
@@ -1638,24 +1639,24 @@ export function LiveDashboard() {
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:col-span-2 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <MessageSquareMore className="h-5 w-5" />
                 <h3 className="text-lg font-semibold">Son Serbest Yorumlar</h3>
               </div>
 
               <div className="grid max-h-[360px] gap-3 overflow-y-auto pr-1">
                 {latestComments.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-cyan-100/20 px-4 py-8 text-center text-sm text-slate-400">
+                  <div className="rounded-xl border border-dashed border-amber-100/20 px-4 py-8 text-center text-sm text-slate-400">
                     Serbest yorum bekleniyor...
                   </div>
                 ) : (
                   latestComments.map((comment, index) => (
                     <article
                       key={comment.id}
-                      className="animate-fade-in-up rounded-xl border border-cyan-100/15 bg-slate-900/30 px-4 py-3"
+                      className="animate-fade-in-up rounded-xl border border-amber-100/15 bg-slate-900/30 px-4 py-3"
                       style={{ animationDelay: `${index * 80}ms` }}
                     >
-                      <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                         Anonim Katılımcı
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-slate-100">{comment.message}</p>
@@ -1664,6 +1665,8 @@ export function LiveDashboard() {
                 )}
               </div>
             </article>
+
+            <MobileStaffParityPanel />
           </section>
         </section>
       </div>

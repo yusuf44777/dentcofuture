@@ -111,7 +111,7 @@ export default function JoinPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0F] px-4 py-12">
       {/* Glow */}
       <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-1/2 top-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-[rgba(108,99,255,0.08)] blur-[100px]" />
+        <div className="absolute left-1/2 top-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-[rgba(199,91,18,0.08)] blur-[100px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -132,8 +132,8 @@ export default function JoinPage() {
           <div className="mb-8 flex gap-2">
             {STEPS.slice(0, 3).map((label, i) => (
               <div key={label} className="flex-1">
-                <div className={`h-1 rounded-full transition-all duration-500 ${i <= step ? "bg-[#6C63FF]" : "bg-[rgba(255,255,255,0.08)]"}`} />
-                <p className={`mt-1.5 text-center text-[10px] font-semibold uppercase tracking-wide transition-colors ${i === step ? "text-[#6C63FF]" : i < step ? "text-[rgba(240,240,255,0.5)]" : "text-[rgba(240,240,255,0.2)]"}`}>
+                <div className={`h-1 rounded-full transition-all duration-500 ${i <= step ? "bg-[#C75B12]" : "bg-[rgba(255,255,255,0.08)]"}`} />
+                <p className={`mt-1.5 text-center text-[10px] font-semibold uppercase tracking-wide transition-colors ${i === step ? "text-[#C75B12]" : i < step ? "text-[rgba(240,240,255,0.5)]" : "text-[rgba(240,240,255,0.2)]"}`}>
                   {label}
                 </p>
               </div>
@@ -187,10 +187,10 @@ export default function JoinPage() {
                 <button key={r.value} onClick={() => { setRole(r.value); setError(""); }}
                   className={`w-full flex items-center gap-4 rounded-[12px] border p-4 text-left transition-all ${
                     role === r.value
-                      ? "border-[#6C63FF] bg-[rgba(108,99,255,0.12)] shadow-[0_0_0_1px_rgba(108,99,255,0.4)]"
-                      : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(108,99,255,0.3)]"
+                      ? "border-[#C75B12] bg-[rgba(199,91,18,0.12)] shadow-[0_0_0_1px_rgba(199,91,18,0.4)]"
+                      : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(199,91,18,0.3)]"
                   }`}>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] text-base text-[#B8B4FF]">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(199,91,18,0.15)] text-base text-[#F7B267]">
                     <i className={r.iconClass} aria-hidden="true" />
                   </span>
                   <div>
@@ -198,7 +198,7 @@ export default function JoinPage() {
                     <p className="text-xs text-[rgba(240,240,255,0.4)]">{r.desc}</p>
                   </div>
                   {role === r.value && (
-                    <Check className="ml-auto h-4 w-4 shrink-0 text-[#6C63FF]" />
+                    <Check className="ml-auto h-4 w-4 shrink-0 text-[#C75B12]" />
                   )}
                 </button>
               ))}
@@ -220,7 +220,7 @@ export default function JoinPage() {
               initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
               className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
               <div className="mb-6 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#6C63FF]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#C75B12]">
                   Soru {quizQ.id} / 5
                 </span>
                 <span className="text-xs text-[rgba(240,240,255,0.3)]">Outlier Testi</span>
@@ -240,11 +240,11 @@ export default function JoinPage() {
                       next[quizQ.id - 1] = parseInt(e.target.value);
                       setAnswers(next);
                     }}
-                    className="w-full accent-[#6C63FF]"
+                    className="w-full accent-[#C75B12]"
                   />
                   <div className="flex justify-between text-xs text-[rgba(240,240,255,0.4)]">
                     <span>{quizQ.scaleMin}</span>
-                    <span className="font-bold text-[#6C63FF]">{answers[quizQ.id - 1] || 3}/5</span>
+                    <span className="font-bold text-[#C75B12]">{answers[quizQ.id - 1] || 3}/5</span>
                     <span>{quizQ.scaleMax}</span>
                   </div>
                 </div>
@@ -261,8 +261,8 @@ export default function JoinPage() {
                       }}
                       className={`w-full rounded-[10px] border p-3 text-left text-sm transition-all ${
                         answers[quizQ.id - 1] === opt.value
-                          ? "border-[#6C63FF] bg-[rgba(108,99,255,0.15)] text-white"
-                          : "border-[rgba(255,255,255,0.08)] bg-[#1A1A24] text-[rgba(240,240,255,0.7)] hover:border-[rgba(108,99,255,0.3)]"
+                          ? "border-[#C75B12] bg-[rgba(199,91,18,0.15)] text-white"
+                          : "border-[rgba(255,255,255,0.08)] bg-[#1A1A24] text-[rgba(240,240,255,0.7)] hover:border-[rgba(199,91,18,0.3)]"
                       }`}>
                       {opt.label}
                     </button>
@@ -360,8 +360,8 @@ export default function JoinPage() {
                 </p>
               </div>
 
-              <div className="rounded-[12px] border border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.08)] p-4">
-                <p className="text-sm font-semibold text-[#00E5A0]">
+              <div className="rounded-[12px] border border-[rgba(47,158,68,0.2)] bg-[rgba(47,158,68,0.08)] p-4">
+                <p className="text-sm font-semibold text-[#2F9E44]">
                   +{POINTS.JOIN_PROFILE + POINTS.QUIZ_COMPLETE} puan kazandın!
                 </p>
                 <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">Profil + Test tamamlandı</p>

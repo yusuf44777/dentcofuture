@@ -186,7 +186,7 @@ export default function NetworkingPage() {
         <h1 className="font-heading text-lg font-extrabold">Networking</h1>
         {!attendeeId && (
           <p className="mt-1 text-xs text-[rgba(240,240,255,0.4)]">
-            Bağlantı kurmak için önce <a href="/join" className="text-[#6C63FF] underline">katıl</a>
+            Bağlantı kurmak için önce <a href="/join" className="text-[#C75B12] underline">katıl</a>
           </p>
         )}
       </div>
@@ -196,7 +196,7 @@ export default function NetworkingPage() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold transition-all ${
-              tab === t.id ? "border-b-2 border-[#6C63FF] text-[#6C63FF]" : "text-[rgba(240,240,255,0.4)] hover:text-white"
+              tab === t.id ? "border-b-2 border-[#C75B12] text-[#C75B12]" : "text-[rgba(240,240,255,0.4)] hover:text-white"
             }`}>
             {t.icon}{t.label}
           </button>
@@ -210,20 +210,20 @@ export default function NetworkingPage() {
             <motion.div key="discover" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {/* Incoming requests */}
               {incomingRequests.length > 0 && (
-                <div className="mb-6 rounded-[12px] border border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.06)] p-4">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#00E5A0]">
+                <div className="mb-6 rounded-[12px] border border-[rgba(47,158,68,0.2)] bg-[rgba(47,158,68,0.06)] p-4">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#2F9E44]">
                     {incomingRequests.length} Bağlantı İsteği
                   </p>
                   {incomingRequests.map(req => {
                     const requester = others.find(a => a.id === req.attendee_a);
                     return (
                       <div key={req.id} className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-sm font-bold">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(199,91,18,0.2)] text-sm font-bold">
                           {requester?.name?.charAt(0) ?? "?"}
                         </div>
                         <span className="flex-1 text-sm font-semibold">{requester?.name ?? "Bir katılımcı"}</span>
                         <button onClick={() => acceptMatch(req.id, req.attendee_a)}
-                          className="rounded-full bg-[#00E5A0] px-3 py-1 text-xs font-bold text-[#0A0A0F]">
+                          className="rounded-full bg-[#2F9E44] px-3 py-1 text-xs font-bold text-[#0A0A0F]">
                           Kabul Et
                         </button>
                       </div>
@@ -238,8 +238,8 @@ export default function NetworkingPage() {
                   <button key={r} onClick={() => setFilterRole(r)}
                     className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
                       filterRole === r
-                        ? "bg-[#6C63FF] text-white"
-                        : "border border-[rgba(255,255,255,0.1)] text-[rgba(240,240,255,0.5)] hover:border-[#6C63FF]"
+                        ? "bg-[#C75B12] text-white"
+                        : "border border-[rgba(255,255,255,0.1)] text-[rgba(240,240,255,0.5)] hover:border-[#C75B12]"
                     }`}>
                     {r ? ROLE_LABELS[r] : "Tümü"}
                   </button>
@@ -260,10 +260,10 @@ export default function NetworkingPage() {
                       <div className="flex items-start gap-3">
                         {/* Avatar with score ring */}
                         <div className="relative shrink-0">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-lg font-bold">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(199,91,18,0.2)] text-lg font-bold">
                             {a.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#13131A] text-[8px] font-extrabold text-[#6C63FF]">
+                          <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#13131A] text-[8px] font-extrabold text-[#C75B12]">
                             {a.outlier_score}
                           </div>
                         </div>
@@ -330,7 +330,7 @@ export default function NetworkingPage() {
                       <motion.div key={m.id}
                         initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
                         className="flex items-center gap-4 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-base font-bold">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(199,91,18,0.2)] text-base font-bold">
                           {other?.name?.charAt(0) ?? "?"}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -354,11 +354,11 @@ export default function NetworkingPage() {
               className="flex flex-col items-center justify-center py-8 text-center">
               {!attendeeId ? (
                 <p className="text-sm text-[rgba(240,240,255,0.4)]">
-                  QR kodunu almak için önce <a href="/join" className="text-[#6C63FF] underline">katıl</a>
+                  QR kodunu almak için önce <a href="/join" className="text-[#C75B12] underline">katıl</a>
                 </p>
               ) : (
                 <>
-                  <div className="rounded-[16px] bg-white p-6 shadow-[0_0_60px_rgba(108,99,255,0.3)]">
+                  <div className="rounded-[16px] bg-white p-6 shadow-[0_0_60px_rgba(199,91,18,0.3)]">
                     <QRCode
                       value={`${typeof window !== "undefined" ? window.location.origin : ""}/profile/${attendeeId}`}
                       size={220}
@@ -368,7 +368,7 @@ export default function NetworkingPage() {
                     <p className="font-heading text-xl font-bold">{attendee?.name}</p>
                     <p className="text-sm text-[rgba(240,240,255,0.4)]">{attendee?.role ? (ROLE_LABELS[attendee.role] ?? attendee.role) : ""}</p>
                     <div className="mt-2 flex items-center justify-center gap-2">
-                      <span className="text-sm font-bold text-[#6C63FF]">{attendee?.outlier_score}</span>
+                      <span className="text-sm font-bold text-[#C75B12]">{attendee?.outlier_score}</span>
                       <span className="text-xs text-[rgba(240,240,255,0.4)]">Outlier Puanı</span>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function NetworkingPage() {
               <div key={msg.id} className={`flex ${msg.sender_id === attendeeId ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[75%] rounded-[10px] px-3 py-2 text-sm ${
                   msg.sender_id === attendeeId
-                    ? "bg-[#6C63FF] text-white"
+                    ? "bg-[#C75B12] text-white"
                     : "bg-[#1A1A24] border border-[rgba(255,255,255,0.08)] text-white"
                 }`}>
                   {msg.text}

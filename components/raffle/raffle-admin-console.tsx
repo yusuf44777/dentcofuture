@@ -445,7 +445,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
         <header className="glass-panel rounded-2xl px-5 py-5 md:px-8 md:py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">
                 Moderatör Çekiliş Merkezi
               </p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
@@ -461,7 +461,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20"
+                  className="border-amber-200/30 bg-amber-200/10 text-amber-50 hover:bg-amber-200/20"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Canlı Pano
@@ -470,7 +470,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
               <Button
                 type="button"
                 variant="outline"
-                className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20"
+                className="border-amber-200/30 bg-amber-200/10 text-amber-50 hover:bg-amber-200/20"
                 onClick={() => {
                   void loadOverview();
                   void loadParticipants(participantsQuery);
@@ -485,20 +485,20 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <article className="glass-panel rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-cyan-200/80">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-amber-200/80">
               <Users className="h-4 w-4" />
               Toplam Katılımcı
             </p>
             <p className="mt-2 text-3xl font-semibold text-white">
               {overview?.stats?.participants_total ?? 0}
             </p>
-            <p className="mt-1 text-xs text-cyan-100/75">
+            <p className="mt-1 text-xs text-amber-100/75">
               Aktif: {overview?.stats?.participants_active ?? 0}
             </p>
           </article>
 
           <article className="glass-panel rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-cyan-200/80">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-amber-200/80">
               <Gift className="h-4 w-4" />
               Aktif Ödül
             </p>
@@ -508,7 +508,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
           </article>
 
           <article className="glass-panel rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-cyan-200/80">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-amber-200/80">
               <Trophy className="h-4 w-4" />
               Toplam Çekiliş
             </p>
@@ -516,17 +516,17 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
           </article>
 
           <article className="glass-panel rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-cyan-200/80">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-amber-200/80">
               <Clock3 className="h-4 w-4" />
               Durum
             </p>
             {overviewState === "loading" ? (
-              <p className="mt-2 inline-flex items-center gap-2 text-sm text-cyan-100">
+              <p className="mt-2 inline-flex items-center gap-2 text-sm text-amber-100">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 Yükleniyor
               </p>
             ) : (
-              <p className="mt-2 text-sm text-cyan-100">
+              <p className="mt-2 text-sm text-amber-100">
                 {overviewState === "error" ? overviewMessage : "Sistem hazır"}
               </p>
             )}
@@ -536,13 +536,13 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
         <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
           <div className="grid gap-6">
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Upload className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Katılımcı İçe Aktarma</h2>
               </div>
               <form className="space-y-3" onSubmit={handleImportParticipants}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-xs font-medium text-cyan-50 transition hover:bg-cyan-200/20">
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-amber-200/30 bg-amber-200/10 px-3 py-2 text-xs font-medium text-amber-50 transition hover:bg-amber-200/20">
                     <Upload className="h-4 w-4" />
                     CSV/TXT Dosyası Seç
                     <input
@@ -552,7 +552,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                       className="hidden"
                     />
                   </label>
-                  <p className="text-xs text-cyan-100/75">
+                  <p className="text-xs text-amber-100/75">
                     {importFileName ? `Seçilen dosya: ${importFileName}` : "Örn: cekilis.csv"}
                   </p>
                 </div>
@@ -562,7 +562,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                     variant="outline"
                     onClick={handleImportProjectCsv}
                     disabled={importState === "loading"}
-                    className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20"
+                    className="border-amber-200/30 bg-amber-200/10 text-amber-50 hover:bg-amber-200/20"
                   >
                     {importState === "loading" ? (
                       <>
@@ -576,7 +576,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                       </>
                     )}
                   </Button>
-                  <p className="text-xs text-cyan-100/75">
+                  <p className="text-xs text-amber-100/75">
                     Tek tıkla proje kökündeki `cekilis.csv` dosyasını yükler.
                   </p>
                 </div>
@@ -586,7 +586,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                   placeholder={
                     "Satır formatları:\nAd Soyad\nAd Soyad | KOD123\nAd Soyad;KOD123;Ref\nAd Soyad, KOD123"
                   }
-                  className="min-h-40 w-full rounded-2xl border border-cyan-100/20 bg-slate-950/35 px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  className="min-h-40 w-full rounded-2xl border border-amber-100/20 bg-slate-950/35 px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-amber-500"
                 />
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Button type="submit" disabled={importState === "loading"}>
@@ -602,7 +602,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                       </>
                     )}
                   </Button>
-                  <p className="text-xs text-cyan-100/75">
+                  <p className="text-xs text-amber-100/75">
                     Kod boş bırakılırsa sistem otomatik `DCF-` formatında kod üretir.
                   </p>
                 </div>
@@ -621,14 +621,14 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
               ) : null}
 
               {importDetail?.sample_codes && importDetail.sample_codes.length > 0 ? (
-                <div className="mt-3 rounded-xl border border-cyan-100/15 bg-slate-900/35 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/80">
+                <div className="mt-3 rounded-xl border border-amber-100/15 bg-slate-900/35 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
                     Örnek Kodlar
                   </p>
                   <ul className="mt-2 grid gap-2 text-xs text-slate-100 sm:grid-cols-2">
                     {importDetail.sample_codes.slice(0, 6).map((row) => (
                       <li key={`${row.participant_code}-${row.full_name}`} className="rounded-lg bg-slate-900/40 px-2 py-1.5">
-                        <span className="font-semibold text-cyan-100">{row.participant_code}</span>{" "}
+                        <span className="font-semibold text-amber-100">{row.participant_code}</span>{" "}
                         <span className="text-slate-300">• {row.full_name}</span>
                       </li>
                     ))}
@@ -638,7 +638,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Sparkles className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Ödül Tanımla</h2>
               </div>
@@ -647,14 +647,14 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                   value={prizeTitle}
                   onChange={(event) => setPrizeTitle(event.target.value)}
                   placeholder="Örn: iPad Çekilişi"
-                  className="h-11 w-full rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  className="h-11 w-full rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-amber-500"
                   required
                 />
                 <textarea
                   value={prizeDescription}
                   onChange={(event) => setPrizeDescription(event.target.value)}
                   placeholder="Ödül açıklaması (opsiyonel)"
-                  className="min-h-20 w-full rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  className="min-h-20 w-full rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-amber-500"
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input
@@ -663,14 +663,14 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                     max={100}
                     value={prizeQuantity}
                     onChange={(event) => setPrizeQuantity(event.target.value)}
-                    className="h-11 w-full rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
+                    className="h-11 w-full rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500"
                   />
-                  <label className="flex items-center gap-2 rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 text-sm text-cyan-50">
+                  <label className="flex items-center gap-2 rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 text-sm text-amber-50">
                     <input
                       type="checkbox"
                       checked={allowPreviousWinner}
                       onChange={(event) => setAllowPreviousWinner(event.target.checked)}
-                      className="h-4 w-4 rounded border-cyan-200 bg-transparent"
+                      className="h-4 w-4 rounded border-amber-200 bg-transparent"
                     />
                     Önceki kazanan tekrar kazanabilir
                   </label>
@@ -703,7 +703,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Users className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Katılımcı Önizleme</h2>
               </div>
@@ -718,9 +718,9 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                   value={participantsQuery}
                   onChange={(event) => setParticipantsQuery(event.target.value)}
                   placeholder="Ad veya kod ile ara"
-                  className="h-10 flex-1 rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  className="h-10 flex-1 rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-amber-500"
                 />
-                <Button type="submit" variant="outline" className="border-cyan-200/30 bg-cyan-200/10 text-cyan-50 hover:bg-cyan-200/20">
+                <Button type="submit" variant="outline" className="border-amber-200/30 bg-amber-200/10 text-amber-50 hover:bg-amber-200/20">
                   Ara
                 </Button>
               </form>
@@ -730,7 +730,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                 </p>
               ) : null}
               {participantsState === "loading" ? (
-                <p className="inline-flex items-center gap-2 text-xs text-cyan-100/80">
+                <p className="inline-flex items-center gap-2 text-xs text-amber-100/80">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                   Katılımcılar yükleniyor...
                 </p>
@@ -739,10 +739,10 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                 {participants.map((participant) => (
                   <div
                     key={participant.id}
-                    className="rounded-xl border border-cyan-100/15 bg-slate-900/30 px-3 py-2"
+                    className="rounded-xl border border-amber-100/15 bg-slate-900/30 px-3 py-2"
                   >
                     <p className="text-sm font-medium text-white">{participant.full_name}</p>
-                    <p className="text-xs text-cyan-100/80">{participant.participant_code}</p>
+                    <p className="text-xs text-amber-100/80">{participant.participant_code}</p>
                   </div>
                 ))}
                 {participantsState !== "loading" && participants.length === 0 ? (
@@ -754,7 +754,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
 
           <div className="grid gap-6">
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <PlayCircle className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Çekilişi Başlat</h2>
               </div>
@@ -762,7 +762,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                 <select
                   value={selectedPrizeId}
                   onChange={(event) => setSelectedPrizeId(event.target.value)}
-                  className="h-11 w-full rounded-xl border border-cyan-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
+                  className="h-11 w-full rounded-xl border border-amber-100/20 bg-slate-950/35 px-3 text-sm text-white outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
                   <option value="">Ödül seçin</option>
                   {activePrizeOptions.map((prize) => (
@@ -799,15 +799,15 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
               ) : null}
 
               {latestWinner ? (
-                <div className="mt-4 animate-pulse rounded-2xl border border-cyan-200/35 bg-gradient-to-br from-cyan-500/20 to-teal-400/20 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/90">
+                <div className="mt-4 animate-pulse rounded-2xl border border-amber-200/35 bg-gradient-to-br from-amber-500/20 to-teal-400/20 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100/90">
                     Son Kazanan Kodu
                   </p>
                   <p className="mt-2 text-3xl font-semibold tracking-[0.08em] text-white">
                     {latestWinner.winner_code}
                   </p>
-                  <p className="mt-2 text-sm text-cyan-100">{latestWinner.winner_name}</p>
-                  <p className="text-xs text-cyan-100/80">
+                  <p className="mt-2 text-sm text-amber-100">{latestWinner.winner_name}</p>
+                  <p className="text-xs text-amber-100/80">
                     {latestWinner.prize_title} • Tur {latestWinner.draw_number}
                   </p>
                 </div>
@@ -815,7 +815,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Gift className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Ödüller</h2>
               </div>
@@ -831,15 +831,15 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                     return (
                       <div
                         key={prize.id}
-                        className="rounded-xl border border-cyan-100/15 bg-slate-900/30 px-3 py-3"
+                        className="rounded-xl border border-amber-100/15 bg-slate-900/30 px-3 py-3"
                       >
                         <p className="text-sm font-medium text-white">{prize.title}</p>
-                        <p className="mt-1 text-xs text-cyan-100/80">
+                        <p className="mt-1 text-xs text-amber-100/80">
                           {prize.draw_count}/{prize.quantity} çekildi • Kalan: {prize.remaining}
                         </p>
                         <div className="mt-2 h-2 rounded-full bg-slate-800/80">
                           <div
-                            className="h-2 rounded-full bg-gradient-to-r from-cyan-400 to-teal-400 transition-all duration-500"
+                            className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-teal-400 transition-all duration-500"
                             style={{ width: `${percent}%` }}
                           />
                         </div>
@@ -857,7 +857,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+              <div className="mb-4 flex items-center gap-2 text-amber-100">
                 <Clock3 className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Son Çekilişler</h2>
               </div>
@@ -868,9 +868,9 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                   recentDraws.slice(0, 10).map((draw) => (
                     <div
                       key={draw.id}
-                      className="rounded-xl border border-cyan-100/15 bg-slate-900/30 px-3 py-2"
+                      className="rounded-xl border border-amber-100/15 bg-slate-900/30 px-3 py-2"
                     >
-                      <p className="text-xs text-cyan-100/90">
+                      <p className="text-xs text-amber-100/90">
                         <span className="font-semibold">{draw.winner_code}</span> • {draw.winner_name}
                       </p>
                       <p className="text-[11px] text-slate-400">

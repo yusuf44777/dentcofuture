@@ -27,6 +27,7 @@ drop table if exists public.networking_profiles cascade;
 drop table if exists public.raffle_draws cascade;
 drop table if exists public.raffle_prizes cascade;
 drop table if exists public.raffle_participants cascade;
+drop table if exists public.event_gallery_items cascade;
 
 drop table if exists public.live_poll_presets cascade;
 drop table if exists public.live_polls cascade;
@@ -266,6 +267,27 @@ create table public.live_poll_presets (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table public.event_gallery_items (
+  id uuid primary key default gen_random_uuid(),
+  uploader_name text not null check (char_length(uploader_name) between 2 and 120),
+  caption text check (caption is null or char_length(caption) <= 280),
+  media_type text not null check (media_type in ('photo', 'video')),
+  mime_type text not null check (char_length(mime_type) between 3 and 120),
+  file_path text not null unique check (char_length(file_path) between 4 and 260),
+  public_url text not null check (char_length(public_url) between 10 and 1024),
+  file_size bigint not null check (file_size > 0 and file_size <= 2147483648),
+  drive_backup_status text not null default 'pending' check (drive_backup_status in ('pending', 'synced', 'failed', 'disabled')),
+  drive_file_id text,
+  drive_error text,
+  created_at timestamptz not null default now()
+);
+
+create index event_gallery_items_created_idx
+  on public.event_gallery_items (created_at desc);
+
+create index event_gallery_items_media_type_idx
+  on public.event_gallery_items (media_type, created_at desc);
 
 -- -----------------------------------------------------------------------------
 -- Legacy profile-card networking tables
@@ -618,6 +640,7 @@ alter table public.attendee_feedbacks replica identity full;
 alter table public.congress_analytics replica identity full;
 alter table public.live_polls replica identity full;
 alter table public.live_poll_presets replica identity full;
+alter table public.event_gallery_items replica identity full;
 alter table public.networking_profiles replica identity full;
 alter table public.networking_profile_actions replica identity full;
 alter table public.raffle_participants replica identity full;
@@ -642,6 +665,7 @@ alter table public.attendee_feedbacks enable row level security;
 alter table public.congress_analytics enable row level security;
 alter table public.live_polls enable row level security;
 alter table public.live_poll_presets enable row level security;
+alter table public.event_gallery_items enable row level security;
 alter table public.networking_profiles enable row level security;
 alter table public.networking_profile_actions enable row level security;
 alter table public.raffle_participants enable row level security;
@@ -718,8 +742,10 @@ create policy public_can_read_analytics on public.congress_analytics for select 
 -- Legacy live poll tables
 drop policy if exists live_polls_read_all on public.live_polls;
 drop policy if exists live_poll_presets_read_all on public.live_poll_presets;
+drop policy if exists event_gallery_items_read_all on public.event_gallery_items;
 create policy live_polls_read_all on public.live_polls for select to anon, authenticated using (true);
 create policy live_poll_presets_read_all on public.live_poll_presets for select to anon, authenticated using (true);
+create policy event_gallery_items_read_all on public.event_gallery_items for select to anon, authenticated using (true);
 
 -- Legacy profile-card networking
 drop policy if exists public_can_insert_networking_profiles on public.networking_profiles;
@@ -782,6 +808,7 @@ grant select, insert on public.attendee_feedbacks to anon, authenticated;
 grant select on public.congress_analytics to anon, authenticated;
 grant select on public.live_polls to anon, authenticated;
 grant select on public.live_poll_presets to anon, authenticated;
+grant select on public.event_gallery_items to anon, authenticated;
 
 grant select, insert, update on public.networking_profiles to anon, authenticated;
 grant select, insert, update on public.networking_profile_actions to anon, authenticated;
@@ -815,6 +842,7 @@ declare
     'congress_analytics',
     'live_polls',
     'live_poll_presets',
+    'event_gallery_items',
     'networking_profiles',
     'networking_profile_actions',
     'raffle_participants',

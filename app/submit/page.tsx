@@ -17,7 +17,7 @@ export default function SubmitPage() {
             priority
             className="h-auto w-[154px] object-contain sm:w-[184px]"
           />
-          <Badge className="bg-cyan-50 text-cyan-800">Dent Co Future • Canlı Geri Bildirim</Badge>
+          <Badge className="bg-amber-50 text-amber-800">Dent Co Future • Canlı Geri Bildirim</Badge>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               Dent Co Future
@@ -26,7 +26,7 @@ export default function SubmitPage() {
               Görüşlerinizi bizimle paylaşın. Yorumlarınız anonim şekilde analiz edilerek canlı ekranda
               kongre akışına katkı sağlar.
             </p>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
               COMMUNITIVE DENTISTRY
             </p>
           </div>

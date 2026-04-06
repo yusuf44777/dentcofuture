@@ -62,11 +62,11 @@ export default function GamePage() {
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div className="flex items-center gap-2">
-          <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
+          <Gamepad2 className="h-5 w-5 text-[#C75B12]" />
           <h1 className="font-heading text-lg font-extrabold">Molar Muhafızı</h1>
         </div>
         {attendeeId && !pointsAwarded && (
-          <div className="ml-auto rounded-full bg-[rgba(0,229,160,0.15)] px-3 py-1 text-xs font-semibold text-[#00E5A0]">
+          <div className="ml-auto rounded-full bg-[rgba(47,158,68,0.15)] px-3 py-1 text-xs font-semibold text-[#2F9E44]">
             +{POINTS.GAME_PLAY} puan oyun bonusu!
           </div>
         )}
@@ -107,7 +107,7 @@ export default function GamePage() {
                 transition={{ delay: i * 0.05 }}
                 className={`flex items-center gap-3 rounded-[8px] p-2.5 ${
                   entry.attendee_id === attendeeId
-                    ? "bg-[rgba(108,99,255,0.15)] border border-[rgba(108,99,255,0.3)]"
+                    ? "bg-[rgba(199,91,18,0.15)] border border-[rgba(199,91,18,0.3)]"
                     : "bg-[rgba(255,255,255,0.03)]"
                 }`}
               >
@@ -124,7 +124,7 @@ export default function GamePage() {
                   </p>
                   <p className="text-[10px] text-[rgba(240,240,255,0.3)]">Dalga {entry.wave}</p>
                 </div>
-                <span className="text-sm font-extrabold text-[#6C63FF]">
+                <span className="text-sm font-extrabold text-[#C75B12]">
                   {entry.score.toLocaleString()}
                 </span>
               </motion.div>

@@ -216,6 +216,7 @@ export interface Database {
       congress_analytics: { Row: AnalyticsRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       live_polls: { Row: { id: string; question: string; options: Json; is_active: boolean; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       live_poll_presets: { Row: { id: string; question: string; options: Json; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      event_gallery_items: { Row: EventGalleryItemRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       staff_roles: {
         Row: {
           id: string;
@@ -276,4 +277,19 @@ export interface NetworkingProfileRow {
   attendee_id: string | null;
   is_visible: boolean; profile_completion_score: number;
   last_active_at: string; is_matched: boolean; matched_with_id: string | null; created_at: string;
+}
+
+export interface EventGalleryItemRow {
+  id: string;
+  uploader_name: string;
+  caption: string | null;
+  media_type: "photo" | "video";
+  mime_type: string;
+  file_path: string;
+  public_url: string;
+  file_size: number;
+  drive_backup_status: "pending" | "synced" | "failed" | "disabled";
+  drive_file_id: string | null;
+  drive_error: string | null;
+  created_at: string;
 }
