@@ -100,7 +100,7 @@ export default function StaffLiveOpsScreen() {
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="LiveOps" subtitle="Yetkiler kontrol ediliyor.">
+      <ScreenShell title="Canlı Operasyon" subtitle="Yetkiler kontrol ediliyor.">
         <ActivityIndicator color={colors.accent} size="large" />
       </ScreenShell>
     );
@@ -112,8 +112,8 @@ export default function StaffLiveOpsScreen() {
 
   return (
     <ScreenShell
-      title="LiveOps"
-      subtitle="Anketleri yönet, soruları pinle ve cevap durumunu güncelle."
+      title="Canlı Operasyon"
+      subtitle="Anketleri yönet, soruları sabitle ve cevap durumunu güncelle."
     >
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -214,7 +214,7 @@ export default function StaffLiveOpsScreen() {
               >
                 <Pin color={questionItem.pinned ? "#FFFFFF" : colors.inkMuted} size={14} />
                 <Text style={[styles.actionChipText, questionItem.pinned ? styles.actionChipTextActive : null]}>
-                  Pin
+                  Sabitle
                 </Text>
               </Pressable>
               <Pressable

@@ -10,6 +10,13 @@ import { useAuthSessionStore } from "../../src/store/auth-session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 const ROLES: AttendeeRole[] = ["Student", "Clinician", "Academic", "Entrepreneur", "Industry"];
+const ROLE_LABELS: Record<AttendeeRole, string> = {
+  Student: "Öğrenci",
+  Clinician: "Klinisyen",
+  Academic: "Akademisyen",
+  Entrepreneur: "Girişimci",
+  Industry: "Sektör"
+};
 
 export default function ParticipantMoreScreen() {
   const queryClient = useQueryClient();
@@ -73,7 +80,7 @@ export default function ParticipantMoreScreen() {
 
   return (
     <ScreenShell
-      title="Daha Fazla"
+      title="Diğer"
       subtitle="Profil, geri bildirim ve etkinlik detaylarını tek yerden yönet."
     >
       <View style={styles.eventCard}>
@@ -114,7 +121,7 @@ export default function ParticipantMoreScreen() {
               }}
             >
               <Text style={[styles.roleChipText, role === candidateRole ? styles.roleChipTextSelected : null]}>
-                {candidateRole}
+                {ROLE_LABELS[candidateRole]}
               </Text>
             </Pressable>
           ))}
@@ -139,7 +146,7 @@ export default function ParticipantMoreScreen() {
           style={styles.input}
           value={outlierScore}
           onChangeText={(value) => setOutlierScore(value.replace(/[^0-9]/g, "").slice(0, 3))}
-          placeholder="Outlier score (0-100)"
+          placeholder="Outlier puanı (0-100)"
           placeholderTextColor="#8D9895"
           keyboardType="number-pad"
         />

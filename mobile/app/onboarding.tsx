@@ -26,13 +26,13 @@ export default function OnboardingScreen() {
   return (
     <ScreenShell
       title="DentCo Outlier profilini kur"
-      subtitle="Diş hekimleri icin tasarlanmis profesyonel tanisma urunune giris yap. Uyumlu profilleri kart kart kesfet."
+      subtitle="Diş hekimleri için tasarlanmış profesyonel tanışma deneyimine katıl. Uyumlu profilleri kart kart keşfet."
     >
       <ProfileEditor
         busy={createMutation.isPending}
         errorMessage={createMutation.error instanceof Error ? createMutation.error.message : undefined}
-        helperText="Temel alanlari doldur; detaylar arttikca kartlarin daha iyi profillere gider."
-        submitLabel="Profili Ac"
+        helperText="Temel alanları doldur; detaylar arttıkça kartların daha uyumlu profillere gider."
+        submitLabel="Profili Aç"
         onSubmit={(values) => {
           createMutation.mutate(values);
         }}

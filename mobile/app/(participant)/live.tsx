@@ -86,7 +86,7 @@ export default function ParticipantLiveScreen() {
 
   return (
     <ScreenShell
-      title="Live Hub"
+      title="Canlı Merkez"
       subtitle="Soru sor, anketlere katıl ve sahnedeki akışa anlık tepki ver."
     >
       {liveQuery.isLoading ? (
@@ -98,7 +98,7 @@ export default function ParticipantLiveScreen() {
 
       {liveQuery.isError ? (
         <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{liveQuery.error instanceof Error ? liveQuery.error.message : "Live verisi alınamadı."}</Text>
+          <Text style={styles.errorText}>{liveQuery.error instanceof Error ? liveQuery.error.message : "Canlı veri alınamadı."}</Text>
         </View>
       ) : null}
 
@@ -126,7 +126,7 @@ export default function ParticipantLiveScreen() {
         </View>
       ) : (
         <View style={styles.warningCard}>
-          <Text style={styles.warningText}>Live etkileşim için önce profilini tamamlamalısın.</Text>
+          <Text style={styles.warningText}>Canlı etkileşim için önce profilini tamamlamalısın.</Text>
         </View>
       )}
 

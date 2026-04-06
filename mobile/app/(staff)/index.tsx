@@ -18,7 +18,7 @@ export default function StaffDashboardScreen() {
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="Staff Panel" subtitle="Yetki durumu kontrol ediliyor.">
+      <ScreenShell title="Ekip Paneli" subtitle="Yetki durumu kontrol ediliyor.">
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
         </View>
@@ -32,22 +32,22 @@ export default function StaffDashboardScreen() {
 
   return (
     <ScreenShell
-      title="Staff Panel"
-      subtitle="Live operasyon, çekiliş ve katılımcı durumunu tek panelde izle."
+      title="Ekip Paneli"
+      subtitle="Canlı operasyon, çekiliş ve katılımcı durumunu tek panelde izle."
     >
       <View style={styles.metricRow}>
-        <Metric label="Attendees" value={String(overviewQuery.data?.stats.attendees ?? 0)} />
-        <Metric label="Questions" value={String(overviewQuery.data?.stats.questions ?? 0)} />
-        <Metric label="Active Polls" value={String(overviewQuery.data?.stats.activePolls ?? 0)} />
+        <Metric label="Katılımcı" value={String(overviewQuery.data?.stats.attendees ?? 0)} />
+        <Metric label="Soru" value={String(overviewQuery.data?.stats.questions ?? 0)} />
+        <Metric label="Aktif Anket" value={String(overviewQuery.data?.stats.activePolls ?? 0)} />
       </View>
       <View style={styles.metricRow}>
-        <Metric label="Reactions" value={String(overviewQuery.data?.stats.reactions ?? 0)} />
-        <Metric label="Raffle Draws" value={String(overviewQuery.data?.stats.raffleDraws ?? 0)} />
-        <Metric label="Feedbacks" value={String(overviewQuery.data?.stats.feedbacks ?? 0)} />
+        <Metric label="Tepki" value={String(overviewQuery.data?.stats.reactions ?? 0)} />
+        <Metric label="Çekiliş" value={String(overviewQuery.data?.stats.raffleDraws ?? 0)} />
+        <Metric label="Geri Bildirim" value={String(overviewQuery.data?.stats.feedbacks ?? 0)} />
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Analytics Snapshot</Text>
+        <Text style={styles.cardTitle}>Analiz Özeti</Text>
         {overviewQuery.isLoading ? (
           <ActivityIndicator color={colors.accent} size="small" />
         ) : overviewQuery.data?.latestAnalytics ? (
@@ -60,7 +60,7 @@ export default function StaffDashboardScreen() {
             </Text>
           </>
         ) : (
-          <Text style={styles.cardText}>Henüz analytics kaydı bulunmuyor.</Text>
+          <Text style={styles.cardText}>Henüz analiz kaydı bulunmuyor.</Text>
         )}
       </View>
     </ScreenShell>

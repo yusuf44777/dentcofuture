@@ -68,7 +68,7 @@ export function ProfileEditor({
           <View style={styles.overviewTextBlock}>
             <Text style={styles.overviewTitle}>Kart Gücü</Text>
             <Text style={styles.overviewSubtitle}>
-              Profesyonel kimyanin dogru kisilere gitmesi icin detaylari doldur ve kartini guclendir.
+              Profesyonel kimyanın doğru kişilere gitmesi için detayları doldur ve kartını güçlendir.
             </Text>
           </View>
           <View style={styles.completenessBadge}>
@@ -79,9 +79,9 @@ export function ProfileEditor({
 
         <View style={styles.visibilityRow}>
           <View style={styles.visibilityTextBlock}>
-            <Text style={styles.visibilityTitle}>Discovery gorunurlugu</Text>
+            <Text style={styles.visibilityTitle}>Keşif görünürlüğü</Text>
             <Text style={styles.visibilitySubtitle}>
-              Kapali kartlar kesfet akisinda baskalarina gosterilmez.
+              Kapalı kartlar keşif akışında başkalarına gösterilmez.
             </Text>
           </View>
           <Switch
@@ -98,11 +98,11 @@ export function ProfileEditor({
       <FormSection
         icon={<Stethoscope color={colors.accent} size={18} />}
         title="Temel Profil"
-        subtitle="Kartin ilk izlenimini belirleyen profesyonel kimlik alanlari."
+        subtitle="Kartın ilk izlenimini belirleyen profesyonel kimlik alanları."
       >
         <Field
           label="Ad Soyad"
-          placeholder="Dr. Ayse Yilmaz"
+          placeholder="Dr. Ayşe Yılmaz"
           value={values.fullName}
           onChangeText={(nextValue) => {
             setValues((currentValues) => ({ ...currentValues, fullName: nextValue }));
@@ -120,7 +120,7 @@ export function ProfileEditor({
 
         <SingleChoiceGroup
           label="Mesleki Rol"
-          helper="Sana bakan kisiler kartini once bu baglamla gorur."
+          helper="Sana bakan kişiler kartını önce bu bağlamla görür."
           options={networkingFilterOptions.professions}
           selectedValue={values.profession}
           onSelect={(nextValue) => {
@@ -150,11 +150,11 @@ export function ProfileEditor({
       <FormSection
         icon={<MapPinned color={colors.copper} size={18} />}
         title="Konum ve Kurum"
-        subtitle="Ayni sehir ve benzer ekosistemlerdeki kisilerle yakalanma sansini artirir."
+        subtitle="Aynı şehir ve benzer ekosistemlerdeki kişilerle yakalanma şansını artırır."
       >
         <Field
           label="Şehir"
-          placeholder="Istanbul"
+          placeholder="İstanbul"
           value={values.city}
           onChangeText={(nextValue) => {
             setValues((currentValues) => ({ ...currentValues, city: nextValue }));
@@ -163,7 +163,7 @@ export function ProfileEditor({
 
         <Field
           label="Kurum / Klinik"
-          placeholder="Kendi klinigim / Universite / Zincir klinik"
+          placeholder="Kendi kliniğim / Üniversite / Zincir klinik"
           value={values.institutionName}
           onChangeText={(nextValue) => {
             setValues((currentValues) => ({ ...currentValues, institutionName: nextValue }));
@@ -187,7 +187,7 @@ export function ProfileEditor({
       <FormSection
         icon={<Users color={colors.accent} size={18} />}
         title="Networking Hedefleri"
-        subtitle="Kimi neden tanimak istedigini sistemin anlamasini saglar."
+        subtitle="Kimi neden tanımak istediğini sistemin anlamasını sağlar."
       >
         <MultiChoiceGroup
           label="İşbirliği Hedefleri"
@@ -219,7 +219,7 @@ export function ProfileEditor({
       <FormSection
         icon={<NotebookTabs color={colors.copper} size={18} />}
         title="Uzmanlık Konuları"
-        subtitle="Vaka dili, teknoloji ilgisi ve ortak merak alanlari burada yakalanir."
+        subtitle="Vaka dili, teknoloji ilgisi ve ortak merak alanları burada yakalanır."
       >
         <MultiChoiceGroup
           label="İlgi Başlıkları"
@@ -242,7 +242,7 @@ export function ProfileEditor({
       <FormSection
         icon={<Globe2 color={colors.accent} size={18} />}
         title="Dil ve Kısa Tanıtım"
-        subtitle="Bio tonu ve diller kartinin profesyonel cekimini belirler."
+        subtitle="Bio tonu ve diller kartının profesyonel çekimini belirler."
       >
         <MultiChoiceGroup
           label="Konuşulan Diller"
@@ -263,7 +263,7 @@ export function ProfileEditor({
 
         <Field
           label="Kısa Tanıtım"
-          placeholder="Odaklandiginiz alanlari ve hangi isbirliklerine acik oldugunuzu kisaca yazin."
+          placeholder="Odaklandığınız alanları ve hangi iş birliklerine açık olduğunuzu kısaca yazın."
           multiline
           numberOfLines={5}
           value={values.bio}
@@ -275,8 +275,8 @@ export function ProfileEditor({
 
       <FormSection
         icon={<BriefcaseBusiness color={colors.copper} size={18} />}
-        title="Eslesme Sonrasi Kanallar"
-        subtitle="Iletisim butonlari ancak karsilikli ilgi olusunca acilir."
+        title="Eşleşme Sonrası Kanallar"
+        subtitle="İletişim butonları ancak karşılıklı ilgi oluşunca açılır."
       >
         <Field
           label="Instagram"

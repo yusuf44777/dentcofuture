@@ -17,7 +17,7 @@ export const NETWORKING_FUTURE_PATH_OPTIONS = [
   "Kamu",
   "Klinik",
   "Akademi",
-  "Girisim"
+  "Girişim"
 ] as const;
 
 export const NETWORKING_PROFESSION_OPTIONS = [
@@ -30,10 +30,10 @@ export const NETWORKING_PROFESSION_OPTIONS = [
 ] as const;
 
 export const NETWORKING_TOPIC_OPTIONS = [
-  "Digital workflow",
-  "Aligner planlama",
-  "Implant rehabilitasyonu",
-  "Gulus tasarimi",
+  "Dijital iş akışı",
+  "Şeffaf plak planlaması",
+  "İmplant rehabilitasyonu",
+  "Gülüş tasarımı",
   "Mikroskopik endodonti",
   "Pediyatrik hasta yönetimi",
   "Cerrahi vaka paylaşımı",
@@ -70,7 +70,7 @@ export const NETWORKING_AVAILABILITY_OPTIONS = [
   "Etkinlik boyunca görüşebilirim",
   "Sadece kahve molalarında",
   "Akşam networking buluşmalarına açığım",
-  "Etkinlik sonrası online görüşebilirim"
+  "Etkinlik sonrası çevrim içi görüşebilirim"
 ] as const;
 
 export const NETWORKING_MAX_TOPIC_COUNT = 6;

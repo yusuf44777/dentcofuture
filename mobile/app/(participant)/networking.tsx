@@ -11,8 +11,17 @@ import {
   sendMatchMessage,
   sendNetworkingInteraction
 } from "../../src/lib/mobile-api";
+import type { AttendeeRole } from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
+
+const ROLE_LABELS: Record<AttendeeRole, string> = {
+  Student: "Öğrenci",
+  Clinician: "Klinisyen",
+  Academic: "Akademisyen",
+  Entrepreneur: "Girişimci",
+  Industry: "Sektör"
+};
 
 export default function ParticipantNetworkingScreen() {
   const queryClient = useQueryClient();
@@ -139,13 +148,13 @@ export default function ParticipantNetworkingScreen() {
 
       {feedQuery.isError ? (
         <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{feedQuery.error instanceof Error ? feedQuery.error.message : "Networking beslemesi alınamadı."}</Text>
+          <Text style={styles.errorText}>{feedQuery.error instanceof Error ? feedQuery.error.message : "Networking akışı alınamadı."}</Text>
         </View>
       ) : null}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Discovery</Text>
+          <Text style={styles.cardTitle}>Keşif</Text>
           <Pressable
             style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
             onPress={() => {
@@ -222,7 +231,9 @@ export default function ParticipantNetworkingScreen() {
               >
                 <View style={styles.matchIdentity}>
                   <Text style={styles.matchName}>{match.profile.fullName}</Text>
-                  <Text style={styles.matchRole}>{match.attendee?.role ?? "Katılımcı"}</Text>
+                  <Text style={styles.matchRole}>
+                    {match.attendee?.role ? ROLE_LABELS[match.attendee.role as AttendeeRole] ?? "Katılımcı" : "Katılımcı"}
+                  </Text>
                 </View>
                 <MessageCircle color={colors.accent} size={16} />
               </Pressable>

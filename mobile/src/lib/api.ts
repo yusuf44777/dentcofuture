@@ -45,7 +45,7 @@ function getApiBaseUrl() {
 
   if (!rawBaseUrl || rawBaseUrl.trim().length === 0) {
     throw new Error(
-      "EXPO_PUBLIC_API_URL tanimli degil. mobile/.env icine Next.js sunucusunun adresini yaz veya Expo host fallback'inin 3000 portuna erisebildiginden emin ol."
+      "EXPO_PUBLIC_API_URL tanımlı değil. mobile/.env içine Next.js sunucusunun adresini yaz veya Expo host fallback'inin 3000 portuna erişebildiğinden emin ol."
     );
   }
 
@@ -198,11 +198,11 @@ export async function apiRequest<T>(
       throw new Error(`HTTP ${response.status}: ${detailedMessage}`);
     }
 
-    throw new Error(`Sunucu istegi basarisiz oldu (HTTP ${response.status}).`);
+    throw new Error(`Sunucu isteği başarısız oldu (HTTP ${response.status}).`);
   }
 
   if (!payload) {
-    throw new Error("Sunucudan bos yanit dondu.");
+    throw new Error("Sunucudan boş yanıt döndü.");
   }
 
   return payload;

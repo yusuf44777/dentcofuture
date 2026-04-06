@@ -31,8 +31,8 @@ export default function MatchesScreen() {
 
   return (
     <ScreenShell
-      title="Karsilikli eslesmeler"
-      subtitle="Iki taraf da ilgi gonderdiginde kartlar burada acilir ve iletisim bilgileri gorunur."
+      title="Karşılıklı eşleşmeler"
+      subtitle="İki taraf da ilgi gönderdiğinde kartlar burada açılır ve iletişim bilgileri görünür."
       rightAction={
         <View style={styles.headerActions}>
           <Pressable
@@ -42,7 +42,7 @@ export default function MatchesScreen() {
             style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
           >
             <ChevronLeft color={colors.ink} size={16} />
-            <Text style={styles.headerButtonText}>Kesfet</Text>
+            <Text style={styles.headerButtonText}>Keşfet</Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -70,25 +70,25 @@ export default function MatchesScreen() {
       <View style={styles.heroBadge}>
         <HeartHandshake color={colors.accent} size={18} />
         <Text style={styles.heroBadgeText}>
-          {matchesQuery.data?.total ?? 0} aktif eslesme
+          {matchesQuery.data?.total ?? 0} aktif eşleşme
         </Text>
       </View>
 
       {matchesQuery.isLoading && !matchesQuery.data ? (
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loaderTitle}>Eslesmeler taraniyor</Text>
-          <Text style={styles.loaderText}>Karsilikli ilgiler burada toplanacak.</Text>
+          <Text style={styles.loaderTitle}>Eşleşmeler taranıyor</Text>
+          <Text style={styles.loaderText}>Karşılıklı ilgiler burada toplanacak.</Text>
         </View>
       ) : null}
 
       {matchesQuery.isError ? (
         <View style={styles.errorCard}>
-          <Text style={styles.errorTitle}>Eslesmeler yuklenemedi</Text>
+          <Text style={styles.errorTitle}>Eşleşmeler yüklenemedi</Text>
           <Text style={styles.errorText}>
             {matchesQuery.error instanceof Error
               ? matchesQuery.error.message
-              : "Eslesme listesi su anda getirilemiyor."}
+              : "Eşleşme listesi şu anda getirilemiyor."}
           </Text>
         </View>
       ) : null}
@@ -98,16 +98,16 @@ export default function MatchesScreen() {
           matchesQuery.data.matches.map((match) => (
             <View key={match.profile.id} style={styles.matchBlock}>
               <Text style={styles.matchMeta}>
-                Eslesti • {new Date(match.matchedAt).toLocaleDateString("tr-TR")}
+                Eşleşti • {new Date(match.matchedAt).toLocaleDateString("tr-TR")}
               </Text>
               <MatchCard profile={match.profile} accent="teal" />
             </View>
           ))
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>Henüz karsilikli ilgi yok</Text>
+            <Text style={styles.emptyTitle}>Henüz karşılıklı ilgi yok</Text>
             <Text style={styles.emptyText}>
-              Discovery tarafinda ilgini gonderdiklerin sana geri donerse burada gorunurler.
+              Keşif tarafında ilgini gönderdiklerin sana geri dönerse burada görünürler.
             </Text>
             <Pressable
               onPress={() => {
@@ -115,7 +115,7 @@ export default function MatchesScreen() {
               }}
               style={({ pressed }) => [styles.emptyButton, pressed ? styles.headerButtonPressed : null]}
             >
-              <Text style={styles.emptyButtonText}>Kartlara Don</Text>
+              <Text style={styles.emptyButtonText}>Kartlara Dön</Text>
             </Pressable>
           </View>
         )

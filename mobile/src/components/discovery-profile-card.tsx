@@ -53,7 +53,7 @@ export function DiscoveryProfileCard({ profile }: DiscoveryProfileCardProps) {
       ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bag kurma sinyalleri</Text>
+        <Text style={styles.sectionTitle}>Networking sinyalleri</Text>
         <View style={styles.topicWrap}>
           {profile.collaboration_goals.slice(0, 3).map((item) => (
             <View key={item} style={styles.topicPill}>
@@ -70,7 +70,7 @@ export function DiscoveryProfileCard({ profile }: DiscoveryProfileCardProps) {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Iletisim bilgileri ancak karsilikli ilgi olusunca acilir.
+          İletişim bilgileri ancak karşılıklı ilgi oluşunca açılır.
         </Text>
       </View>
     </View>

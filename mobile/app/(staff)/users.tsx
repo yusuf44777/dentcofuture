@@ -65,7 +65,7 @@ export default function StaffUsersScreen() {
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="Participants" subtitle="Yetkiler hazırlanıyor.">
+      <ScreenShell title="Katılımcılar" subtitle="Yetkiler hazırlanıyor.">
         <ActivityIndicator color={colors.accent} size="large" />
       </ScreenShell>
     );
@@ -79,7 +79,7 @@ export default function StaffUsersScreen() {
 
   return (
     <ScreenShell
-      title="Participants"
+      title="Katılımcılar"
       subtitle="Katılımcı listesini yönet, aktiflik durumunu güncelle."
     >
       <View style={styles.card}>
@@ -96,14 +96,14 @@ export default function StaffUsersScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Participant code"
+          placeholder="Katılımcı kodu"
           placeholderTextColor="#8D9895"
           value={participantCode}
           onChangeText={setParticipantCode}
         />
         <TextInput
           style={styles.input}
-          placeholder="External ref"
+          placeholder="Harici referans"
           placeholderTextColor="#8D9895"
           value={externalRef}
           onChangeText={setExternalRef}
@@ -134,7 +134,7 @@ export default function StaffUsersScreen() {
         <View style={styles.searchRow}>
           <TextInput
             style={[styles.input, styles.searchInput]}
-            placeholder="Ad, kod veya ref ile ara"
+            placeholder="Ad, kod veya referans ile ara"
             placeholderTextColor="#8D9895"
             value={searchDraft}
             onChangeText={setSearchDraft}
@@ -154,7 +154,7 @@ export default function StaffUsersScreen() {
             <View style={styles.participantInfo}>
               <Text style={styles.participantName}>{participant.full_name}</Text>
               <Text style={styles.participantMeta}>
-                {participant.participant_code ?? "Kodsuz"} • {participant.external_ref ?? "Ref yok"}
+                {participant.participant_code ?? "Kodsuz"} • {participant.external_ref ?? "Referans yok"}
               </Text>
             </View>
             <Pressable

@@ -44,8 +44,8 @@ export default function ParticipantGameScreen() {
 
   return (
     <ScreenShell
-      title="Enamel Siege"
-      subtitle="Roguelike oyuna gir, skor gönder ve etkinlik puanını yükselt."
+      title="Mine Kuşatması"
+      subtitle="Oyuna gir, skor gönder ve etkinlik puanını yükselt."
     >
       <View style={styles.webViewCard}>
         {webViewLoading ? (
@@ -86,7 +86,7 @@ export default function ParticipantGameScreen() {
             value={waveInput}
             onChangeText={(value) => setWaveInput(value.replace(/[^0-9]/g, ""))}
             style={styles.input}
-            placeholder="Wave"
+            placeholder="Dalga"
             placeholderTextColor="#8D9895"
           />
           <Pressable
@@ -123,7 +123,7 @@ export default function ParticipantGameScreen() {
           <View style={styles.personalBest}>
             <Text style={styles.personalBestTitle}>Kişisel En İyi</Text>
             <Text style={styles.personalBestText}>
-              Skor {scoresQuery.data.personalBest.score} • Wave {scoresQuery.data.personalBest.wave}
+              Skor {scoresQuery.data.personalBest.score} • Dalga {scoresQuery.data.personalBest.wave}
             </Text>
           </View>
         ) : (

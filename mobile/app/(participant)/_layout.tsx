@@ -18,14 +18,14 @@ export default function ParticipantLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Ana Sayfa",
           tabBarIcon: ({ color, size }) => <House color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="live"
         options={{
-          title: "Live",
+          title: "Canlı",
           tabBarIcon: ({ color, size }) => <Radio color={color} size={size} />
         }}
       />
@@ -39,14 +39,14 @@ export default function ParticipantLayout() {
       <Tabs.Screen
         name="game"
         options={{
-          title: "Game",
+          title: "Oyun",
           tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
+          title: "Diğer",
           tabBarIcon: ({ color, size }) => <Settings2 color={color} size={size} />
         }}
       />

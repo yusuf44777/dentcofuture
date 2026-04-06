@@ -24,8 +24,8 @@ export default function GameScreen() {
           <ArrowLeft color={colors.ink} size={20} />
         </Pressable>
         <View style={styles.headerTitle}>
-          <Text style={styles.title}>Tooth Defenders</Text>
-          <Text style={styles.subtitle}>Micro Rogue</Text>
+          <Text style={styles.title}>Diş Savunucuları</Text>
+          <Text style={styles.subtitle}>Mikro Macera</Text>
         </View>
       </View>
 

@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   return (
     <ScreenShell
       title="Profil vitrini"
-      subtitle="Kartinin tonu, gorunurlugu ve ilgi alanlari burada sekillenir."
+      subtitle="Kartının tonu, görünürlüğü ve ilgi alanları burada şekillenir."
       rightAction={
         <Pressable
           onPress={() => {
@@ -68,7 +68,7 @@ export default function ProfileScreen() {
           <Text style={styles.errorText}>
             {profileQuery.error instanceof Error
               ? profileQuery.error.message
-              : "Profil verileri okunamadi."}
+              : "Profil verileri okunamadı."}
           </Text>
         </View>
       ) : null}
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
           initialValues={initialValues}
           busy={updateMutation.isPending}
           errorMessage={updateMutation.error instanceof Error ? updateMutation.error.message : undefined}
-          submitLabel="Profili Guncelle"
+          submitLabel="Profili Güncelle"
           onSubmit={(values) => {
             updateMutation.mutate(values);
           }}

@@ -42,18 +42,18 @@ export default function ParticipantHomeScreen() {
   return (
     <ScreenShell
       title="Katılımcı Merkezi"
-      subtitle="Live oturum, networking ve oyun puanlarını tek akışta takip edin."
+      subtitle="Canlı oturum, networking ve oyun puanlarını tek akışta takip edin."
     >
       <View style={styles.metricRow}>
         <MetricCard label="Puanın" value={String(me.attendee?.points ?? 0)} />
-        <MetricCard label="Live Soru" value={String(liveQuery.data?.questions.length ?? 0)} />
+        <MetricCard label="Canlı Soru" value={String(liveQuery.data?.questions.length ?? 0)} />
         <MetricCard label="Liderlik" value={String(leaderboardQuery.data?.me?.rank ?? "-")} />
       </View>
 
       {!me.attendee ? (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Onboarding Gerekli</Text>
-          <Text style={styles.warningText}>Live ve networking modüllerini kullanmak için profil bilgilerini tamamlayın.</Text>
+          <Text style={styles.warningTitle}>Profil Tamamlama Gerekli</Text>
+          <Text style={styles.warningText}>Canlı ve networking modüllerini kullanmak için profil bilgilerini tamamlayın.</Text>
           <Pressable
             style={({ pressed }) => [styles.ctaButton, pressed ? styles.pressed : null]}
             onPress={() => {
@@ -72,7 +72,7 @@ export default function ParticipantHomeScreen() {
       </View>
 
       <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>Top 5 Liderlik</Text>
+        <Text style={styles.panelTitle}>İlk 5 Liderlik</Text>
         {(leaderboardQuery.data?.leaderboard ?? []).slice(0, 5).map((item, index) => (
           <View key={item.id} style={styles.rankRow}>
             <Text style={styles.rankText}>{index + 1}. {item.name}</Text>

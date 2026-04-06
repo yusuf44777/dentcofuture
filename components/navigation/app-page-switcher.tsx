@@ -49,7 +49,7 @@ export function AppPageSwitcher({
       },
       {
         href: "/networking",
-        label: "Ağ Kurma",
+        label: "Networking",
         icon: UsersRound,
         active: pathname.startsWith("/networking")
       },

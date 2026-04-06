@@ -214,10 +214,10 @@ export function NetworkingIntakeForm() {
           <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY</Badge>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Kahve Molası Ağ Kurma
+              Kahve Molası Networking
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Bu ekran bir tanışma uygulaması değil, kongre içi profesyonel ağ kurma içindir.
+              Bu ekran bir tanışma uygulaması değil, kongre içi profesyonel networking içindir.
             </p>
           </div>
         </div>
@@ -228,7 +228,7 @@ export function NetworkingIntakeForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope className="h-5 w-5 text-cyan-700" />
-              Ağ Kurma Kartı
+              Networking Kartı
             </CardTitle>
             <CardDescription>Benzer ilgi alanındaki katılımcı listesini hemen görün.</CardDescription>
           </CardHeader>

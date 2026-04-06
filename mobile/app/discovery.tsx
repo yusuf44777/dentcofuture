@@ -72,7 +72,7 @@ export default function DiscoveryScreen() {
   return (
     <ScreenShell
       title="Klinik kimyasını keşfet"
-      subtitle="Dating app akışı gibi ilerle; profesyonel uyum gördüğün diş hekimlerine ilgini gönder."
+      subtitle="Kart akışı gibi ilerle; profesyonel uyum gördüğün diş hekimlerine ilgini gönder."
       rightAction={
         <View style={styles.headerActions}>
           <Pressable
@@ -82,7 +82,7 @@ export default function DiscoveryScreen() {
             style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
           >
             <Users color={colors.ink} size={16} />
-            <Text style={styles.headerButtonText}>Eslesmeler</Text>
+            <Text style={styles.headerButtonText}>Eşleşmeler</Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -122,14 +122,14 @@ export default function DiscoveryScreen() {
           value={activeProfile ? String(activeIndex + 1) : "0"}
         />
         <Metric label="Kalan aday" value={String(remainingCount)} />
-        <Metric label="Karsilikli eslesme" value={String(feedQuery.data?.mutualMatchesCount ?? 0)} />
+        <Metric label="Karşılıklı eşleşme" value={String(feedQuery.data?.mutualMatchesCount ?? 0)} />
       </View>
 
       {latestMatch ? (
         <View style={styles.matchBanner}>
-          <Text style={styles.matchBannerTitle}>Karsilikli ilgi olustu</Text>
+          <Text style={styles.matchBannerTitle}>Karşılıklı ilgi oluştu</Text>
           <Text style={styles.matchBannerText}>
-            {latestMatch.profile.full_name} artik eslesmeler ekraninda. Iletisim butonlari acildi.
+            {latestMatch.profile.full_name} artık eşleşmeler ekranında. İletişim butonları açıldı.
           </Text>
           <Pressable
             onPress={() => {
@@ -138,7 +138,7 @@ export default function DiscoveryScreen() {
             }}
             style={({ pressed }) => [styles.matchBannerButton, pressed ? styles.headerButtonPressed : null]}
           >
-            <Text style={styles.matchBannerButtonText}>Eslesmelere Git</Text>
+            <Text style={styles.matchBannerButtonText}>Eşleşmelere Git</Text>
           </Pressable>
         </View>
       ) : null}
@@ -146,18 +146,18 @@ export default function DiscoveryScreen() {
       {feedQuery.isLoading && !feedQuery.data ? (
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loaderTitle}>Kartlar hazirlaniyor</Text>
+          <Text style={styles.loaderTitle}>Kartlar hazırlanıyor</Text>
           <Text style={styles.loaderText}>
-            Uzmanlik, ilgi ve profesyonel hedefler taraniyor.
+            Uzmanlık, ilgi ve profesyonel hedefler taranıyor.
           </Text>
         </View>
       ) : null}
 
       {feedQuery.isError ? (
         <View style={styles.errorCard}>
-          <Text style={styles.errorTitle}>Besleme yuklenemedi</Text>
+          <Text style={styles.errorTitle}>Akış yüklenemedi</Text>
           <Text style={styles.errorText}>
-            {feedQuery.error instanceof Error ? feedQuery.error.message : "Kart akisi alinamiyor."}
+            {feedQuery.error instanceof Error ? feedQuery.error.message : "Kart akışı alınamıyor."}
           </Text>
         </View>
       ) : null}
@@ -174,7 +174,7 @@ export default function DiscoveryScreen() {
               <View style={styles.actionBar}>
                 <ActionButton
                   variant="pass"
-                  label={interactionMutation.isPending ? "Bekle..." : "Pas Gec"}
+                  label={interactionMutation.isPending ? "Bekle..." : "Pas Geç"}
                   icon={<X color={colors.danger} size={20} />}
                   disabled={interactionMutation.isPending}
                   onPress={() => {
@@ -186,7 +186,7 @@ export default function DiscoveryScreen() {
                 />
                 <ActionButton
                   variant="like"
-                  label={interactionMutation.isPending ? "Bekle..." : "Ilgini Gonder"}
+                  label={interactionMutation.isPending ? "Bekle..." : "İlgini Gönder"}
                   icon={<Heart color="#FFFFFF" size={20} fill="#FFFFFF" />}
                   disabled={interactionMutation.isPending}
                   onPress={() => {
@@ -200,9 +200,9 @@ export default function DiscoveryScreen() {
             </>
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Yeni kart kalmadi</Text>
+              <Text style={styles.emptyTitle}>Yeni kart kalmadı</Text>
               <Text style={styles.emptyText}>
-                Profilleri tukkettin. Biraz sonra yenile veya eslesmeler ekranina gec.
+                Profilleri tükettin. Biraz sonra yenile veya eşleşmeler ekranına geç.
               </Text>
               <Pressable
                 onPress={() => {

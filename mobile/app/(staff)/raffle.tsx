@@ -88,7 +88,7 @@ export default function StaffRaffleScreen() {
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="Raffle Ops" subtitle="Yetki durumu hazırlanıyor.">
+      <ScreenShell title="Çekiliş Operasyonu" subtitle="Yetki durumu hazırlanıyor.">
         <ActivityIndicator color={colors.accent} size="large" />
       </ScreenShell>
     );
@@ -103,7 +103,7 @@ export default function StaffRaffleScreen() {
 
   return (
     <ScreenShell
-      title="Raffle Ops"
+      title="Çekiliş Operasyonu"
       subtitle="Ödül havuzu yönet, çekiliş başlat ve kazananları canlı takip et."
     >
       <View style={styles.metricRow}>

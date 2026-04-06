@@ -25,21 +25,21 @@ export default function StaffLayout() {
       <Tabs.Screen
         name="live-ops"
         options={{
-          title: "LiveOps",
+          title: "Canlı Operasyon",
           tabBarIcon: ({ color, size }) => <RadioTower color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="raffle"
         options={{
-          title: "Raffle",
+          title: "Çekiliş",
           tabBarIcon: ({ color, size }) => <Gift color={color} size={size} />
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
-          title: "Users",
+          title: "Katılımcılar",
           tabBarIcon: ({ color, size }) => <UsersRound color={color} size={size} />
         }}
       />

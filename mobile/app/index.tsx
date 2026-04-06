@@ -30,7 +30,7 @@ export default function IndexScreen() {
   if (!hydrated) {
     return (
       <ScreenShell
-        title="Communitive Super App"
+        title="DentCo Outlier"
         subtitle="Uygulama güvenli oturum ve rol durumunu hazırlıyor."
       >
         <View style={styles.loaderCard}>
@@ -49,13 +49,13 @@ export default function IndexScreen() {
   if (meQuery.isLoading) {
     return (
       <ScreenShell
-        title="Communitive Super App"
+        title="DentCo Outlier"
         subtitle="Rol bilgisi doğrulanıyor."
       >
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
           <Text style={styles.loaderTitle}>Profil kontrolü yapılıyor</Text>
-          <Text style={styles.loaderText}>Katılımcı ve staff yetkileri yükleniyor.</Text>
+          <Text style={styles.loaderText}>Katılımcı ve ekip yetkileri yükleniyor.</Text>
         </View>
       </ScreenShell>
     );

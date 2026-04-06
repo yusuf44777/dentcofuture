@@ -24,13 +24,13 @@ export default function StaffSettingsScreen() {
       return verification.valid;
     },
     onSuccess: (valid) => {
-      setLastStepUpStatus(valid ? "Step-up doğrulandı." : "Step-up geçersiz.");
+      setLastStepUpStatus(valid ? "Ek doğrulama başarılı." : "Ek doğrulama geçersiz.");
     }
   });
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="Staff Ayarları" subtitle="Profil hazırlanıyor.">
+      <ScreenShell title="Ekip Ayarları" subtitle="Profil hazırlanıyor.">
         <ActivityIndicator color={colors.accent} size="large" />
       </ScreenShell>
     );
@@ -42,15 +42,15 @@ export default function StaffSettingsScreen() {
 
   return (
     <ScreenShell
-      title="Staff Ayarları"
-      subtitle="Yetkiler, step-up doğrulama ve oturum yönetimi."
+      title="Ekip Ayarları"
+      subtitle="Yetkiler, ek doğrulama ve oturum yönetimi."
     >
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <ShieldCheck color={colors.accent} size={16} />
           <Text style={styles.cardTitle}>Rol ve Yetkiler</Text>
         </View>
-        <Text style={styles.metaText}>Rol: {me.staffRole?.role ?? "staff"}</Text>
+        <Text style={styles.metaText}>Rol: {me.staffRole?.role ?? "ekip"}</Text>
         <View style={styles.capabilityWrap}>
           {(me.staffRole?.capabilities ?? []).map((capability) => (
             <View key={capability} style={styles.capabilityChip}>
@@ -63,7 +63,7 @@ export default function StaffSettingsScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <KeyRound color={colors.copper} size={16} />
-          <Text style={styles.cardTitle}>Step-up Kontrolü</Text>
+          <Text style={styles.cardTitle}>Ek Doğrulama Kontrolü</Text>
         </View>
         <Text style={styles.metaText}>Test yetkisi: {TEST_CAPABILITY}</Text>
         <Pressable
@@ -76,7 +76,7 @@ export default function StaffSettingsScreen() {
           {testStepUpMutation.isPending ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.primaryButtonText}>Step-up Test Et</Text>
+            <Text style={styles.primaryButtonText}>Ek Doğrulamayı Test Et</Text>
           )}
         </Pressable>
         {lastStepUpStatus ? <Text style={styles.metaText}>{lastStepUpStatus}</Text> : null}
@@ -89,7 +89,7 @@ export default function StaffSettingsScreen() {
         }}
       >
         <LogOut color="#FFFFFF" size={14} />
-        <Text style={styles.logoutText}>Staff Oturumunu Kapat</Text>
+        <Text style={styles.logoutText}>Ekip Oturumunu Kapat</Text>
       </Pressable>
     </ScreenShell>
   );

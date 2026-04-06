@@ -29,7 +29,7 @@ export default function SupabaseTestScreen() {
 
         setTodos((data ?? []) as TodoItem[]);
       } catch (caughtError) {
-        setError(caughtError instanceof Error ? caughtError.message : "Todo listesi alınamadı.");
+        setError(caughtError instanceof Error ? caughtError.message : "Görev listesi alınamadı.");
       } finally {
         setLoading(false);
       }
@@ -40,7 +40,7 @@ export default function SupabaseTestScreen() {
 
   return (
     <ScreenShell
-      title="Supabase Test"
+      title="Supabase Testi"
       subtitle="todos tablosu üzerinden bağlantı doğrulama ekranı."
     >
       <View style={styles.card}>
