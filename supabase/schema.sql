@@ -821,6 +821,42 @@ revoke all on public.staff_roles from anon, authenticated;
 revoke all on public.staff_operation_audits from anon, authenticated;
 
 -- -----------------------------------------------------------------------------
+-- Storage bucket (gallery)
+-- -----------------------------------------------------------------------------
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'event-gallery',
+  'event-gallery',
+  true,
+  209715200,
+  array[
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+    'image/gif',
+    'video/mp4',
+    'video/quicktime',
+    'video/webm',
+    'video/x-matroska',
+    'video/3gpp'
+  ]::text[]
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- -----------------------------------------------------------------------------
 -- Realtime publication
 -- -----------------------------------------------------------------------------
 do $$

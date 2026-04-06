@@ -65,15 +65,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const supabase = createSupabaseAdminClient();
-    await ensureGalleryBucket(supabase);
-
     const objectPath = buildGalleryStoragePath(fileName, mediaType);
-    const { data, error } = await supabase.storage.from(GALLERY_BUCKET_NAME).createSignedUploadUrl(objectPath);
-
-    if (error || !data) {
-      throw new Error(error?.message ?? "Yükleme oturumu oluşturulamadı.");
-    }
+    const supabase = createSupabaseAdminClient();
+    const data = await createSignedUploadSession(supabase, objectPath);
 
     return NextResponse.json({
       ok: true,
@@ -102,12 +96,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function ensureGalleryBucket(supabase: SupabaseClient) {
-  const { data: existingBucket, error: lookupError } = await supabase.storage.getBucket(
-    GALLERY_BUCKET_NAME
-  );
-  if (!lookupError && existingBucket) {
-    return;
+async function createSignedUploadSession(supabase: SupabaseClient, objectPath: string) {
+  const firstAttempt = await supabase.storage.from(GALLERY_BUCKET_NAME).createSignedUploadUrl(objectPath);
+  if (!firstAttempt.error && firstAttempt.data) {
+    return firstAttempt.data;
+  }
+
+  const firstErrorMessage = firstAttempt.error?.message ?? "";
+  if (!shouldCreateBucketFromError(firstErrorMessage)) {
+    throw new Error(firstErrorMessage || "Yükleme oturumu oluşturulamadı.");
   }
 
   const { error: createError } = await supabase.storage.createBucket(GALLERY_BUCKET_NAME, {
@@ -118,6 +115,23 @@ async function ensureGalleryBucket(supabase: SupabaseClient) {
   if (createError && !createError.message.toLowerCase().includes("already exists")) {
     throw new Error(`Galeri bucket oluşturulamadı: ${createError.message}`);
   }
+
+  const secondAttempt = await supabase.storage.from(GALLERY_BUCKET_NAME).createSignedUploadUrl(objectPath);
+  if (secondAttempt.error || !secondAttempt.data) {
+    throw new Error(secondAttempt.error?.message ?? "Yükleme oturumu oluşturulamadı.");
+  }
+
+  return secondAttempt.data;
+}
+
+function shouldCreateBucketFromError(message: string) {
+  const normalized = message.trim().toLowerCase();
+  return (
+    normalized.includes("bucket") &&
+    (normalized.includes("not found") ||
+      normalized.includes("does not exist") ||
+      normalized.includes("not exist"))
+  );
 }
 
 function diagnoseUploadSessionError(error: unknown) {
@@ -138,12 +152,22 @@ function diagnoseUploadSessionError(error: unknown) {
   if (
     normalized.includes("invalid api key") ||
     normalized.includes("jwt") ||
-    normalized.includes("not authorized")
+    normalized.includes("not authorized") ||
+    normalized.includes("row-level security") ||
+    normalized.includes("permission denied")
   ) {
     return {
       code: "INVALID_SUPABASE_SERVICE_ROLE_KEY",
       message:
-        "Supabase servis anahtarı geçersiz veya yetkisiz. SUPABASE_SERVICE_ROLE_KEY değerini kontrol edin."
+        "Supabase servis anahtarı geçersiz veya yetkisiz. SUPABASE_SERVICE_ROLE_KEY değerini kontrol edin (anon key değil service_role olmalı)."
+    };
+  }
+
+  if (shouldCreateBucketFromError(rawMessage)) {
+    return {
+      code: "STORAGE_BUCKET_MISSING",
+      message:
+        "event-gallery bucket bulunamadı. Supabase Storage'da bucket'ı oluşturup tekrar deneyin."
     };
   }
 
