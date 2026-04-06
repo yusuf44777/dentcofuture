@@ -139,8 +139,8 @@ function ParticleField() {
         if (p.y < -20) p.y = canvas!.height + 20;
         if (p.y > canvas!.height + 20) p.y = -20;
         ctx!.globalAlpha = p.op + Math.sin(fr * 0.02 + p.ph) * 0.05;
-        ctx!.fillStyle = p.green ? "#2F9E44" : "#C75B12";
-        ctx!.strokeStyle = p.green ? "rgba(47,158,68,0.2)" : "rgba(199,91,18,0.2)";
+        ctx!.fillStyle = p.green ? "#00E5A0" : "#6C63FF";
+        ctx!.strokeStyle = p.green ? "rgba(0,229,160,0.2)" : "rgba(108,99,255,0.2)";
         ctx!.lineWidth = 0.5;
         drawTooth(p.x, p.y, p.size / 2);
         ctx!.fill(); ctx!.stroke();
@@ -196,8 +196,8 @@ export default function LandingPage() {
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section ref={heroRef} className="relative flex min-h-screen items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(199,91,18,0.08)] blur-[100px]" />
-          <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-[rgba(47,158,68,0.05)] blur-[80px]" />
+          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(108,99,255,0.08)] blur-[100px]" />
+          <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-[rgba(0,229,160,0.05)] blur-[80px]" />
         </div>
         <div className="absolute inset-0 grid-bg opacity-40" />
         <ParticleField />
@@ -238,7 +238,7 @@ export default function LandingPage() {
               className="mt-10 flex justify-center gap-3 sm:gap-6">
               {[{ l: "Gün", v: d }, { l: "Saat", v: h }, { l: "Dk", v: m }, { l: "Sn", v: s }].map(({ l, v }) => (
                 <div key={l} className="flex flex-col items-center">
-                  <div className="flex h-16 w-14 items-center justify-center rounded-[12px] border border-[rgba(199,91,18,0.3)] bg-[rgba(199,91,18,0.1)] sm:h-20 sm:w-20">
+                  <div className="flex h-16 w-14 items-center justify-center rounded-[12px] border border-[rgba(108,99,255,0.3)] bg-[rgba(108,99,255,0.1)] sm:h-20 sm:w-20">
                     <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2,"0")}</span>
                   </div>
                   <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-[rgba(240,240,255,0.4)]">{l}</span>
@@ -269,7 +269,7 @@ export default function LandingPage() {
             { icon: <Images className="h-4 w-4"/>, text: "Etkinlik Galerisi" }
           ].map(({ icon, text }) => (
             <div key={text} className="flex items-center gap-2 text-sm text-[rgba(240,240,255,0.5)]">
-              <span className="text-[#C75B12]">{icon}</span>{text}
+              <span className="text-[#6C63FF]">{icon}</span>{text}
             </div>
           ))}
         </div>
@@ -278,7 +278,7 @@ export default function LandingPage() {
       {/* ── Speakers ─────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-6 py-24">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#C75B12]">Konuşmacılar</p>
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
           <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Outlier&apos;larla Tanışın</h2>
         </motion.div>
         <div className="relative mx-auto mt-12 max-w-3xl">
@@ -291,7 +291,7 @@ export default function LandingPage() {
               {SPEAKERS.map((speaker) => (
                 <div key={speaker.name} className="w-full shrink-0 px-1">
                   <div className="card-surface-hover min-h-[280px] p-6 text-center sm:p-8">
-                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(199,91,18,0.15)] border-2 border-[rgba(199,91,18,0.3)] text-3xl">
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] border-2 border-[rgba(108,99,255,0.3)] text-3xl">
                       <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
                     </div>
                     <h3 className="font-heading text-2xl font-bold">{speaker.title}</h3>
@@ -307,7 +307,7 @@ export default function LandingPage() {
               type="button"
               onClick={handlePrevSpeaker}
               aria-label="Önceki konuşmacı"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#C75B12] hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -320,7 +320,7 @@ export default function LandingPage() {
                   onClick={() => setActiveSpeaker(i)}
                   aria-label={`${i + 1}. konuşmacı slaytı`}
                   className={`h-2.5 rounded-full transition-all ${
-                    activeSpeaker === i ? "w-8 bg-[#C75B12]" : "w-2.5 bg-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.4)]"
+                    activeSpeaker === i ? "w-8 bg-[#6C63FF]" : "w-2.5 bg-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.4)]"
                   }`}
                 />
               ))}
@@ -330,7 +330,7 @@ export default function LandingPage() {
               type="button"
               onClick={handleNextSpeaker}
               aria-label="Sonraki konuşmacı"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#C75B12] hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -343,7 +343,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 grid-bg opacity-20" />
         <div className="relative mx-auto max-w-3xl px-6">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#2F9E44]">Program</p>
+            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#00E5A0]">Program</p>
             <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Günün Akışı</h2>
           </motion.div>
           <div className="mt-12 space-y-3">
@@ -353,17 +353,17 @@ export default function LandingPage() {
                 viewport={{ once: true }} transition={{ delay: i * 0.04 }}
                 className={`flex items-start gap-4 rounded-[12px] border p-4 ${
                   item.type === "break" ? "border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)]"
-                  : item.type === "panel" ? "border-[rgba(199,91,18,0.2)] bg-[rgba(199,91,18,0.07)]"
-                  : item.type === "interactive" ? "border-[rgba(47,158,68,0.2)] bg-[rgba(47,158,68,0.07)]"
-                  : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(199,91,18,0.3)]"
+                  : item.type === "panel" ? "border-[rgba(108,99,255,0.2)] bg-[rgba(108,99,255,0.07)]"
+                  : item.type === "interactive" ? "border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.07)]"
+                  : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(108,99,255,0.3)]"
                 }`}>
                 <span className="w-24 shrink-0 text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">{item.time}</span>
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-semibold ${item.type === "break" ? "text-[rgba(240,240,255,0.5)]" : "text-white"}`}>{item.title}</p>
                   {item.speaker && <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">{item.speaker}</p>}
                 </div>
-                {item.type === "interactive" && <span className="shrink-0 text-xs font-semibold text-[#2F9E44]">Etkileşimli</span>}
-                {item.type === "panel" && <span className="shrink-0 text-xs font-semibold text-[#F4A261]">Panel</span>}
+                {item.type === "interactive" && <span className="shrink-0 text-xs font-semibold text-[#00E5A0]">Etkileşimli</span>}
+                {item.type === "panel" && <span className="shrink-0 text-xs font-semibold text-[#A78BFA]">Panel</span>}
               </motion.div>
             ))}
           </div>
@@ -372,7 +372,7 @@ export default function LandingPage() {
 
       {/* ── CTA ──────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-32 text-center">
-        <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(199,91,18,0.1)] blur-[120px]" />
+        <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(108,99,255,0.1)] blur-[120px]" />
         <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           className="relative z-10 px-6">
           <h2 className="font-heading text-4xl font-extrabold sm:text-6xl">

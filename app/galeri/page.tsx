@@ -16,7 +16,7 @@ export default function GalleryPage() {
             priority
             className="h-auto w-[154px] object-contain sm:w-[184px]"
           />
-          <Badge className="bg-amber-50 text-amber-800">Dent Co Future • Etkinlik Albümü</Badge>
+          <Badge className="bg-cyan-50 text-cyan-800">Dent Co Future • Etkinlik Albümü</Badge>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
               Galeri

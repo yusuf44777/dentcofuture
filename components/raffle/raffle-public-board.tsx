@@ -88,7 +88,7 @@ export function RafflePublicBoard() {
     <main className="min-h-screen px-4 py-6 sm:py-8">
       <section className="mx-auto flex w-full max-w-md flex-col gap-5">
         <div className="text-center">
-          <Badge className="bg-amber-50 text-amber-800">COMMUNITIVE DENTISTRY • Çekiliş</Badge>
+          <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY • Çekiliş</Badge>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
             Dent Co Future Çekiliş Ekranı
           </h1>
@@ -102,7 +102,7 @@ export function RafflePublicBoard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-amber-700" />
+              <Users className="h-5 w-5 text-cyan-700" />
               Aktif Katılımcı
             </CardTitle>
           </CardHeader>
@@ -114,13 +114,13 @@ export function RafflePublicBoard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-700" />
+              <Trophy className="h-5 w-5 text-cyan-700" />
               Son Kazanan Kod
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loadState === "loading" ? (
-              <p className="inline-flex items-center gap-2 text-sm text-amber-800">
+              <p className="inline-flex items-center gap-2 text-sm text-cyan-800">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 Çekiliş verisi yükleniyor...
               </p>
@@ -133,15 +133,15 @@ export function RafflePublicBoard() {
             ) : null}
 
             {loadState === "ready" && latestWinner ? (
-              <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
+              <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-800">
                   Kazanan Kod
                 </p>
                 <p className="mt-2 text-3xl font-semibold tracking-[0.08em] text-slate-900">
                   {latestWinner.winner_code}
                 </p>
                 <p className="mt-2 text-sm text-slate-700">{latestWinner.winner_name}</p>
-                <p className="text-xs text-amber-700">
+                <p className="text-xs text-cyan-700">
                   {latestWinner.prize_title} • Tur {latestWinner.draw_number}
                 </p>
               </div>
@@ -158,7 +158,7 @@ export function RafflePublicBoard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-amber-700" />
+              <Gift className="h-5 w-5 text-cyan-700" />
               Sonuç Geçmişi
             </CardTitle>
           </CardHeader>
@@ -166,7 +166,7 @@ export function RafflePublicBoard() {
             {recentDraws.slice(0, 8).map((draw) => (
               <div
                 key={draw.id}
-                className="rounded-xl border border-amber-100 bg-white px-3 py-2"
+                className="rounded-xl border border-cyan-100 bg-white px-3 py-2"
               >
                 <p className="text-xs font-semibold text-slate-900">
                   {draw.winner_code} • {draw.winner_name}
@@ -182,7 +182,7 @@ export function RafflePublicBoard() {
           </CardContent>
         </Card>
 
-        <p className="flex items-center justify-center gap-1 text-xs text-amber-700">
+        <p className="flex items-center justify-center gap-1 text-xs text-cyan-700">
           <Sparkles className="h-4 w-4" />
           Kodunuz açıklandığında görevli ekibe ileterek ödülünüzü alabilirsiniz.
         </p>

@@ -18,16 +18,16 @@ const config: Config = {
         surface: "#13131A",
         "surface-2": "#1A1A24",
         purple: {
-          DEFAULT: "#C75B12",
-          dim: "rgba(199,91,18,0.15)",
-          glow: "rgba(199,91,18,0.4)"
+          DEFAULT: "#6C63FF",
+          dim: "rgba(108,99,255,0.15)",
+          glow: "rgba(108,99,255,0.4)"
         },
         mint: {
-          DEFAULT: "#2F9E44",
-          dim: "rgba(47,158,68,0.15)",
-          glow: "rgba(47,158,68,0.4)"
+          DEFAULT: "#00E5A0",
+          dim: "rgba(0,229,160,0.15)",
+          glow: "rgba(0,229,160,0.4)"
         },
-        danger: "#D64545"
+        danger: "#FF4D6D"
       },
       borderRadius: {
         card: "12px",
@@ -64,8 +64,8 @@ const config: Config = {
         shimmer: "shimmer 3s linear infinite"
       },
       boxShadow: {
-        purple: "0 0 30px rgba(199,91,18,0.3)",
-        mint: "0 0 30px rgba(47,158,68,0.3)",
+        purple: "0 0 30px rgba(108,99,255,0.3)",
+        mint: "0 0 30px rgba(0,229,160,0.3)",
         card: "0 4px 24px rgba(0,0,0,0.4)"
       }
     }

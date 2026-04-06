@@ -101,10 +101,10 @@ function getStatusClassName(status: GalleryBackupStatus) {
     return "bg-rose-100 text-rose-800";
   }
   if (status === "disabled") {
-    return "bg-amber-100 text-amber-900";
+    return "bg-cyan-100 text-cyan-900";
   }
 
-  return "bg-amber-100 text-amber-900";
+  return "bg-cyan-100 text-cyan-900";
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -261,8 +261,8 @@ export function EventGalleryAlbum() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-amber-100/70 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center gap-2 text-amber-800">
+      <section className="rounded-2xl border border-cyan-100/70 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex items-center gap-2 text-cyan-800">
           <UploadCloud className="h-5 w-5" />
           <h2 className="text-lg font-semibold tracking-tight">Etkinlik Albümüne Ekle</h2>
         </div>
@@ -275,7 +275,7 @@ export function EventGalleryAlbum() {
               placeholder="Adınız Soyadınız"
               value={uploaderName}
               onChange={(event) => setUploaderName(event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
             />
           </div>
           <div className="space-y-1">
@@ -285,7 +285,7 @@ export function EventGalleryAlbum() {
               multiple
               accept="image/*,video/*"
               onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
-              className="block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-amber-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-amber-900 hover:border-amber-300"
+              className="block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-cyan-900 hover:border-cyan-300"
             />
           </div>
         </div>
@@ -297,7 +297,7 @@ export function EventGalleryAlbum() {
             value={caption}
             onChange={(event) => setCaption(event.target.value)}
             rows={3}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
           />
         </div>
 
@@ -318,7 +318,7 @@ export function EventGalleryAlbum() {
           <p className="text-xs text-slate-500">
             Seçilen dosya: {selectedFiles.length > 0 ? selectedFiles.length : 0}
           </p>
-          {uploadProgress ? <p className="text-xs text-amber-700">{uploadProgress}</p> : null}
+          {uploadProgress ? <p className="text-xs text-cyan-700">{uploadProgress}</p> : null}
         </div>
 
         {message ? <p className="mt-2 text-sm text-emerald-700">{message}</p> : null}
@@ -328,7 +328,7 @@ export function EventGalleryAlbum() {
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-slate-900">
-            <Images className="h-5 w-5 text-amber-700" />
+            <Images className="h-5 w-5 text-cyan-700" />
             <h2 className="text-lg font-semibold tracking-tight">Etkinlik Galerisi</h2>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -423,7 +423,7 @@ export function EventGalleryAlbum() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-xs text-amber-900">
+      <section className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-xs text-cyan-900">
         <p className="flex items-center gap-2 font-medium">
           <Camera className="h-4 w-4" />
           Yüklenen medya dosyaları otomatik olarak Supabase üzerinde saklanır ve Google Drive&apos;a yedeklenir.

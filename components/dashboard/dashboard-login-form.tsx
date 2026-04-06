@@ -71,7 +71,7 @@ export function DashboardLoginForm({ redirectPath = "/admin" }: DashboardLoginFo
           inputMode="email"
           value={identifier}
           onChange={(event) => setIdentifier(event.target.value)}
-          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/30"
+          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/30"
           placeholder="ornek@firma.com"
           required
         />
@@ -90,7 +90,7 @@ export function DashboardLoginForm({ redirectPath = "/admin" }: DashboardLoginFo
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/30"
+          className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-[15px] text-slate-800 shadow-sm outline-none transition focus-visible:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500/30"
           placeholder="Şifreyi girin"
           required
         />

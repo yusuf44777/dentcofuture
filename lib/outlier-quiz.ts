@@ -78,8 +78,8 @@ export function getOutlierTitle(score: number): string {
 
 export function getOutlierColor(score: number): string {
   if (score >= 85) return "#FF4D6D";
-  if (score >= 70) return "#C75B12";
-  if (score >= 55) return "#2F9E44";
+  if (score >= 70) return "#6C63FF";
+  if (score >= 55) return "#00E5A0";
   if (score >= 40) return "#F59E0B";
   return "#64748B";
 }

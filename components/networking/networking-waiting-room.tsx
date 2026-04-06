@@ -223,7 +223,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
     <main className="min-h-screen px-4 py-8">
       <section className="mx-auto flex w-full max-w-md flex-col gap-5">
         <div className="text-center">
-          <Badge className="bg-amber-50 text-amber-800">COMMUNITIVE DENTISTRY • Networking</Badge>
+          <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY • Networking</Badge>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
             Networking Katılımcıları
           </h1>
@@ -238,7 +238,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <UserRound className="h-5 w-5 text-amber-700" />
+                <UserRound className="h-5 w-5 text-cyan-700" />
                 Profiliniz
               </CardTitle>
             </CardHeader>
@@ -291,14 +291,14 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-amber-700" />
+              <Users className="h-5 w-5 text-cyan-700" />
               Katılımcı Listesi
             </CardTitle>
             <CardDescription>{infoMessage}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {resolvingProfileId ? (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-3 text-sm text-amber-800">
+              <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-3 text-sm text-cyan-800">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 Kayıtlı profil kontrol ediliyor...
               </div>
@@ -310,7 +310,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
             </p>
 
             {viewState === "loading" ? (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-3 text-sm text-amber-800">
+              <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-3 text-sm text-cyan-800">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 Katılımcı listesi yükleniyor...
               </div>
@@ -338,7 +338,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
             ) : null}
 
             {viewState === "empty" ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+              <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-sm text-cyan-800">
                 Şu an listelenecek başka katılımcı bulunamadı. Liste otomatik yenilenmeye devam ediyor.
               </div>
             ) : null}
@@ -346,7 +346,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
             {viewState === "ready" ? (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">
                     Sizin İçin Önerilenler
                   </p>
 
@@ -355,7 +355,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
                       {recommendedProfiles.map((profile) => (
                         <div
                           key={profile.id}
-                          className="rounded-xl border border-amber-200 bg-amber-50/30 px-3 py-3 transition hover:bg-amber-50/60"
+                          className="rounded-xl border border-cyan-200 bg-cyan-50/30 px-3 py-3 transition hover:bg-cyan-50/60"
                         >
                           <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
                           <p className="text-xs text-slate-600">İlgi Alanı: {profile.interest_area}</p>
@@ -402,7 +402,7 @@ export function NetworkingWaitingRoom({ profileId }: NetworkingWaitingRoomProps)
                       ))}
                     </div>
                   ) : (
-                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
+                    <p className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs text-cyan-800">
                       Şu an ilgi alanınıza göre öneri bulunamadı. Diğer katılımcıları inceleyebilirsiniz.
                     </p>
                   )}

@@ -7,9 +7,9 @@
   --surface: #13131A;
   --surface-2: #1A1A24;
   --border: rgba(255, 255, 255, 0.08);
-  --purple: #C75B12;
-  --mint: #2F9E44;
-  --danger: #D64545;
+  --purple: #6C63FF;
+  --mint: #00E5A0;
+  --danger: #FF4D6D;
   --text: #F0F0FF;
   --text-muted: rgba(240, 240, 255, 0.5);
 }
@@ -35,28 +35,28 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: rgba(199,91,18,0.4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(199,91,18,0.7); }
+::-webkit-scrollbar-thumb { background: rgba(108,99,255,0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(108,99,255,0.7); }
 
 /* Typography */
 .font-heading { font-family: var(--font-syne), system-ui, sans-serif; }
 
 .text-gradient-purple {
-  background: linear-gradient(135deg, #C75B12 0%, #F4A261 100%);
+  background: linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .text-gradient-mint {
-  background: linear-gradient(135deg, #2F9E44 0%, #74C69D 100%);
+  background: linear-gradient(135deg, #00E5A0 0%, #00BCD4 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .text-gradient-hero {
-  background: linear-gradient(135deg, #F0F0FF 0%, #C75B12 50%, #2F9E44 100%);
+  background: linear-gradient(135deg, #F0F0FF 0%, #6C63FF 50%, #00E5A0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -76,8 +76,8 @@ body {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .card-surface-hover:hover {
-  border-color: rgba(199,91,18,0.4);
-  box-shadow: 0 0 20px rgba(199,91,18,0.1);
+  border-color: rgba(108,99,255,0.4);
+  box-shadow: 0 0 20px rgba(108,99,255,0.1);
 }
 
 /* Grid bg */
@@ -91,14 +91,14 @@ body {
 /* Live pulse dot */
 .live-dot {
   width: 8px; height: 8px;
-  background: #D64545;
+  background: #FF4D6D;
   border-radius: 50%;
   animation: live-pulse 1.5s ease-in-out infinite;
 }
 @keyframes live-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(214,69,69,0.6); }
-  70%  { box-shadow: 0 0 0 10px rgba(214,69,69,0); }
-  100% { box-shadow: 0 0 0 0 rgba(214,69,69,0); }
+  0%   { box-shadow: 0 0 0 0 rgba(255,77,109,0.6); }
+  70%  { box-shadow: 0 0 0 10px rgba(255,77,109,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,77,109,0); }
 }
 
 /* Reaction float animation */

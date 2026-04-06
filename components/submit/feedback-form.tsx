@@ -149,13 +149,13 @@ export function FeedbackForm() {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-amber-50 p-1.5">
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-cyan-50 p-1.5">
         <button
           type="button"
           onClick={() => setMode("text")}
           className={`flex h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
             mode === "text"
-              ? "bg-white text-amber-900 shadow-sm"
+              ? "bg-white text-cyan-900 shadow-sm"
               : "text-slate-600 hover:bg-white/70 hover:text-slate-800"
           }`}
         >
@@ -167,7 +167,7 @@ export function FeedbackForm() {
           onClick={() => setMode("poll")}
           className={`flex h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
             mode === "poll"
-              ? "bg-white text-amber-900 shadow-sm"
+              ? "bg-white text-cyan-900 shadow-sm"
               : "text-slate-600 hover:bg-white/70 hover:text-slate-800"
           }`}
         >
@@ -196,12 +196,12 @@ export function FeedbackForm() {
             <p className="text-xs text-slate-500">Canlı anket kontrol ediliyor...</p>
           ) : null}
           {pollConfigUiState === "error" ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
               {pollConfigMessage}
             </p>
           ) : null}
           {activePoll ? (
-            <p className="text-xs font-medium text-amber-700">Canlı anket yayında</p>
+            <p className="text-xs font-medium text-cyan-700">Canlı anket yayında</p>
           ) : (
             <p className="text-xs text-slate-500">Varsayılan anket gösteriliyor</p>
           )}
@@ -216,8 +216,8 @@ export function FeedbackForm() {
                   htmlFor={optionId}
                   className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition ${
                     checked
-                      ? "border-amber-400 bg-amber-50 text-amber-900"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-amber-200 hover:bg-amber-50/40"
+                      ? "border-cyan-400 bg-cyan-50 text-cyan-900"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-cyan-200 hover:bg-cyan-50/40"
                   }`}
                 >
                   <input
@@ -226,7 +226,7 @@ export function FeedbackForm() {
                     name="poll-option"
                     checked={checked}
                     onChange={() => setSelectedOption(option)}
-                    className="h-4 w-4 accent-amber-600"
+                    className="h-4 w-4 accent-cyan-600"
                     required
                   />
                   <span className="text-sm font-medium">{option}</span>

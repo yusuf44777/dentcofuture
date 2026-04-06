@@ -241,7 +241,7 @@ export default function LivePage() {
         </div>
         {!attendeeId && (
           <p className="mt-1 text-xs text-[rgba(240,240,255,0.4)]">
-            Katılmak için önce <a href="/join" className="text-[#C75B12] underline">kayıt ol</a>
+            Katılmak için önce <a href="/join" className="text-[#6C63FF] underline">kayıt ol</a>
           </p>
         )}
       </div>
@@ -252,7 +252,7 @@ export default function LivePage() {
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold transition-all ${
               tab === t.id
-                ? "border-b-2 border-[#C75B12] text-[#C75B12]"
+                ? "border-b-2 border-[#6C63FF] text-[#6C63FF]"
                 : "text-[rgba(240,240,255,0.4)] hover:text-white"
             }`}>
             {t.icon}{t.label}
@@ -300,8 +300,8 @@ export default function LivePage() {
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: i * 0.03 }}
                       className={`rounded-[12px] border p-4 transition-all ${
-                        q.answered ? "border-[rgba(47,158,68,0.2)] bg-[rgba(47,158,68,0.05)] opacity-60"
-                        : q.pinned ? "border-[rgba(199,91,18,0.4)] bg-[rgba(199,91,18,0.08)] shadow-[0_0_20px_rgba(199,91,18,0.15)]"
+                        q.answered ? "border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.05)] opacity-60"
+                        : q.pinned ? "border-[rgba(108,99,255,0.4)] bg-[rgba(108,99,255,0.08)] shadow-[0_0_20px_rgba(108,99,255,0.15)]"
                         : "border-[rgba(255,255,255,0.08)] bg-[#13131A]"
                       }`}>
                       <div className="flex items-start gap-3">
@@ -310,8 +310,8 @@ export default function LivePage() {
                           disabled={upvoted.has(q.id) || myUpvotes <= 0 || !attendeeId}
                           className={`flex flex-col items-center gap-0.5 rounded-[8px] border px-2 py-1.5 transition-all ${
                             upvoted.has(q.id)
-                              ? "border-[#C75B12] bg-[rgba(199,91,18,0.2)] text-[#C75B12]"
-                              : "border-[rgba(255,255,255,0.1)] text-[rgba(240,240,255,0.4)] hover:border-[#C75B12] hover:text-[#C75B12]"
+                              ? "border-[#6C63FF] bg-[rgba(108,99,255,0.2)] text-[#6C63FF]"
+                              : "border-[rgba(255,255,255,0.1)] text-[rgba(240,240,255,0.4)] hover:border-[#6C63FF] hover:text-[#6C63FF]"
                           } disabled:cursor-not-allowed disabled:opacity-30`}>
                           <ChevronUp className="h-4 w-4" />
                           <span className="text-xs font-bold tabular-nums">{q.votes}</span>
@@ -322,8 +322,8 @@ export default function LivePage() {
                             <span className="text-xs text-[rgba(240,240,255,0.4)]">
                               {(q.attendee as { name?: string } | undefined)?.name ?? "Anonim"}
                             </span>
-                            {q.pinned && <span className="flex items-center gap-1 text-xs text-[#F4A261]"><Pin className="h-3 w-3"/> Sabitlendi</span>}
-                            {q.answered && <span className="flex items-center gap-1 text-xs text-[#2F9E44]"><Check className="h-3 w-3"/> Yanıtlandı</span>}
+                            {q.pinned && <span className="flex items-center gap-1 text-xs text-[#A78BFA]"><Pin className="h-3 w-3"/> Sabitlendi</span>}
+                            {q.answered && <span className="flex items-center gap-1 text-xs text-[#00E5A0]"><Check className="h-3 w-3"/> Yanıtlandı</span>}
                           </div>
                         </div>
                       </div>
@@ -366,19 +366,19 @@ export default function LivePage() {
                           className={`relative w-full overflow-hidden rounded-[12px] border p-4 text-left transition-all ${
                             voted
                               ? "border-[rgba(255,255,255,0.1)] cursor-default"
-                              : "border-[rgba(255,255,255,0.1)] hover:border-[#C75B12] hover:bg-[rgba(199,91,18,0.08)] cursor-pointer"
+                              : "border-[rgba(255,255,255,0.1)] hover:border-[#6C63FF] hover:bg-[rgba(108,99,255,0.08)] cursor-pointer"
                           }`}>
                           {/* Bar */}
                           {voted && (
                             <div
-                              className="absolute inset-y-0 left-0 rounded-[12px] bg-[rgba(199,91,18,0.15)] transition-all duration-700"
+                              className="absolute inset-y-0 left-0 rounded-[12px] bg-[rgba(108,99,255,0.15)] transition-all duration-700"
                               style={{ width: `${pct}%` }}
                             />
                           )}
                           <div className="relative flex items-center justify-between">
                             <span className="text-sm font-semibold text-white">{opt}</span>
                             {voted && (
-                              <span className="text-xs font-bold text-[#C75B12]">{pct}%</span>
+                              <span className="text-xs font-bold text-[#6C63FF]">{pct}%</span>
                             )}
                           </div>
                         </button>
@@ -400,7 +400,7 @@ export default function LivePage() {
                 </p>
                 <div className="h-3 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-[#C75B12] to-[#2F9E44]"
+                    className="h-full rounded-full bg-gradient-to-r from-[#6C63FF] to-[#00E5A0]"
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (Object.values(reactionCounts).reduce((a,b)=>a+b,0) / 2))}%` }}
                     transition={{ duration: 0.5 }}
@@ -417,7 +417,7 @@ export default function LivePage() {
                   {REACTION_LIST.map(reaction => (
                     <button key={reaction} onClick={() => sendReaction(reaction)}
                       aria-label={REACTION_ICON_MAP[reaction].label}
-                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] py-5 transition-all hover:border-[rgba(199,91,18,0.4)] hover:bg-[rgba(199,91,18,0.1)] active:scale-90">
+                      className="flex flex-col items-center gap-2 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] py-5 transition-all hover:border-[rgba(108,99,255,0.4)] hover:bg-[rgba(108,99,255,0.1)] active:scale-90">
                       <i className={`${REACTION_ICON_MAP[reaction].iconClass} text-2xl text-[#C9C6FF]`} aria-hidden="true" />
                       <span className="text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">
                         {reactionCounts[reaction] ?? 0}
@@ -438,7 +438,7 @@ export default function LivePage() {
                     ))}
                   </div>
                   <p className="text-center text-xs text-[rgba(240,240,255,0.4)]">
-                    Tepki göndermek için <a href="/join" className="text-[#C75B12]">katıl</a>
+                    Tepki göndermek için <a href="/join" className="text-[#6C63FF]">katıl</a>
                   </p>
                 </div>
               )}
@@ -459,7 +459,7 @@ export default function LivePage() {
                     transition={{ delay: i * 0.05 }}
                     className={`flex items-center gap-4 rounded-[12px] border p-3 ${
                       a.id === attendeeId
-                        ? "border-[rgba(199,91,18,0.4)] bg-[rgba(199,91,18,0.1)]"
+                        ? "border-[rgba(108,99,255,0.4)] bg-[rgba(108,99,255,0.1)]"
                         : "border-[rgba(255,255,255,0.06)] bg-[#13131A]"
                     }`}>
                     <span className={`w-7 text-center text-sm font-extrabold ${
@@ -470,7 +470,7 @@ export default function LivePage() {
                         : i === 2 ? <i className="fa-solid fa-award" aria-hidden="true" />
                         : `#${i + 1}`}
                     </span>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(199,91,18,0.2)] text-sm font-bold">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(108,99,255,0.2)] text-sm font-bold">
                       {a.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -479,7 +479,7 @@ export default function LivePage() {
                       </p>
                       <p className="text-xs text-[rgba(240,240,255,0.4)]">{ROLE_LABELS[a.role] ?? a.role}</p>
                     </div>
-                    <span className="text-sm font-extrabold text-[#C75B12]">{a.points}</span>
+                    <span className="text-sm font-extrabold text-[#6C63FF]">{a.points}</span>
                   </motion.div>
                 ))}
                 {leaderboard.length === 0 && (

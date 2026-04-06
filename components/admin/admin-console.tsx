@@ -174,8 +174,8 @@ export function AdminConsole() {
         {/* ── Stats row ───────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {[
-            { label: "Katılımcılar", value: attendees.length, icon: <Users className="h-5 w-5" />, color: "#C75B12" },
-            { label: "Sorular", value: questions.length, icon: <MessageSquare className="h-5 w-5" />, color: "#2F9E44" },
+            { label: "Katılımcılar", value: attendees.length, icon: <Users className="h-5 w-5" />, color: "#6C63FF" },
+            { label: "Sorular", value: questions.length, icon: <MessageSquare className="h-5 w-5" />, color: "#00E5A0" },
             { label: "Tepkiler", value: reactionTotal, icon: <Zap className="h-5 w-5" />, color: "#FF4D6D" },
             { label: "Aktif Anket", value: polls.filter(p=>p.active).length ? "Evet" : "Hayır", icon: <BarChart3 className="h-5 w-5" />, color: "#F59E0B" }
           ].map(stat => (
@@ -196,7 +196,7 @@ export function AdminConsole() {
             {Object.entries(roleCounts).map(([role, count]) => (
               <div key={role} className="flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-2">
                 <span className="text-sm font-semibold text-white">{ROLE_LABELS[role as AttendeeRole] ?? role}</span>
-                <span className="rounded-full bg-[#C75B12] px-2 py-0.5 text-xs font-bold text-white">{count}</span>
+                <span className="rounded-full bg-[#6C63FF] px-2 py-0.5 text-xs font-bold text-white">{count}</span>
               </div>
             ))}
           </div>
@@ -207,7 +207,7 @@ export function AdminConsole() {
           <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Tepki Enerji Ölçeri</h2>
           <div className="mb-4 h-3 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#C75B12] to-[#2F9E44] transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-[#6C63FF] to-[#00E5A0] transition-all duration-500"
               style={{ width: `${Math.min(100, reactionTotal / 2)}%` }}
             />
           </div>
@@ -234,7 +234,7 @@ export function AdminConsole() {
           <div className="space-y-2">
             {sessions.map(sess => (
               <div key={sess.id} className={`flex items-center gap-3 rounded-[10px] border p-3 ${
-                sess.active ? "border-[rgba(47,158,68,0.3)] bg-[rgba(47,158,68,0.06)]" : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
+                sess.active ? "border-[rgba(0,229,160,0.3)] bg-[rgba(0,229,160,0.06)]" : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]"
               }`}>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-semibold">{sess.title}</p>
@@ -264,7 +264,7 @@ export function AdminConsole() {
         <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#13131A] p-6">
           <h2 className="font-heading mb-4 text-sm font-bold uppercase tracking-wider text-[rgba(240,240,255,0.5)]">Anketler</h2>
 
-          <div className="mb-6 space-y-3 rounded-[10px] border border-[rgba(199,91,18,0.2)] bg-[rgba(199,91,18,0.06)] p-4">
+          <div className="mb-6 space-y-3 rounded-[10px] border border-[rgba(108,99,255,0.2)] bg-[rgba(108,99,255,0.06)] p-4">
             <Textarea placeholder="Anket sorusu..." value={pollQuestion}
               onChange={e => setPollQuestion(e.target.value)} rows={2} />
             {pollOptions.map((opt, i) => (
@@ -291,7 +291,7 @@ export function AdminConsole() {
               const total = Object.values(poll.results ?? {}).reduce((a, b) => a + b, 0);
               return (
                 <div key={poll.id} className={`rounded-[10px] border p-4 ${
-                  poll.active ? "border-[rgba(47,158,68,0.3)] bg-[rgba(47,158,68,0.06)]" : "border-[rgba(255,255,255,0.06)]"
+                  poll.active ? "border-[rgba(0,229,160,0.3)] bg-[rgba(0,229,160,0.06)]" : "border-[rgba(255,255,255,0.06)]"
                 }`}>
                   <div className="mb-3 flex items-start gap-3">
                     <div className="flex-1">
@@ -319,7 +319,7 @@ export function AdminConsole() {
                         <div key={i} className="flex items-center gap-3">
                           <span className="w-32 truncate text-xs text-[rgba(240,240,255,0.6)]">{opt}</span>
                           <div className="flex-1 h-1.5 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
-                            <div className="h-full rounded-full bg-[#C75B12] transition-all duration-500" style={{ width: `${pct}%` }} />
+                            <div className="h-full rounded-full bg-[#6C63FF] transition-all duration-500" style={{ width: `${pct}%` }} />
                           </div>
                           <span className="w-10 text-right text-xs font-bold text-[rgba(240,240,255,0.5)]">{pct}%</span>
                         </div>
@@ -341,7 +341,7 @@ export function AdminConsole() {
             {questions.map(q => (
               <div key={q.id} className={`flex items-start gap-3 rounded-[10px] border p-3 ${
                 q.answered ? "border-[rgba(255,255,255,0.04)] opacity-50"
-                : q.pinned ? "border-[rgba(199,91,18,0.4)] bg-[rgba(199,91,18,0.06)]"
+                : q.pinned ? "border-[rgba(108,99,255,0.4)] bg-[rgba(108,99,255,0.06)]"
                 : "border-[rgba(255,255,255,0.06)]"
               }`}>
                 <div className="flex-1 min-w-0">
@@ -352,12 +352,12 @@ export function AdminConsole() {
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <Button variant="ghost" size="icon" onClick={() => togglePin(q.id, q.pinned)}
-                    className={q.pinned ? "text-[#C75B12]" : ""}>
+                    className={q.pinned ? "text-[#6C63FF]" : ""}>
                     <Pin className="h-3.5 w-3.5" />
                   </Button>
                   {!q.answered && (
                     <Button variant="ghost" size="icon" onClick={() => markAnswered(q.id)}>
-                      <Check className="h-3.5 w-3.5 text-[#2F9E44]" />
+                      <Check className="h-3.5 w-3.5 text-[#00E5A0]" />
                     </Button>
                   )}
                 </div>
@@ -386,7 +386,7 @@ export function AdminConsole() {
                 </span>
                 <span className="flex-1 text-sm font-semibold truncate">{a.name}</span>
                 <span className="text-xs text-[rgba(240,240,255,0.4)]">{ROLE_LABELS[a.role] ?? a.role}</span>
-                <span className="text-sm font-extrabold text-[#C75B12]">{a.points} puan</span>
+                <span className="text-sm font-extrabold text-[#6C63FF]">{a.points} puan</span>
               </div>
             ))}
           </div>

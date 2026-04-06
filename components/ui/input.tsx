@@ -27,16 +27,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             "w-full rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[#1A1A24] px-4 py-3 text-sm text-white placeholder:text-[rgba(240,240,255,0.3)] transition-all",
-            "focus:border-[#C75B12] focus:bg-[rgba(199,91,18,0.05)] focus:shadow-[0_0_0_3px_rgba(199,91,18,0.15)]",
+            "focus:border-[#6C63FF] focus:bg-[rgba(108,99,255,0.05)] focus:shadow-[0_0_0_3px_rgba(108,99,255,0.15)]",
             "disabled:opacity-40 disabled:cursor-not-allowed",
-            error && "border-[#D64545] focus:border-[#D64545] focus:shadow-[0_0_0_3px_rgba(214,69,69,0.15)]",
+            error && "border-[#FF4D6D] focus:border-[#FF4D6D] focus:shadow-[0_0_0_3px_rgba(255,77,109,0.15)]",
             inputPrefix && "pl-9",
             className
           )}
           {...props}
         />
       </div>
-      {error && <p className="text-xs text-[#D64545]">{error}</p>}
+      {error && <p className="text-xs text-[#FF4D6D]">{error}</p>}
     </div>
   )
 );

@@ -211,7 +211,7 @@ export function NetworkingIntakeForm() {
             priority
             className="h-auto w-[148px] object-contain sm:w-[176px]"
           />
-          <Badge className="bg-amber-50 text-amber-800">COMMUNITIVE DENTISTRY</Badge>
+          <Badge className="bg-cyan-50 text-cyan-800">COMMUNITIVE DENTISTRY</Badge>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               Kahve Molası Networking
@@ -227,7 +227,7 @@ export function NetworkingIntakeForm() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Stethoscope className="h-5 w-5 text-amber-700" />
+              <Stethoscope className="h-5 w-5 text-cyan-700" />
               Networking Kartı
             </CardTitle>
             <CardDescription>Benzer ilgi alanındaki katılımcı listesini hemen görün.</CardDescription>
@@ -235,14 +235,14 @@ export function NetworkingIntakeForm() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {isLoadingSavedProfile ? (
-                <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
+                <p className="flex items-center gap-1 text-xs font-medium text-cyan-700">
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                   Kayıtlı profil kontrol ediliyor...
                 </p>
               ) : null}
 
               {savedProfileMessage ? (
-                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <p className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
                   {savedProfileMessage}
                 </p>
               ) : null}
@@ -259,7 +259,7 @@ export function NetworkingIntakeForm() {
                   placeholder="Örn: Ece Yılmaz"
                   required
                   autoComplete="name"
-                  className="h-11 w-full rounded-xl border border-amber-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
                 />
               </div>
 
@@ -273,7 +273,7 @@ export function NetworkingIntakeForm() {
                   value={interestArea}
                   onChange={(event) => setInterestArea(event.target.value)}
                   required
-                  className="h-11 w-full rounded-xl border border-amber-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   <option value="">Alan seçin</option>
                     {NETWORKING_INTEREST_OPTIONS.map((option) => (
@@ -294,7 +294,7 @@ export function NetworkingIntakeForm() {
                   value={futurePath}
                   onChange={(event) => setFuturePath(event.target.value)}
                   required
-                  className="h-11 w-full rounded-xl border border-amber-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="h-11 w-full rounded-xl border border-cyan-100 bg-white px-3 text-sm text-slate-800 outline-none transition focus-visible:ring-2 focus-visible:ring-cyan-500"
                 >
                   <option value="">Bir yol seçin</option>
                     {NETWORKING_FUTURE_PATH_OPTIONS.map((option) => (
@@ -310,7 +310,7 @@ export function NetworkingIntakeForm() {
                   Sosyal Medya (Opsiyonel)
                 </label>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-white px-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-white px-3">
                     <Instagram className="h-4 w-4 text-pink-600" />
                     <input
                       id="instagram"
@@ -321,7 +321,7 @@ export function NetworkingIntakeForm() {
                       className="h-11 w-full bg-transparent text-sm text-slate-800 outline-none"
                     />
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-white px-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-white px-3">
                     <Linkedin className="h-4 w-4 text-sky-700" />
                     <input
                       id="linkedin"
@@ -356,7 +356,7 @@ export function NetworkingIntakeForm() {
               )}
 
               {submitState === "loading" ? (
-                <p className="flex items-center gap-1 text-xs font-medium text-amber-700">
+                <p className="flex items-center gap-1 text-xs font-medium text-cyan-700">
                   <CheckCircle2 className="h-4 w-4" />
                   Profiliniz kaydediliyor, liste hazırlanıyor...
                 </p>
@@ -367,7 +367,7 @@ export function NetworkingIntakeForm() {
                 Listede ad-soyad, mesleki alan ve paylaşılan sosyal medya bilgisi gösterilir.
               </p>
 
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-cyan-700">
                 Profiliniz bu cihazda saklanır, sayfa yenilense bile kaybolmaz.
               </p>
             </form>

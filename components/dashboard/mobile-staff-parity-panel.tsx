@@ -99,10 +99,10 @@ function getBackupBadgeClass(status: GalleryItem["drive_backup_status"]) {
     return "bg-rose-500/20 text-rose-200";
   }
   if (status === "disabled") {
-    return "bg-amber-500/20 text-amber-100";
+    return "bg-cyan-500/20 text-cyan-100";
   }
 
-  return "bg-amber-500/20 text-amber-100";
+  return "bg-cyan-500/20 text-cyan-100";
 }
 
 function getBackupLabel(status: GalleryItem["drive_backup_status"]) {
@@ -413,7 +413,7 @@ export function MobileStaffParityPanel() {
 
   return (
     <article className="glass-panel rounded-3xl p-5 md:col-span-2 md:p-6">
-      <div className="mb-4 flex items-center gap-2 text-amber-100">
+      <div className="mb-4 flex items-center gap-2 text-cyan-100">
         <Users className="h-5 w-5" />
         <h3 className="text-lg font-semibold">Mobil Operasyon Eşitlemesi</h3>
       </div>
@@ -423,8 +423,8 @@ export function MobileStaffParityPanel() {
       </p>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <section className="rounded-2xl border border-amber-200/15 bg-slate-900/25 p-4">
-          <div className="mb-3 flex items-center gap-2 text-amber-100">
+        <section className="rounded-2xl border border-cyan-200/15 bg-slate-900/25 p-4">
+          <div className="mb-3 flex items-center gap-2 text-cyan-100">
             <Pin className="h-4 w-4" />
             <h4 className="text-sm font-semibold">Canlı Sorular</h4>
           </div>
@@ -436,17 +436,17 @@ export function MobileStaffParityPanel() {
             {questions.slice(0, 30).map((question) => (
               <div
                 key={question.id}
-                className="rounded-xl border border-amber-200/15 bg-slate-950/45 px-3 py-2"
+                className="rounded-xl border border-cyan-200/15 bg-slate-950/45 px-3 py-2"
               >
                 <p className="text-sm text-slate-100">{question.text}</p>
-                <p className="mt-1 text-xs text-amber-100/70">
+                <p className="mt-1 text-xs text-cyan-100/70">
                   {getAttendeeName(question.attendee)} • {question.votes} oy
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-8 border-amber-200/30 bg-amber-200/10 px-3 text-xs text-amber-50 hover:bg-amber-200/20"
+                    className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
                     onClick={() =>
                       void updateQuestion(question.id, {
                         pinned: !question.pinned
@@ -484,8 +484,8 @@ export function MobileStaffParityPanel() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-amber-200/15 bg-slate-900/25 p-4">
-          <div className="mb-3 flex items-center gap-2 text-amber-100">
+        <section className="rounded-2xl border border-cyan-200/15 bg-slate-900/25 p-4">
+          <div className="mb-3 flex items-center gap-2 text-cyan-100">
             <UserPlus className="h-4 w-4" />
             <h4 className="text-sm font-semibold">Katılımcılar</h4>
           </div>
@@ -495,21 +495,21 @@ export function MobileStaffParityPanel() {
               type="text"
               value={newParticipantName}
               onChange={(event) => setNewParticipantName(event.target.value)}
-              className="h-9 w-full rounded-lg border border-amber-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
+              className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
               placeholder="Ad soyad"
             />
             <input
               type="text"
               value={newParticipantCode}
               onChange={(event) => setNewParticipantCode(event.target.value)}
-              className="h-9 w-full rounded-lg border border-amber-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
+              className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
               placeholder="Katılımcı kodu"
             />
             <input
               type="text"
               value={newParticipantExternalRef}
               onChange={(event) => setNewParticipantExternalRef(event.target.value)}
-              className="h-9 w-full rounded-lg border border-amber-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
+              className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
               placeholder="Dış referans"
             />
             <Button
@@ -539,13 +539,13 @@ export function MobileStaffParityPanel() {
                   setParticipantSearchValue(participantSearchDraft.trim());
                 }
               }}
-              className="h-9 w-full rounded-lg border border-amber-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-amber-300"
+              className="h-9 w-full rounded-lg border border-cyan-200/25 bg-slate-900/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-cyan-300"
               placeholder="Ad, kod veya referans ara"
             />
             <Button
               type="button"
               variant="outline"
-              className="h-9 border-amber-200/30 bg-amber-200/10 px-3 text-amber-50 hover:bg-amber-200/20"
+              className="h-9 border-cyan-200/30 bg-cyan-200/10 px-3 text-cyan-50 hover:bg-cyan-200/20"
               onClick={() => setParticipantSearchValue(participantSearchDraft.trim())}
             >
               <Search className="h-4 w-4" />
@@ -563,18 +563,18 @@ export function MobileStaffParityPanel() {
             {participants.slice(0, 40).map((participant) => (
               <div
                 key={participant.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-amber-200/15 bg-slate-950/45 px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-xl border border-cyan-200/15 bg-slate-950/45 px-3 py-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm text-slate-100">{participant.full_name}</p>
-                  <p className="truncate text-xs text-amber-100/70">
+                  <p className="truncate text-xs text-cyan-100/70">
                     {participant.participant_code ?? "Kodsuz"} • {participant.external_ref ?? "Referans yok"}
                   </p>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8 border-amber-200/30 bg-amber-200/10 px-3 text-amber-50 hover:bg-amber-200/20"
+                  className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-cyan-50 hover:bg-cyan-200/20"
                   onClick={() => void toggleParticipant(participant.id, participant.is_active)}
                   disabled={participantActionId === participant.id}
                 >
@@ -591,24 +591,24 @@ export function MobileStaffParityPanel() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-amber-200/15 bg-slate-900/25 p-4">
-          <div className="mb-3 flex items-center gap-2 text-amber-100">
+        <section className="rounded-2xl border border-cyan-200/15 bg-slate-900/25 p-4">
+          <div className="mb-3 flex items-center gap-2 text-cyan-100">
             <Images className="h-4 w-4" />
             <h4 className="text-sm font-semibold">Galeri Operasyonu</h4>
           </div>
 
           <div className="mb-3 grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-amber-200/20 bg-amber-200/5 px-2 py-2 text-center">
+            <div className="rounded-lg border border-cyan-200/20 bg-cyan-200/5 px-2 py-2 text-center">
               <p className="text-base font-semibold text-white">{galleryStats.total}</p>
-              <p className="text-[10px] uppercase tracking-wide text-amber-200/75">Toplam</p>
+              <p className="text-[10px] uppercase tracking-wide text-cyan-200/75">Toplam</p>
             </div>
-            <div className="rounded-lg border border-amber-200/20 bg-amber-200/5 px-2 py-2 text-center">
+            <div className="rounded-lg border border-cyan-200/20 bg-cyan-200/5 px-2 py-2 text-center">
               <p className="text-base font-semibold text-white">{galleryStats.photos}</p>
-              <p className="text-[10px] uppercase tracking-wide text-amber-200/75">Foto</p>
+              <p className="text-[10px] uppercase tracking-wide text-cyan-200/75">Foto</p>
             </div>
-            <div className="rounded-lg border border-amber-200/20 bg-amber-200/5 px-2 py-2 text-center">
+            <div className="rounded-lg border border-cyan-200/20 bg-cyan-200/5 px-2 py-2 text-center">
               <p className="text-base font-semibold text-white">{galleryStats.videos}</p>
-              <p className="text-[10px] uppercase tracking-wide text-amber-200/75">Video</p>
+              <p className="text-[10px] uppercase tracking-wide text-cyan-200/75">Video</p>
             </div>
           </div>
 
@@ -630,7 +630,7 @@ export function MobileStaffParityPanel() {
             {galleryItems.slice(0, 24).map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-amber-200/15 bg-slate-950/45 p-2.5"
+                className="rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5"
               >
                 <div className="flex gap-2">
                   <div className="h-16 w-16 overflow-hidden rounded-lg bg-slate-800/70">
@@ -661,7 +661,7 @@ export function MobileStaffParityPanel() {
                         {getBackupLabel(item.drive_backup_status)}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-amber-100/70">
+                    <p className="mt-1 line-clamp-1 text-xs text-cyan-100/70">
                       {item.caption || "Açıklama yok"}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-300">
