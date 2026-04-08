@@ -28,6 +28,8 @@ drop table if exists public.raffle_draws cascade;
 drop table if exists public.raffle_prizes cascade;
 drop table if exists public.raffle_participants cascade;
 drop table if exists public.event_gallery_items cascade;
+drop table if exists public.networking_gallery_comments cascade;
+drop table if exists public.networking_gallery_likes cascade;
 
 drop table if exists public.live_poll_presets cascade;
 drop table if exists public.live_polls cascade;
@@ -288,6 +290,34 @@ create index event_gallery_items_created_idx
 
 create index event_gallery_items_media_type_idx
   on public.event_gallery_items (media_type, created_at desc);
+
+create table public.networking_gallery_likes (
+  id uuid primary key default gen_random_uuid(),
+  gallery_item_id uuid not null references public.event_gallery_items(id) on delete cascade,
+  attendee_id uuid not null references public.attendees(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (gallery_item_id, attendee_id)
+);
+
+create index networking_gallery_likes_item_idx
+  on public.networking_gallery_likes (gallery_item_id, created_at desc);
+
+create index networking_gallery_likes_attendee_idx
+  on public.networking_gallery_likes (attendee_id, created_at desc);
+
+create table public.networking_gallery_comments (
+  id uuid primary key default gen_random_uuid(),
+  gallery_item_id uuid not null references public.event_gallery_items(id) on delete cascade,
+  attendee_id uuid not null references public.attendees(id) on delete cascade,
+  text text not null check (char_length(text) between 1 and 280),
+  created_at timestamptz not null default now()
+);
+
+create index networking_gallery_comments_item_idx
+  on public.networking_gallery_comments (gallery_item_id, created_at desc);
+
+create index networking_gallery_comments_attendee_idx
+  on public.networking_gallery_comments (attendee_id, created_at desc);
 
 -- -----------------------------------------------------------------------------
 -- Legacy profile-card networking tables
@@ -641,6 +671,8 @@ alter table public.congress_analytics replica identity full;
 alter table public.live_polls replica identity full;
 alter table public.live_poll_presets replica identity full;
 alter table public.event_gallery_items replica identity full;
+alter table public.networking_gallery_likes replica identity full;
+alter table public.networking_gallery_comments replica identity full;
 alter table public.networking_profiles replica identity full;
 alter table public.networking_profile_actions replica identity full;
 alter table public.raffle_participants replica identity full;
@@ -666,6 +698,8 @@ alter table public.congress_analytics enable row level security;
 alter table public.live_polls enable row level security;
 alter table public.live_poll_presets enable row level security;
 alter table public.event_gallery_items enable row level security;
+alter table public.networking_gallery_likes enable row level security;
+alter table public.networking_gallery_comments enable row level security;
 alter table public.networking_profiles enable row level security;
 alter table public.networking_profile_actions enable row level security;
 alter table public.raffle_participants enable row level security;
@@ -743,9 +777,19 @@ create policy public_can_read_analytics on public.congress_analytics for select 
 drop policy if exists live_polls_read_all on public.live_polls;
 drop policy if exists live_poll_presets_read_all on public.live_poll_presets;
 drop policy if exists event_gallery_items_read_all on public.event_gallery_items;
+drop policy if exists networking_gallery_likes_read_all on public.networking_gallery_likes;
+drop policy if exists networking_gallery_likes_insert on public.networking_gallery_likes;
+drop policy if exists networking_gallery_likes_delete on public.networking_gallery_likes;
+drop policy if exists networking_gallery_comments_read_all on public.networking_gallery_comments;
+drop policy if exists networking_gallery_comments_insert on public.networking_gallery_comments;
 create policy live_polls_read_all on public.live_polls for select to anon, authenticated using (true);
 create policy live_poll_presets_read_all on public.live_poll_presets for select to anon, authenticated using (true);
 create policy event_gallery_items_read_all on public.event_gallery_items for select to anon, authenticated using (true);
+create policy networking_gallery_likes_read_all on public.networking_gallery_likes for select to anon, authenticated using (true);
+create policy networking_gallery_likes_insert on public.networking_gallery_likes for insert to anon, authenticated with check (true);
+create policy networking_gallery_likes_delete on public.networking_gallery_likes for delete to anon, authenticated using (true);
+create policy networking_gallery_comments_read_all on public.networking_gallery_comments for select to anon, authenticated using (true);
+create policy networking_gallery_comments_insert on public.networking_gallery_comments for insert to anon, authenticated with check (true);
 
 -- Legacy profile-card networking
 drop policy if exists public_can_insert_networking_profiles on public.networking_profiles;
@@ -809,6 +853,8 @@ grant select on public.congress_analytics to anon, authenticated;
 grant select on public.live_polls to anon, authenticated;
 grant select on public.live_poll_presets to anon, authenticated;
 grant select on public.event_gallery_items to anon, authenticated;
+grant select, insert, delete on public.networking_gallery_likes to anon, authenticated;
+grant select, insert on public.networking_gallery_comments to anon, authenticated;
 
 grant select, insert, update on public.networking_profiles to anon, authenticated;
 grant select, insert, update on public.networking_profile_actions to anon, authenticated;
@@ -879,6 +925,8 @@ declare
     'live_polls',
     'live_poll_presets',
     'event_gallery_items',
+    'networking_gallery_likes',
+    'networking_gallery_comments',
     'networking_profiles',
     'networking_profile_actions',
     'raffle_participants',

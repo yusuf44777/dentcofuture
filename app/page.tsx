@@ -1,5 +1,4 @@
 "use client";
-import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images } from "lucide-react";
@@ -12,8 +11,6 @@ const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
-const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
-const LUMA_CHECKOUT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
 
 const SPEAKERS = [
   {
@@ -158,18 +155,17 @@ function ParticleField() {
 
 function ApplicationCheckoutButton() {
   return (
-    <a
-      href={LUMA_CHECKOUT_URL}
+    <button
+      type="button"
+      disabled
+      aria-disabled="true"
       className={cn(
-        "luma-checkout--button",
         buttonVariants({ size: "xl", variant: "surface" }),
-        "h-16 w-full px-10 text-lg sm:w-auto sm:text-xl"
+        "h-16 w-full cursor-not-allowed px-10 text-lg opacity-70 sm:w-auto sm:text-xl"
       )}
-      data-luma-action="checkout"
-      data-luma-event-id={LUMA_EVENT_ID}
     >
-      Etkinliğe Kaydol
-    </a>
+      Yakında
+    </button>
   );
 }
 
@@ -378,7 +374,7 @@ export default function LandingPage() {
           <h2 className="font-heading text-4xl font-extrabold sm:text-6xl">
             Sen de bir <span className="text-gradient-purple">Outlier</span> mısın?
           </h2>
-          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Etkinliğe hemen kaydol.</p>
+          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Başvurular yakında açılacak.</p>
           <div className="mt-8 flex justify-center">
             <ApplicationCheckoutButton />
           </div>
@@ -399,11 +395,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      <Script
-        id="luma-checkout"
-        src="https://embed.lu.ma/checkout-button.js"
-        strategy="afterInteractive"
-      />
     </main>
   );
 }

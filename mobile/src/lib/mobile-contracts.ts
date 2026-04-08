@@ -63,6 +63,35 @@ export type MobileNetworkingFeed = {
   refreshedAt: string;
 };
 
+export type MobileNetworkingGalleryComment = {
+  id: string;
+  itemId: string;
+  attendeeId: string;
+  attendeeName: string;
+  attendeeRole: string | null;
+  text: string;
+  createdAt: string;
+};
+
+export type MobileNetworkingGalleryPost = {
+  id: string;
+  uploaderName: string;
+  caption: string | null;
+  mediaType: "photo" | "video";
+  publicUrl: string;
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  likedByMe: boolean;
+  recentComments: MobileNetworkingGalleryComment[];
+};
+
+export type MobileNetworkingGalleryFeed = {
+  ok: true;
+  posts: MobileNetworkingGalleryPost[];
+  refreshedAt: string;
+};
+
 export type MobileLiveQuestion = {
   id: string;
   text: string;

@@ -4,6 +4,8 @@ import type {
   MobileMatchThread,
   MobileMe,
   MobileNetworkingFeed,
+  MobileNetworkingGalleryComment,
+  MobileNetworkingGalleryFeed,
   MobileOtpSession,
   StaffCapability,
   StaffOverview
@@ -160,6 +162,49 @@ export function fetchLeaderboard() {
 
 export function fetchNetworkingFeed() {
   return apiRequest<MobileNetworkingFeed>("/api/mobile/networking/feed", undefined, { auth: true });
+}
+
+export function fetchNetworkingGalleryFeed(limit = 18) {
+  const normalizedLimit = Number.isFinite(limit)
+    ? Math.max(6, Math.min(36, Math.floor(limit)))
+    : 18;
+  return apiRequest<MobileNetworkingGalleryFeed>(
+    `/api/mobile/networking/gallery/feed?limit=${normalizedLimit}`,
+    undefined,
+    { auth: true }
+  );
+}
+
+export function toggleNetworkingGalleryLike(itemId: string) {
+  return apiRequest<{
+    ok: true;
+    itemId: string;
+    liked: boolean;
+    likesCount: number;
+  }>(
+    "/api/mobile/networking/gallery/likes",
+    {
+      method: "POST",
+      body: JSON.stringify({ itemId })
+    },
+    { auth: true }
+  );
+}
+
+export function createNetworkingGalleryComment(itemId: string, text: string) {
+  return apiRequest<{
+    ok: true;
+    itemId: string;
+    commentsCount: number;
+    comment: MobileNetworkingGalleryComment;
+  }>(
+    "/api/mobile/networking/gallery/comments",
+    {
+      method: "POST",
+      body: JSON.stringify({ itemId, text })
+    },
+    { auth: true }
+  );
 }
 
 export function sendNetworkingInteraction(targetProfileId: string, action: "like" | "pass") {

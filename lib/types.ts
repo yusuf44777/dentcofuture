@@ -217,6 +217,22 @@ export interface Database {
       live_polls: { Row: { id: string; question: string; options: Json; is_active: boolean; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       live_poll_presets: { Row: { id: string; question: string; options: Json; created_at: string; updated_at: string }; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       event_gallery_items: { Row: EventGalleryItemRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      networking_gallery_likes: {
+        Row: NetworkingGalleryLikeRow;
+        Insert: Omit<NetworkingGalleryLikeRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      networking_gallery_comments: {
+        Row: NetworkingGalleryCommentRow;
+        Insert: Omit<NetworkingGalleryCommentRow, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
       staff_roles: {
         Row: {
           id: string;
@@ -291,5 +307,20 @@ export interface EventGalleryItemRow {
   drive_backup_status: "pending" | "synced" | "failed" | "disabled";
   drive_file_id: string | null;
   drive_error: string | null;
+  created_at: string;
+}
+
+export interface NetworkingGalleryLikeRow {
+  id: string;
+  gallery_item_id: string;
+  attendee_id: string;
+  created_at: string;
+}
+
+export interface NetworkingGalleryCommentRow {
+  id: string;
+  gallery_item_id: string;
+  attendee_id: string;
+  text: string;
   created_at: string;
 }
