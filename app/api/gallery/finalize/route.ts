@@ -7,6 +7,7 @@ import {
   MAX_GALLERY_UPLOAD_BYTES,
   getErrorMessage,
   isValidGalleryObjectPath,
+  normalizeGalleryPublicUrl,
   resolveGalleryStorageMode,
   resolveGalleryMediaType,
   sanitizeCaption,
@@ -167,6 +168,12 @@ export async function POST(request: NextRequest) {
       publicUrl = drivePublicUrl;
     }
 
+    const normalizedPublicUrl = normalizeGalleryPublicUrl({
+      publicUrl,
+      mediaType,
+      driveFileId
+    });
+
     const { data: item, error: upsertError } = await supabase
       .from("event_gallery_items")
       .upsert(
@@ -176,7 +183,7 @@ export async function POST(request: NextRequest) {
           media_type: mediaType,
           mime_type: mimeType,
           file_path: path,
-          public_url: publicUrl,
+          public_url: normalizedPublicUrl,
           file_size: bytes.length,
           drive_backup_status: driveStatus,
           drive_file_id: driveFileId,

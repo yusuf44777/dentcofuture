@@ -3,6 +3,7 @@ import type {
   MobileNetworkingGalleryComment,
   MobileNetworkingGalleryFeed
 } from "@/lib/mobile/contracts";
+import { normalizeGalleryPublicUrl } from "@/lib/gallery";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 
 export const runtime = "nodejs";
@@ -172,7 +173,10 @@ export async function GET(request: NextRequest) {
       uploaderName: item.uploader_name,
       caption: item.caption,
       mediaType: item.media_type,
-      publicUrl: item.public_url,
+      publicUrl: normalizeGalleryPublicUrl({
+        publicUrl: item.public_url,
+        mediaType: item.media_type
+      }),
       createdAt: item.created_at,
       likesCount: likedBy.size,
       commentsCount: itemComments.length,

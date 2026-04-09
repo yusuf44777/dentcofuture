@@ -123,6 +123,73 @@ export function buildGalleryStoragePath(fileName: string, mediaType: GalleryMedi
   return `gallery/${mediaType}/${year}/${month}/${randomPart}.${safeExtension}`;
 }
 
+const GOOGLE_DRIVE_FILE_ID_PATTERNS = [
+  /[?&]id=([a-zA-Z0-9_-]{10,})/i,
+  /\/d\/([a-zA-Z0-9_-]{10,})(?:[/?#]|$)/i,
+  /^([a-zA-Z0-9_-]{10,})$/i
+];
+
+export function extractGoogleDriveFileId(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  for (const pattern of GOOGLE_DRIVE_FILE_ID_PATTERNS) {
+    const match = trimmed.match(pattern);
+    const fileId = match?.[1]?.trim();
+    if (fileId) {
+      return fileId;
+    }
+  }
+
+  return null;
+}
+
+function isGoogleDriveUrl(value: string) {
+  return /^https?:\/\/(?:[^/]+\.)?(?:drive\.google\.com|docs\.google\.com|googleusercontent\.com|lh3\.googleusercontent\.com)\//i.test(
+    value.trim()
+  );
+}
+
+function buildGoogleDrivePhotoUrl(fileId: string) {
+  return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w2048`;
+}
+
+function buildGoogleDriveVideoUrl(fileId: string) {
+  return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
+}
+
+export function normalizeGalleryPublicUrl(input: {
+  publicUrl: string;
+  mediaType: GalleryMediaType;
+  driveFileId?: string | null;
+}) {
+  const publicUrl = input.publicUrl.trim();
+  const knownDriveId =
+    (typeof input.driveFileId === "string" ? input.driveFileId.trim() : "") ||
+    extractGoogleDriveFileId(publicUrl) ||
+    "";
+
+  if (!publicUrl && !knownDriveId) {
+    return publicUrl;
+  }
+
+  if (!isGoogleDriveUrl(publicUrl) && publicUrl) {
+    return publicUrl;
+  }
+
+  if (!knownDriveId) {
+    return publicUrl;
+  }
+
+  if (input.mediaType === "photo") {
+    return buildGoogleDrivePhotoUrl(knownDriveId);
+  }
+
+  return buildGoogleDriveVideoUrl(knownDriveId);
+}
+
 function inferFileExtension(fileName: string) {
   const cleaned = fileName.trim().toLowerCase();
   const parts = cleaned.split(".");

@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   clampGalleryLimit,
   getErrorMessage,
+  normalizeGalleryPublicUrl,
   type GalleryMediaType
 } from "@/lib/gallery";
 
@@ -49,9 +50,17 @@ export async function GET(request: NextRequest) {
       throw new Error(`Galeri listesi alınamadı: ${error.message}`);
     }
 
+    const normalizedItems = ((data ?? []) as GalleryRow[]).map((item) => ({
+      ...item,
+      public_url: normalizeGalleryPublicUrl({
+        publicUrl: item.public_url,
+        mediaType: item.media_type
+      })
+    }));
+
     return NextResponse.json({
       ok: true,
-      items: (data ?? []) as GalleryRow[]
+      items: normalizedItems
     });
   } catch (error) {
     return NextResponse.json(

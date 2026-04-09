@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { MobileNetworkingGalleryUploaderProfile } from "@/lib/mobile/contracts";
+import { normalizeGalleryPublicUrl } from "@/lib/gallery";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 
 export const runtime = "nodejs";
@@ -123,7 +124,10 @@ export async function GET(request: NextRequest) {
       id: item.id,
       caption: item.caption,
       mediaType: item.media_type,
-      publicUrl: item.public_url,
+      publicUrl: normalizeGalleryPublicUrl({
+        publicUrl: item.public_url,
+        mediaType: item.media_type
+      }),
       createdAt: item.created_at,
       likesCount: likesByItem.get(item.id) ?? 0,
       commentsCount: commentsByItem.get(item.id) ?? 0
