@@ -11,10 +11,11 @@ import {
   TextInput,
   View
 } from "react-native";
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Heart,
+  Plus,
   Linkedin,
   MessageCircle,
   Play,
@@ -67,6 +68,7 @@ function formatGalleryDate(value: string) {
 }
 
 export default function ParticipantNetworkingScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
   const attendeeId = me?.attendee?.id ?? null;
@@ -79,6 +81,7 @@ export default function ParticipantNetworkingScreen() {
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
+  const [isUploadSheetVisible, setIsUploadSheetVisible] = useState(false);
   const [activeCommentItemId, setActiveCommentItemId] = useState<string | null>(null);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
 
@@ -219,6 +222,7 @@ export default function ParticipantNetworkingScreen() {
     onSuccess: async (result) => {
       setSelectedUploadAssets([]);
       setUploadCaption("");
+      setIsUploadSheetVisible(false);
       if (result.failedFiles.length > 0) {
         setUploadError(
           `${result.uploadedCount} fotoğraf paylaşıldı, ${result.failedFiles.length} dosya yüklenemedi.`
@@ -261,14 +265,6 @@ export default function ParticipantNetworkingScreen() {
     );
   }, [matchesQuery.data?.matches, selectedAttendeeId]);
 
-  const galleryTotals = useMemo(() => {
-    const posts = galleryFeedQuery.data?.posts ?? [];
-    return {
-      likes: posts.reduce((sum, post) => sum + post.likesCount, 0),
-      comments: posts.reduce((sum, post) => sum + post.commentsCount, 0)
-    };
-  }, [galleryFeedQuery.data?.posts]);
-
   const selectedCommentPost = useMemo(() => {
     if (!activeCommentItemId) {
       return null;
@@ -282,6 +278,15 @@ export default function ParticipantNetworkingScreen() {
       return;
     }
     await Linking.openURL(url);
+  };
+
+  const openUploaderProfile = (name: string) => {
+    const normalized = name.replace(/\s+/g, " ").trim();
+    if (normalized.length < 2) {
+      return;
+    }
+
+    router.push(`/(participant)/uploader?name=${encodeURIComponent(normalized)}` as never);
   };
 
   const pickPhotoForUpload = async () => {
@@ -635,115 +640,27 @@ export default function ParticipantNetworkingScreen() {
         </>
       ) : (
         <>
-          <View style={styles.metricRow}>
-            <Metric label="Paylaşım" value={String(galleryFeedQuery.data?.posts.length ?? 0)} />
-            <Metric label="Beğeni" value={String(galleryTotals.likes)} />
-            <Metric label="Yorum" value={String(galleryTotals.comments)} />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Yeni Paylaşım</Text>
-            <Text style={styles.mutedText}>
-              Bu sürümde yalnızca fotoğraf paylaşımı açık. Video paylaşımı yakında eklenecek.
-            </Text>
-
-            {selectedUploadAssets.length > 0 ? (
-              <View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.uploadPreviewStrip}
-                >
-                  {selectedUploadAssets.map((asset, index) => (
-                    <Image
-                      key={`${asset.uri}-${index}`}
-                      source={{ uri: asset.uri }}
-                      resizeMode="cover"
-                      style={styles.uploadPreviewThumb}
-                    />
-                  ))}
-                </ScrollView>
-                <Text style={styles.uploadCountText}>{selectedUploadAssets.length} fotoğraf seçildi</Text>
-              </View>
-            ) : (
-              <View style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>Henüz fotoğraf seçilmedi.</Text>
-              </View>
-            )}
-
-            <View style={styles.uploadButtonRow}>
-              <Pressable
-                style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
-                onPress={() => {
-                  void pickPhotoForUpload();
-                }}
-              >
-                <Text style={styles.uploadPickButtonText}>Fotoğrafları Seç</Text>
-              </Pressable>
-              {selectedUploadAssets.length > 0 ? (
-                <Pressable
-                  style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
-                  onPress={() => {
-                    setSelectedUploadAssets([]);
-                    setUploadMessage("Seçim temizlendi.");
-                    setUploadError("");
-                  }}
-                >
-                  <Text style={styles.uploadClearButtonText}>Seçimi Temizle</Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            <TextInput
-              style={styles.galleryComposerInput}
-              placeholder="Açıklama ekle..."
-              placeholderTextColor={colors.inkMuted}
-              value={uploadCaption}
-              onChangeText={(value) => setUploadCaption(value.slice(0, 280))}
-            />
-
-            {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
-            {uploadMessage ? <Text style={styles.uploadSuccessText}>{uploadMessage}</Text> : null}
-            {galleryUploadMutation.error ? (
-              <Text style={styles.errorText}>
-                {galleryUploadMutation.error instanceof Error
-                  ? galleryUploadMutation.error.message
-                  : "Fotoğraf paylaşılamadı."}
-              </Text>
-            ) : null}
-
-            <Pressable
-              disabled={selectedUploadAssets.length === 0 || galleryUploadMutation.isPending}
-              style={({ pressed }) => [
-                styles.uploadShareButton,
-                pressed ? styles.pressed : null,
-                selectedUploadAssets.length === 0 || galleryUploadMutation.isPending ? styles.disabled : null
-              ]}
-              onPress={() => {
-                galleryUploadMutation.mutate();
-              }}
-            >
-              {galleryUploadMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.uploadShareButtonText}>
-                  Paylaş ({selectedUploadAssets.length})
-                </Text>
-              )}
-            </Pressable>
-          </View>
-
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Outliers Feed</Text>
-              <Pressable
-                style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
-                onPress={() => {
-                  void galleryFeedQuery.refetch();
-                }}
-              >
-                <RefreshCw color={colors.inkMuted} size={16} />
-              </Pressable>
+              <View style={styles.cardHeaderActions}>
+                <Pressable
+                  style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    setIsUploadSheetVisible(true);
+                  }}
+                >
+                  <Plus color={colors.accent} size={16} />
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    void galleryFeedQuery.refetch();
+                  }}
+                >
+                  <RefreshCw color={colors.inkMuted} size={16} />
+                </Pressable>
+              </View>
             </View>
 
             {galleryFeedQuery.isLoading ? (
@@ -779,7 +696,14 @@ export default function ParticipantNetworkingScreen() {
                       <Text style={styles.galleryAvatarText}>{avatarLetter}</Text>
                     </View>
                     <View style={styles.galleryMetaBlock}>
-                      <Text style={styles.galleryAuthor}>{post.uploaderName}</Text>
+                      <Pressable
+                        style={({ pressed }) => [pressed ? styles.pressed : null]}
+                        onPress={() => {
+                          openUploaderProfile(post.uploaderName);
+                        }}
+                      >
+                        <Text style={styles.galleryAuthor}>{post.uploaderName}</Text>
+                      </Pressable>
                       <Text style={styles.galleryDate}>{formatGalleryDate(post.createdAt)}</Text>
                     </View>
                   </View>
@@ -904,6 +828,126 @@ export default function ParticipantNetworkingScreen() {
           </View>
         </>
       )}
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isUploadSheetVisible}
+        onRequestClose={() => {
+          setIsUploadSheetVisible(false);
+        }}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable
+            style={styles.sheetDismissArea}
+            onPress={() => {
+              setIsUploadSheetVisible(false);
+            }}
+          />
+          <View style={styles.sheetCard}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Yeni Paylaşım</Text>
+              <Pressable
+                style={({ pressed }) => [styles.sheetCloseButton, pressed ? styles.pressed : null]}
+                onPress={() => {
+                  setIsUploadSheetVisible(false);
+                }}
+              >
+                <Text style={styles.sheetCloseText}>Kapat</Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.sheetMetaText}>
+              Bu sürümde yalnızca fotoğraf paylaşımı açık. Video paylaşımı yakında eklenecek.
+            </Text>
+
+            {selectedUploadAssets.length > 0 ? (
+              <View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.uploadPreviewStrip}
+                >
+                  {selectedUploadAssets.map((asset, index) => (
+                    <Image
+                      key={`${asset.uri}-${index}`}
+                      source={{ uri: asset.uri }}
+                      resizeMode="cover"
+                      style={styles.uploadPreviewThumb}
+                    />
+                  ))}
+                </ScrollView>
+                <Text style={styles.uploadCountText}>{selectedUploadAssets.length} fotoğraf seçildi</Text>
+              </View>
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>Henüz fotoğraf seçilmedi.</Text>
+              </View>
+            )}
+
+            <View style={styles.uploadButtonRow}>
+              <Pressable
+                style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
+                onPress={() => {
+                  void pickPhotoForUpload();
+                }}
+              >
+                <Text style={styles.uploadPickButtonText}>Fotoğrafları Seç</Text>
+              </Pressable>
+              {selectedUploadAssets.length > 0 ? (
+                <Pressable
+                  style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    setSelectedUploadAssets([]);
+                    setUploadMessage("Seçim temizlendi.");
+                    setUploadError("");
+                  }}
+                >
+                  <Text style={styles.uploadClearButtonText}>Seçimi Temizle</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <TextInput
+              style={styles.galleryComposerInput}
+              placeholder="Açıklama ekle..."
+              placeholderTextColor={colors.inkMuted}
+              value={uploadCaption}
+              onChangeText={(value) => setUploadCaption(value.slice(0, 280))}
+            />
+
+            {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
+            {uploadMessage ? <Text style={styles.uploadSuccessText}>{uploadMessage}</Text> : null}
+            {galleryUploadMutation.error ? (
+              <Text style={styles.errorText}>
+                {galleryUploadMutation.error instanceof Error
+                  ? galleryUploadMutation.error.message
+                  : "Fotoğraf paylaşılamadı."}
+              </Text>
+            ) : null}
+
+            <Pressable
+              disabled={selectedUploadAssets.length === 0 || galleryUploadMutation.isPending}
+              style={({ pressed }) => [
+                styles.uploadShareButton,
+                pressed ? styles.pressed : null,
+                selectedUploadAssets.length === 0 || galleryUploadMutation.isPending ? styles.disabled : null
+              ]}
+              onPress={() => {
+                galleryUploadMutation.mutate();
+              }}
+            >
+              {galleryUploadMutation.isPending ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.uploadShareButtonText}>
+                  Paylaş ({selectedUploadAssets.length})
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="slide"
@@ -1220,6 +1264,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between"
+  },
+  cardHeaderActions: {
+    flexDirection: "row",
+    gap: spacing.xs
   },
   cardTitle: {
     color: colors.ink,

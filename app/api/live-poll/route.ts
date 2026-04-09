@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isModeratorRequestAuthorized } from "@/lib/auth/moderator-request";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,6 +106,59 @@ function mapLivePoll(row: LivePollRow | null) {
   };
 }
 
+function createEmptyResults(options: string[]) {
+  return options.reduce((acc, _, index) => {
+    acc[String(index)] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+}
+
+async function syncLegacyPollsState(
+  supabase: SupabaseClient,
+  options: {
+    livePollId?: string;
+    question: string;
+    options: string[];
+    isActive: boolean;
+  }
+) {
+  if (options.isActive) {
+    const { error: closeLegacyError } = await supabase
+      .from("polls")
+      .update({ active: false })
+      .eq("active", true);
+
+    if (closeLegacyError) {
+      throw new Error(`Legacy anketler kapatılamadı: ${closeLegacyError.message}`);
+    }
+
+    const { error: insertLegacyError } = await supabase
+      .from("polls")
+      .insert({
+        id: options.livePollId,
+        question: options.question,
+        options: options.options,
+        results: createEmptyResults(options.options),
+        active: true,
+        session_id: null
+      });
+
+    if (insertLegacyError) {
+      throw new Error(`Legacy anket senkronu başarısız: ${insertLegacyError.message}`);
+    }
+
+    return;
+  }
+
+  let closeQuery = supabase.from("polls").update({ active: false });
+  closeQuery = options.livePollId ? closeQuery.eq("id", options.livePollId) : closeQuery.eq("active", true);
+  const { error: closeLegacyError } = await closeQuery;
+
+  if (closeLegacyError) {
+    throw new Error(`Legacy anket kapatma başarısız: ${closeLegacyError.message}`);
+  }
+}
+
 async function getActivePoll() {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
@@ -119,7 +173,34 @@ async function getActivePoll() {
     throw new Error(`Aktif anket alınamadı: ${error.message}`);
   }
 
-  return mapLivePoll((data ?? null) as LivePollRow | null);
+  if (data) {
+    return mapLivePoll((data ?? null) as LivePollRow | null);
+  }
+
+  const legacyPollResult = await supabase
+    .from("polls")
+    .select("id, question, options, active, created_at")
+    .eq("active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (legacyPollResult.error) {
+    throw new Error(`Legacy aktif anket alınamadı: ${legacyPollResult.error.message}`);
+  }
+
+  if (!legacyPollResult.data) {
+    return null;
+  }
+
+  return {
+    id: legacyPollResult.data.id,
+    question: legacyPollResult.data.question,
+    options: parseOptions(legacyPollResult.data.options as Json),
+    isActive: true,
+    createdAt: legacyPollResult.data.created_at,
+    updatedAt: legacyPollResult.data.created_at
+  };
 }
 
 export async function GET() {
@@ -207,6 +288,13 @@ export async function POST(request: NextRequest) {
       throw new Error(`Anket yayınlanamadı: ${createError.message}`);
     }
 
+    await syncLegacyPollsState(supabase, {
+      livePollId: createdPoll.id,
+      question: question.slice(0, QUESTION_MAX_LENGTH),
+      options,
+      isActive: true
+    });
+
     return NextResponse.json({
       ok: true,
       activePoll: mapLivePoll(createdPoll as LivePollRow),
@@ -229,6 +317,7 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const supabase = createSupabaseAdminClient();
+    const activePoll = await getActivePoll();
     const { error } = await supabase
       .from("live_polls")
       .update({
@@ -240,6 +329,13 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       throw new Error(`Anket kapatılamadı: ${error.message}`);
     }
+
+    await syncLegacyPollsState(supabase, {
+      livePollId: activePoll?.id,
+      question: "",
+      options: [],
+      isActive: false
+    });
 
     return NextResponse.json({
       ok: true,

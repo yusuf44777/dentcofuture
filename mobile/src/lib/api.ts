@@ -52,6 +52,11 @@ function getApiBaseUrl() {
   return rawBaseUrl.replace(/\/+$/, "");
 }
 
+function isHtmlDocumentPayload(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith("<!doctype") || normalized.startsWith("<html");
+}
+
 function sleep(ms: number) {
   return new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
@@ -189,9 +194,17 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    const htmlFallbackMessage =
+      rawText && isHtmlDocumentPayload(rawText)
+        ? response.status === 404
+          ? "İstenen API endpoint'i bulunamadı."
+          : "Sunucudan beklenmeyen bir HTML yanıtı döndü."
+        : "";
+
+    const payloadErrorMessage = payload?.error ?? payload?.message ?? "";
     const detailedMessage =
-      payload?.error ??
-      payload?.message ??
+      htmlFallbackMessage ||
+      payloadErrorMessage ||
       (rawText ? rawText.slice(0, 220) : "");
 
     if (detailedMessage) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePollResponse } from "@/lib/engagement";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import type { MobileLiveState } from "@/lib/mobile/contracts";
 import type { ReactionEmoji } from "@/lib/types";
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = resolved.session.supabase;
-  const [questionsResult, pollResult, reactionsResult, leaderboardResult] = await Promise.all([
+  const [questionsResult, pollResult, livePollResult, reactionsResult, leaderboardResult] = await Promise.all([
     supabase
       .from("questions")
       .select("id, text, votes, answered, pinned, created_at, attendee_id, attendee:attendees(name, role)")
@@ -31,6 +32,13 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: true })
       .limit(40),
     supabase.from("polls").select("*").eq("active", true).limit(1).maybeSingle(),
+    supabase
+      .from("live_polls")
+      .select("id, question, options, is_active, created_at, updated_at")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from("reactions").select("emoji"),
     supabase.from("attendees").select("id, name, role, points").order("points", { ascending: false }).limit(20)
   ]);
@@ -40,6 +48,9 @@ export async function GET(request: NextRequest) {
   }
   if (pollResult.error) {
     return NextResponse.json({ error: `Anket alınamadı: ${pollResult.error.message}` }, { status: 500 });
+  }
+  if (livePollResult.error) {
+    return NextResponse.json({ error: `Canlı anket alınamadı: ${livePollResult.error.message}` }, { status: 500 });
   }
   if (reactionsResult.error) {
     return NextResponse.json({ error: `Tepkiler alınamadı: ${reactionsResult.error.message}` }, { status: 500 });
@@ -56,8 +67,76 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const activePoll = pollResult.data as MobileLiveState["activePoll"];
+  let activePoll = pollResult.data as MobileLiveState["activePoll"];
   const pollTotals: Record<string, number> = {};
+
+  if (!activePoll && livePollResult.data) {
+    const liveOptionsRaw = Array.isArray(livePollResult.data.options) ? livePollResult.data.options : [];
+    const liveOptions = liveOptionsRaw
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .slice(0, 10);
+
+    activePoll = {
+      id: livePollResult.data.id,
+      question: livePollResult.data.question,
+      options: liveOptions,
+      results: {},
+      active: true,
+      session_id: null,
+      created_at: livePollResult.data.created_at
+    };
+
+    for (let index = 0; index < liveOptions.length; index += 1) {
+      pollTotals[String(index)] = 0;
+    }
+
+    const [votesResult, feedbackResult] = await Promise.all([
+      supabase.from("poll_votes").select("option_index").eq("poll_id", activePoll.id),
+      supabase.from("attendee_feedbacks").select("message").order("created_at", { ascending: false }).limit(2000)
+    ]);
+
+    if (votesResult.error) {
+      return NextResponse.json({ error: `Poll oyları alınamadı: ${votesResult.error.message}` }, { status: 500 });
+    }
+
+    if (feedbackResult.error) {
+      return NextResponse.json(
+        { error: `Poll geri bildirimleri alınamadı: ${feedbackResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
+    for (const row of votesResult.data ?? []) {
+      const idx = Number(row.option_index);
+      if (Number.isInteger(idx) && idx >= 0 && idx < liveOptions.length) {
+        const key = String(idx);
+        pollTotals[key] = (Number(pollTotals[key]) || 0) + 1;
+      }
+    }
+
+    const optionIndexByName = new Map<string, number>();
+    liveOptions.forEach((option, index) => {
+      optionIndexByName.set(option.toLocaleLowerCase("tr-TR"), index);
+    });
+
+    for (const row of feedbackResult.data ?? []) {
+      const parsed = parsePollResponse(row.message ?? "");
+      if (!parsed || parsed.pollId !== activePoll.id) {
+        continue;
+      }
+
+      const matchedIndex = optionIndexByName.get(parsed.option.toLocaleLowerCase("tr-TR"));
+      if (matchedIndex === undefined) {
+        continue;
+      }
+
+      const key = String(matchedIndex);
+      pollTotals[key] = (Number(pollTotals[key]) || 0) + 1;
+    }
+  }
+
   if (activePoll?.results && typeof activePoll.results === "object") {
     for (const [key, value] of Object.entries(activePoll.results)) {
       pollTotals[key] = Number(value) || 0;

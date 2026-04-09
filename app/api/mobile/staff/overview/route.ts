@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     attendees,
     questions,
     activePolls,
+    activeLivePolls,
     reactions,
     raffleParticipants,
     rafflePrizes,
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     supabase.from("attendees").select("id", { count: "exact", head: true }),
     supabase.from("questions").select("id", { count: "exact", head: true }),
     supabase.from("polls").select("id", { count: "exact", head: true }).eq("active", true),
+    supabase.from("live_polls").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("reactions").select("id", { count: "exact", head: true }),
     supabase.from("raffle_participants").select("id", { count: "exact", head: true }),
     supabase.from("raffle_prizes").select("id", { count: "exact", head: true }),
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest) {
     attendees.error ??
     questions.error ??
     activePolls.error ??
+    activeLivePolls.error ??
     reactions.error ??
     raffleParticipants.error ??
     rafflePrizes.error ??
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
     stats: {
       attendees: attendees.count ?? 0,
       questions: questions.count ?? 0,
-      activePolls: activePolls.count ?? 0,
+      activePolls: Math.max(activePolls.count ?? 0, activeLivePolls.count ?? 0),
       reactions: reactions.count ?? 0,
       raffleParticipants: raffleParticipants.count ?? 0,
       rafflePrizes: rafflePrizes.count ?? 0,

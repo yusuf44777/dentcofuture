@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Gamepad2, House, Images, Radio, UserRound } from "lucide-react-native";
+import { Gamepad2, House, Radio, UserRound } from "lucide-react-native";
 import { colors } from "../../src/theme/tokens";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 
@@ -40,7 +40,7 @@ export default function ParticipantLayout() {
         options={{
           title: "Outliers",
           href: isProfileLocked ? null : undefined,
-          tabBarIcon: ({ color, size }) => <Images color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <House color={color} size={size} />
         }}
       />
       <Tabs.Screen
@@ -56,6 +56,12 @@ export default function ParticipantLayout() {
         options={{
           title: "Profilim",
           tabBarIcon: ({ color, size }) => <UserRound color={color} size={size} />
+        }}
+      />
+      <Tabs.Screen
+        name="uploader"
+        options={{
+          href: null
         }}
       />
     </Tabs>

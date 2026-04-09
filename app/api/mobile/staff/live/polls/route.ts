@@ -57,8 +57,15 @@ export async function GET(request: NextRequest) {
     return resolved.errorResponse;
   }
 
-  const [activeResult, recentResult] = await Promise.all([
+  const [activeResult, liveActiveResult, recentResult] = await Promise.all([
     resolved.session.supabase.from("polls").select("*").eq("active", true).maybeSingle(),
+    resolved.session.supabase
+      .from("live_polls")
+      .select("id, question, options, is_active, created_at, updated_at")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     resolved.session.supabase
       .from("polls")
       .select("id, question, options, results, active, session_id, created_at")
@@ -69,14 +76,34 @@ export async function GET(request: NextRequest) {
   if (activeResult.error) {
     return NextResponse.json({ error: `Aktif anket alınamadı: ${activeResult.error.message}` }, { status: 500 });
   }
+  if (liveActiveResult.error) {
+    return NextResponse.json(
+      { error: `Canlı aktif anket alınamadı: ${liveActiveResult.error.message}` },
+      { status: 500 }
+    );
+  }
 
   if (recentResult.error) {
     return NextResponse.json({ error: `Anket listesi alınamadı: ${recentResult.error.message}` }, { status: 500 });
   }
 
+  const mappedLivePoll = liveActiveResult.data
+    ? {
+        id: liveActiveResult.data.id,
+        question: liveActiveResult.data.question,
+        options: Array.isArray(liveActiveResult.data.options)
+          ? liveActiveResult.data.options.filter((item): item is string => typeof item === "string")
+          : [],
+        results: {},
+        active: true,
+        session_id: null,
+        created_at: liveActiveResult.data.created_at
+      }
+    : null;
+
   return NextResponse.json({
     ok: true,
-    activePoll: activeResult.data ?? null,
+    activePoll: activeResult.data ?? mappedLivePoll,
     polls: recentResult.data ?? []
   });
 }

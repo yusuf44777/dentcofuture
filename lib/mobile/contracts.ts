@@ -103,6 +103,32 @@ export type MobileNetworkingGalleryComments = {
   total: number;
 };
 
+export type MobileNetworkingGalleryUploader = {
+  attendeeId: string | null;
+  name: string;
+  role: string | null;
+  classLevel: Attendee["class_level"] | null;
+  instagram: string | null;
+  linkedin: string | null;
+};
+
+export type MobileNetworkingGalleryUploaderPost = {
+  id: string;
+  caption: string | null;
+  mediaType: "photo" | "video";
+  publicUrl: string;
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+};
+
+export type MobileNetworkingGalleryUploaderProfile = {
+  ok: true;
+  uploader: MobileNetworkingGalleryUploader;
+  posts: MobileNetworkingGalleryUploaderPost[];
+  refreshedAt: string;
+};
+
 export type MobileMatchThread = {
   otherAttendee: Pick<Attendee, "id" | "name" | "role" | "instagram" | "linkedin">;
   messages: Array<{

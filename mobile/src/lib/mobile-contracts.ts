@@ -102,6 +102,32 @@ export type MobileNetworkingGalleryCommentsResponse = {
   total: number;
 };
 
+export type MobileNetworkingGalleryUploader = {
+  attendeeId: string | null;
+  name: string;
+  role: string | null;
+  classLevel: AttendeeClassLevel | null;
+  instagram: string | null;
+  linkedin: string | null;
+};
+
+export type MobileNetworkingGalleryUploaderPost = {
+  id: string;
+  caption: string | null;
+  mediaType: "photo" | "video";
+  publicUrl: string;
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+};
+
+export type MobileNetworkingGalleryUploaderResponse = {
+  ok: true;
+  uploader: MobileNetworkingGalleryUploader;
+  posts: MobileNetworkingGalleryUploaderPost[];
+  refreshedAt: string;
+};
+
 export type MobileLiveQuestion = {
   id: string;
   text: string;

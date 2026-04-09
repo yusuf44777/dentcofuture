@@ -49,13 +49,101 @@ export async function POST(request: NextRequest) {
   if (pollError) {
     return NextResponse.json({ error: `Anket okunamadı: ${pollError.message}` }, { status: 500 });
   }
-  if (!poll || !poll.active) {
+
+  if (poll && poll.active) {
+    const options = Array.isArray(poll.options) ? poll.options : [];
+    if (optionIndex >= options.length) {
+      return NextResponse.json({ error: "Seçenek anket aralığı dışında." }, { status: 400 });
+    }
+
+    const voteInsert = await supabase.from("poll_votes").insert({
+      poll_id: pollId,
+      attendee_id: resolved.session.attendee.id,
+      option_index: optionIndex
+    });
+
+    if (voteInsert.error) {
+      if (voteInsert.error.code === "23505") {
+        return NextResponse.json({ ok: true, alreadyVoted: true });
+      }
+      return NextResponse.json({ error: `Oy kaydedilemedi: ${voteInsert.error.message}` }, { status: 500 });
+    }
+
+    const results = {
+      ...(poll.results && typeof poll.results === "object" ? poll.results : {})
+    } as Record<string, number>;
+    const key = String(optionIndex);
+    results[key] = (Number(results[key]) || 0) + 1;
+
+    const { error: updateError } = await supabase
+      .from("polls")
+      .update({ results })
+      .eq("id", pollId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: `Anket sonucu güncellenemedi: ${updateError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, alreadyVoted: false, results });
+  }
+
+  const livePollResult = await supabase
+    .from("live_polls")
+    .select("id, question, options, is_active")
+    .eq("id", pollId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (livePollResult.error) {
+    return NextResponse.json(
+      { error: `Canlı anket okunamadı: ${livePollResult.error.message}` },
+      { status: 500 }
+    );
+  }
+
+  if (!livePollResult.data) {
     return NextResponse.json({ error: "Aktif anket bulunamadı." }, { status: 404 });
   }
 
-  const options = Array.isArray(poll.options) ? poll.options : [];
-  if (optionIndex >= options.length) {
+  const liveOptions = Array.isArray(livePollResult.data.options)
+    ? livePollResult.data.options.filter((item): item is string => typeof item === "string")
+    : [];
+
+  if (optionIndex >= liveOptions.length) {
     return NextResponse.json({ error: "Seçenek anket aralığı dışında." }, { status: 400 });
+  }
+
+  const initialResults = liveOptions.reduce((acc, _, index) => {
+    acc[String(index)] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const ensureLegacyPoll = await supabase
+    .from("polls")
+    .upsert(
+      {
+        id: pollId,
+        question: livePollResult.data.question,
+        options: liveOptions,
+        results: initialResults,
+        active: true,
+        session_id: null
+      },
+      {
+        onConflict: "id"
+      }
+    )
+    .select("id, results")
+    .single();
+
+  if (ensureLegacyPoll.error) {
+    return NextResponse.json(
+      { error: `Legacy anket kaydı oluşturulamadı: ${ensureLegacyPoll.error.message}` },
+      { status: 500 }
+    );
   }
 
   const voteInsert = await supabase.from("poll_votes").insert({
@@ -71,17 +159,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Oy kaydedilemedi: ${voteInsert.error.message}` }, { status: 500 });
   }
 
-  const results = { ...(poll.results && typeof poll.results === "object" ? poll.results : {}) } as Record<string, number>;
+  const results = {
+    ...(ensureLegacyPoll.data?.results && typeof ensureLegacyPoll.data.results === "object"
+      ? ensureLegacyPoll.data.results
+      : initialResults)
+  } as Record<string, number>;
   const key = String(optionIndex);
   results[key] = (Number(results[key]) || 0) + 1;
 
-  const { error: updateError } = await supabase
+  const updateResult = await supabase
     .from("polls")
-    .update({ results })
+    .update({ results, active: true })
     .eq("id", pollId);
 
-  if (updateError) {
-    return NextResponse.json({ error: `Anket sonucu güncellenemedi: ${updateError.message}` }, { status: 500 });
+  if (updateResult.error) {
+    return NextResponse.json(
+      { error: `Anket sonucu güncellenemedi: ${updateResult.error.message}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true, alreadyVoted: false, results });

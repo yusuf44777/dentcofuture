@@ -10,6 +10,7 @@ import type {
   MobileNetworkingGalleryCommentsResponse,
   MobileNetworkingGalleryComment,
   MobileNetworkingGalleryFeed,
+  MobileNetworkingGalleryUploaderResponse,
   MobileOtpSession,
   StaffCapability,
   StaffOverview
@@ -253,6 +254,67 @@ export function fetchNetworkingGalleryComments(itemId: string, limit = 40) {
     undefined,
     { auth: true }
   );
+}
+
+export async function fetchNetworkingGalleryUploaderProfile(name: string, limit = 24) {
+  const normalizedName = name.replace(/\s+/g, " ").trim();
+  if (normalizedName.length < 2) {
+    throw new Error("Geçerli bir kullanıcı adı gerekli.");
+  }
+
+  const normalizedLimit = Number.isFinite(limit)
+    ? Math.max(6, Math.min(60, Math.floor(limit)))
+    : 24;
+
+  try {
+    return await apiRequest<MobileNetworkingGalleryUploaderResponse>(
+      `/api/mobile/networking/gallery/uploader?name=${encodeURIComponent(normalizedName)}&limit=${normalizedLimit}`,
+      undefined,
+      { auth: true }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const isMissingEndpointError = message.includes("http 404") || message.includes("endpoint");
+    if (!isMissingEndpointError) {
+      throw error;
+    }
+
+    const feed = await fetchNetworkingGalleryFeed(Math.max(18, normalizedLimit));
+    const posts = (feed.posts ?? [])
+      .filter(
+        (post) =>
+          post.uploaderName.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR") ===
+          normalizedName.toLocaleLowerCase("tr-TR")
+      )
+      .slice(0, normalizedLimit)
+      .map((post) => ({
+        id: post.id,
+        caption: post.caption,
+        mediaType: post.mediaType,
+        publicUrl: post.publicUrl,
+        createdAt: post.createdAt,
+        likesCount: post.likesCount,
+        commentsCount: post.commentsCount
+      }));
+
+    if (posts.length === 0) {
+      throw new Error("Profil detayları şu an yüklenemedi.");
+    }
+
+    return {
+      ok: true,
+      uploader: {
+        attendeeId: null,
+        name: normalizedName,
+        role: null,
+        classLevel: null,
+        instagram: null,
+        linkedin: null
+      },
+      posts,
+      refreshedAt: new Date().toISOString()
+    };
+  }
 }
 
 function inferFileNameFromAsset(asset: ImagePickerAsset) {
