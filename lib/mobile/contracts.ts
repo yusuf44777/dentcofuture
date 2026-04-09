@@ -96,6 +96,13 @@ export type MobileNetworkingGalleryFeed = {
   refreshedAt: string;
 };
 
+export type MobileNetworkingGalleryComments = {
+  ok: true;
+  itemId: string;
+  comments: MobileNetworkingGalleryComment[];
+  total: number;
+};
+
 export type MobileMatchThread = {
   otherAttendee: Pick<Attendee, "id" | "name" | "role" | "instagram" | "linkedin">;
   messages: Array<{

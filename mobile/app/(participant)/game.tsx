@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Send, Swords } from "lucide-react-native";
 import { WebView } from "react-native-webview";
@@ -41,6 +42,10 @@ export default function ParticipantGameScreen() {
     const wave = Number(waveInput);
     return Number.isInteger(score) && score >= 0 && Number.isInteger(wave) && wave > 0;
   }, [scoreInput, waveInput]);
+
+  if (me?.role === "participant" && !me.attendee) {
+    return <Redirect href={"/(participant)/more" as never} />;
+  }
 
   return (
     <ScreenShell

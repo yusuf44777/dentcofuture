@@ -1,10 +1,13 @@
 export type AttendeeRole = "Student" | "Clinician" | "Academic" | "Entrepreneur" | "Industry";
+export type ParticipantProfileRole = "Student" | "Academic";
+export type AttendeeClassLevel = "Hazırlık" | "1" | "2" | "3" | "4" | "5" | "Mezun";
 
 export type Attendee = {
   id: string;
   auth_user_id: string | null;
   name: string;
   role: AttendeeRole;
+  class_level: AttendeeClassLevel | null;
   instagram: string | null;
   linkedin: string | null;
   avatar_url: string | null;
@@ -90,6 +93,13 @@ export type MobileNetworkingGalleryFeed = {
   ok: true;
   posts: MobileNetworkingGalleryPost[];
   refreshedAt: string;
+};
+
+export type MobileNetworkingGalleryCommentsResponse = {
+  ok: true;
+  itemId: string;
+  comments: MobileNetworkingGalleryComment[];
+  total: number;
 };
 
 export type MobileLiveQuestion = {

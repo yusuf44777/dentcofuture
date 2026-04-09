@@ -8,6 +8,15 @@ export type AttendeeRole =
   | "Entrepreneur"
   | "Industry";
 
+export type AttendeeClassLevel =
+  | "Hazırlık"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "Mezun";
+
 export type OutlierBadge =
   | "Innovator"
   | "Artist"
@@ -19,6 +28,7 @@ export interface Attendee {
   auth_user_id: string | null;
   name: string;
   role: AttendeeRole;
+  class_level: AttendeeClassLevel | null;
   instagram: string | null;
   linkedin: string | null;
   avatar_url: string | null;
@@ -140,10 +150,11 @@ export interface Database {
     Tables: {
       attendees: {
         Row: Attendee;
-        Insert: Omit<Attendee, "id" | "created_at" | "auth_user_id"> & {
+        Insert: Omit<Attendee, "id" | "created_at" | "auth_user_id" | "class_level"> & {
           id?: string;
           created_at?: string;
           auth_user_id?: string | null;
+          class_level?: AttendeeClassLevel | null;
         };
         Update: Partial<Omit<Attendee, "id" | "created_at">>;
       };

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Heart,
@@ -21,12 +23,15 @@ import {
   UserRoundX,
   Instagram
 } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
 import { ScreenShell } from "../../src/components/screen-shell";
 import {
+  createNetworkingGalleryPost,
   createNetworkingGalleryComment,
   fetchMatchThread,
   fetchMessageThreads,
   fetchNetworkingFeed,
+  fetchNetworkingGalleryComments,
   fetchNetworkingGalleryFeed,
   fetchNetworkingMatches,
   sendMatchMessage,
@@ -64,11 +69,19 @@ function formatGalleryDate(value: string) {
 export default function ParticipantNetworkingScreen() {
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
-  const [activeSection, setActiveSection] = useState<NetworkingSection>("discovery");
+  const attendeeId = me?.attendee?.id ?? null;
+  const [activeSection, setActiveSection] = useState<NetworkingSection>("gallery");
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [selectedUploadAsset, setSelectedUploadAsset] = useState<ImagePicker.ImagePickerAsset | null>(
+    null
+  );
+  const [uploadCaption, setUploadCaption] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [activeCommentItemId, setActiveCommentItemId] = useState<string | null>(null);
+  const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
 
   const feedQuery = useQuery({
     queryKey: ["mobile-networking-feed"],
@@ -82,6 +95,13 @@ export default function ParticipantNetworkingScreen() {
     queryFn: () => fetchNetworkingGalleryFeed(20),
     enabled: Boolean(me && me.role === "participant" && me.attendee),
     refetchInterval: 15_000
+  });
+
+  const galleryCommentsQuery = useQuery({
+    queryKey: ["mobile-networking-gallery-comments", activeCommentItemId],
+    queryFn: () => fetchNetworkingGalleryComments(activeCommentItemId as string, 120),
+    enabled: Boolean(activeCommentItemId && isCommentSheetVisible && me?.attendee),
+    staleTime: 4_000
   });
 
   const matchesQuery = useQuery({
@@ -146,6 +166,36 @@ export default function ParticipantNetworkingScreen() {
         ...current,
         [variables.itemId]: ""
       }));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["mobile-networking-gallery-comments", variables.itemId]
+        })
+      ]);
+    }
+  });
+
+  const galleryUploadMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedUploadAsset) {
+        throw new Error("Önce bir fotoğraf seç.");
+      }
+
+      const uploaderName = me?.attendee?.name;
+      if (!uploaderName) {
+        throw new Error("Profil bilgisi eksik.");
+      }
+
+      return createNetworkingGalleryPost({
+        asset: selectedUploadAsset,
+        caption: uploadCaption.trim(),
+        uploaderName
+      });
+    },
+    onSuccess: async () => {
+      setSelectedUploadAsset(null);
+      setUploadCaption("");
+      setUploadError("");
       await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
     }
   });
@@ -187,20 +237,59 @@ export default function ParticipantNetworkingScreen() {
     };
   }, [galleryFeedQuery.data?.posts]);
 
-  const galleryUploadUrl = useMemo(() => {
-    const baseUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-    if (!baseUrl) {
-      return "";
+  const selectedCommentPost = useMemo(() => {
+    if (!activeCommentItemId) {
+      return null;
     }
 
-    return `${baseUrl.replace(/\/+$/, "")}/galeri`;
-  }, []);
+    return (galleryFeedQuery.data?.posts ?? []).find((post) => post.id === activeCommentItemId) ?? null;
+  }, [activeCommentItemId, galleryFeedQuery.data?.posts]);
 
   const openSocial = async (url: string | null | undefined) => {
     if (!url) {
       return;
     }
     await Linking.openURL(url);
+  };
+
+  const pickPhotoForUpload = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setUploadError("Galeriye erişim izni gerekiyor.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.9
+    });
+
+    if (result.canceled || result.assets.length === 0) {
+      return;
+    }
+
+    const selectedAsset = result.assets[0];
+    if (!selectedAsset) {
+      return;
+    }
+
+    if (
+      typeof selectedAsset.mimeType === "string" &&
+      selectedAsset.mimeType.length > 0 &&
+      !selectedAsset.mimeType.startsWith("image/")
+    ) {
+      setUploadError("Bu sürümde sadece fotoğraf paylaşılabilir.");
+      return;
+    }
+
+    setSelectedUploadAsset(selectedAsset);
+    setUploadError("");
+  };
+
+  const openCommentSheet = (itemId: string) => {
+    setActiveCommentItemId(itemId);
+    setIsCommentSheetVisible(true);
   };
 
   const updateCommentDraft = (itemId: string, value: string) => {
@@ -210,27 +299,33 @@ export default function ParticipantNetworkingScreen() {
     }));
   };
 
-  if (!me?.attendee) {
-    return (
-      <ScreenShell
-        title="Networking"
-        subtitle="Networking modülü için önce katılımcı profilini tamamlayın."
-      >
-        <View style={styles.warningCard}>
-          <Text style={styles.warningText}>
-            Profil tamamlandıktan sonra eşleşme, sohbet ve galeri akışı aktif olur.
-          </Text>
-        </View>
-      </ScreenShell>
-    );
+  if (me?.role === "participant" && !me.attendee) {
+    return <Redirect href={"/(participant)/more" as never} />;
   }
 
   return (
     <ScreenShell
-      title="Networking"
-      subtitle="Keşfet, galeri akışında etkileşim kur, eşleş ve anında sohbet et."
+      title="Outliers"
+      subtitle="Feed'de paylaş, etkileşim kur, eşleş ve anında sohbet et."
     >
       <View style={styles.segmentWrap}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.segmentButton,
+            activeSection === "gallery" ? styles.segmentButtonActive : null,
+            pressed ? styles.pressed : null
+          ]}
+          onPress={() => setActiveSection("gallery")}
+        >
+          <Text
+            style={[
+              styles.segmentLabel,
+              activeSection === "gallery" ? styles.segmentLabelActive : null
+            ]}
+          >
+            Outliers Feed
+          </Text>
+        </Pressable>
         <Pressable
           style={({ pressed }) => [
             styles.segmentButton,
@@ -246,23 +341,6 @@ export default function ParticipantNetworkingScreen() {
             ]}
           >
             Keşif
-          </Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.segmentButton,
-            activeSection === "gallery" ? styles.segmentButtonActive : null,
-            pressed ? styles.pressed : null
-          ]}
-          onPress={() => setActiveSection("gallery")}
-        >
-          <Text
-            style={[
-              styles.segmentLabel,
-              activeSection === "gallery" ? styles.segmentLabelActive : null
-            ]}
-          >
-            Galeri
           </Text>
         </Pressable>
       </View>
@@ -281,19 +359,19 @@ export default function ParticipantNetworkingScreen() {
           {feedQuery.isLoading ? (
             <View style={styles.loaderCard}>
               <ActivityIndicator color={colors.accent} size="large" />
-              <Text style={styles.loaderText}>Networking akışı hazırlanıyor...</Text>
+              <Text style={styles.loaderText}>Outliers akışı hazırlanıyor...</Text>
             </View>
           ) : null}
 
           {feedQuery.isError ? (
             <View style={styles.errorCard}>
-              <Text style={styles.errorText}>
-                {feedQuery.error instanceof Error
-                  ? feedQuery.error.message
-                  : "Networking akışı alınamadı."}
-              </Text>
-            </View>
-          ) : null}
+                <Text style={styles.errorText}>
+                  {feedQuery.error instanceof Error
+                    ? feedQuery.error.message
+                    : "Outliers akışı alınamadı."}
+                </Text>
+              </View>
+            ) : null}
 
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -442,7 +520,7 @@ export default function ParticipantNetworkingScreen() {
               ) : (
                 <ScrollView style={styles.threadScroll} contentContainerStyle={styles.threadContent}>
                   {(threadQuery.data?.thread.messages ?? []).map((message) => {
-                    const mine = message.senderId === me.attendee?.id;
+                    const mine = message.senderId === attendeeId;
                     return (
                       <View
                         key={message.id}
@@ -505,23 +583,70 @@ export default function ParticipantNetworkingScreen() {
             <Metric label="Yorum" value={String(galleryTotals.comments)} />
           </View>
 
-          {galleryUploadUrl ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Yeni Paylaşım</Text>
+            <Text style={styles.mutedText}>
+              Bu sürümde yalnızca fotoğraf paylaşımı açık. Video paylaşımı yakında eklenecek.
+            </Text>
+
+            {selectedUploadAsset ? (
+              <Image source={{ uri: selectedUploadAsset.uri }} resizeMode="cover" style={styles.uploadPreview} />
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Text style={styles.uploadPlaceholderText}>Henüz fotoğraf seçilmedi.</Text>
+              </View>
+            )}
+
+            <View style={styles.uploadButtonRow}>
+              <Pressable
+                style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
+                onPress={() => {
+                  void pickPhotoForUpload();
+                }}
+              >
+                <Text style={styles.uploadPickButtonText}>Fotoğraf Seç</Text>
+              </Pressable>
+            </View>
+
+            <TextInput
+              style={styles.galleryComposerInput}
+              placeholder="Açıklama ekle..."
+              placeholderTextColor={colors.inkMuted}
+              value={uploadCaption}
+              onChangeText={(value) => setUploadCaption(value.slice(0, 280))}
+            />
+
+            {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
+            {galleryUploadMutation.error ? (
+              <Text style={styles.errorText}>
+                {galleryUploadMutation.error instanceof Error
+                  ? galleryUploadMutation.error.message
+                  : "Fotoğraf paylaşılamadı."}
+              </Text>
+            ) : null}
+
             <Pressable
+              disabled={!selectedUploadAsset || galleryUploadMutation.isPending}
               style={({ pressed }) => [
-                styles.uploadShortcutButton,
-                pressed ? styles.pressed : null
+                styles.uploadShareButton,
+                pressed ? styles.pressed : null,
+                !selectedUploadAsset || galleryUploadMutation.isPending ? styles.disabled : null
               ]}
               onPress={() => {
-                void openSocial(galleryUploadUrl);
+                galleryUploadMutation.mutate();
               }}
             >
-              <Text style={styles.uploadShortcutText}>Yeni paylaşım yükle</Text>
+              {galleryUploadMutation.isPending ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.uploadShareButtonText}>Paylaş</Text>
+              )}
             </Pressable>
-          ) : null}
+          </View>
 
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Networking Galeri</Text>
+              <Text style={styles.cardTitle}>Outliers Feed</Text>
               <Pressable
                 style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
                 onPress={() => {
@@ -618,10 +743,18 @@ export default function ParticipantNetworkingScreen() {
                         {post.likesCount} Beğeni
                       </Text>
                     </Pressable>
-                    <View style={styles.galleryCounter}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.galleryCounter,
+                        pressed ? styles.pressed : null
+                      ]}
+                      onPress={() => {
+                        openCommentSheet(post.id);
+                      }}
+                    >
                       <MessageCircle color={colors.copper} size={14} />
                       <Text style={styles.galleryCounterText}>{post.commentsCount} Yorum</Text>
-                    </View>
+                    </Pressable>
                   </View>
 
                   <View style={styles.galleryComments}>
@@ -635,9 +768,18 @@ export default function ParticipantNetworkingScreen() {
                     ) : (
                       <Text style={styles.galleryCommentEmpty}>İlk yorumu sen bırak.</Text>
                     )}
-                    {hiddenCommentCount > 0 ? (
-                      <Text style={styles.galleryCommentMore}>+{hiddenCommentCount} yorum daha</Text>
-                    ) : null}
+                    <Pressable
+                      style={({ pressed }) => [pressed ? styles.pressed : null]}
+                      onPress={() => {
+                        openCommentSheet(post.id);
+                      }}
+                    >
+                      <Text style={styles.galleryCommentMore}>
+                        {hiddenCommentCount > 0
+                          ? `+${hiddenCommentCount} yorum daha`
+                          : "Tüm yorumları görüntüle"}
+                      </Text>
+                    </Pressable>
                   </View>
 
                   <View style={styles.galleryComposerRow}>
@@ -673,6 +815,113 @@ export default function ParticipantNetworkingScreen() {
           </View>
         </>
       )}
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isCommentSheetVisible}
+        onRequestClose={() => {
+          setIsCommentSheetVisible(false);
+        }}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable
+            style={styles.sheetDismissArea}
+            onPress={() => {
+              setIsCommentSheetVisible(false);
+            }}
+          />
+          <View style={styles.sheetCard}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Yorumlar</Text>
+              <Pressable
+                style={({ pressed }) => [styles.sheetCloseButton, pressed ? styles.pressed : null]}
+                onPress={() => {
+                  setIsCommentSheetVisible(false);
+                }}
+              >
+                <Text style={styles.sheetCloseText}>Kapat</Text>
+              </Pressable>
+            </View>
+
+            {selectedCommentPost ? (
+              <Text style={styles.sheetMetaText}>
+                {selectedCommentPost.uploaderName} • {formatGalleryDate(selectedCommentPost.createdAt)}
+              </Text>
+            ) : null}
+
+            {galleryCommentsQuery.isLoading ? (
+              <View style={styles.sheetLoaderWrap}>
+                <ActivityIndicator color={colors.accent} size="small" />
+              </View>
+            ) : null}
+
+            {galleryCommentsQuery.isError ? (
+              <Text style={styles.errorText}>
+                {galleryCommentsQuery.error instanceof Error
+                  ? galleryCommentsQuery.error.message
+                  : "Yorumlar alınamadı."}
+              </Text>
+            ) : null}
+
+            <ScrollView
+              style={styles.sheetCommentsScroll}
+              contentContainerStyle={styles.sheetCommentsContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {(galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? []).map(
+                (comment) => (
+                  <View key={comment.id} style={styles.sheetCommentRow}>
+                    <Text style={styles.sheetCommentAuthor}>{comment.attendeeName}</Text>
+                    <Text style={styles.sheetCommentText}>{comment.text}</Text>
+                    <Text style={styles.sheetCommentDate}>{formatGalleryDate(comment.createdAt)}</Text>
+                  </View>
+                )
+              )}
+
+              {!galleryCommentsQuery.isLoading &&
+              (galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? []).length ===
+                0 ? (
+                <Text style={styles.sheetEmptyText}>Henüz yorum yok. İlk yorumu sen bırak.</Text>
+              ) : null}
+            </ScrollView>
+
+            {activeCommentItemId ? (
+              <View style={styles.galleryComposerRow}>
+                <TextInput
+                  style={styles.galleryComposerInput}
+                  placeholder="Yorum yaz..."
+                  placeholderTextColor={colors.inkMuted}
+                  value={commentDrafts[activeCommentItemId] ?? ""}
+                  onChangeText={(value) => updateCommentDraft(activeCommentItemId, value)}
+                />
+                <Pressable
+                  disabled={
+                    galleryCommentMutation.isPending ||
+                    (commentDrafts[activeCommentItemId] ?? "").trim().length < 1
+                  }
+                  style={({ pressed }) => [
+                    styles.gallerySendButton,
+                    pressed ? styles.pressed : null,
+                    galleryCommentMutation.isPending ||
+                    (commentDrafts[activeCommentItemId] ?? "").trim().length < 1
+                      ? styles.disabled
+                      : null
+                  ]}
+                  onPress={() => {
+                    galleryCommentMutation.mutate({
+                      itemId: activeCommentItemId,
+                      text: (commentDrafts[activeCommentItemId] ?? "").trim()
+                    });
+                  }}
+                >
+                  <Send color="#FFFFFF" size={13} />
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </ScreenShell>
   );
 }
@@ -715,19 +964,59 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: colors.accent
   },
-  uploadShortcutButton: {
+  uploadPreview: {
+    backgroundColor: colors.backgroundDeep,
+    borderRadius: radii.md,
+    height: 180,
+    marginTop: spacing.sm,
+    width: "100%"
+  },
+  uploadPlaceholder: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 120,
+    justifyContent: "center",
+    marginTop: spacing.sm
+  },
+  uploadPlaceholderText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12
+  },
+  uploadButtonRow: {
+    flexDirection: "row",
+    marginTop: spacing.sm
+  },
+  uploadPickButton: {
     alignItems: "center",
     backgroundColor: colors.copperSoft,
     borderColor: colors.copper,
     borderRadius: radii.pill,
     borderWidth: 1,
-    marginBottom: spacing.md,
-    paddingVertical: 10
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8
   },
-  uploadShortcutText: {
+  uploadPickButtonText: {
     color: colors.copper,
     fontFamily: typography.body,
     fontSize: 12,
+    fontWeight: "700"
+  },
+  uploadShareButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    marginTop: spacing.sm,
+    minHeight: 40
+  },
+  uploadShareButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 13,
     fontWeight: "800"
   },
   metricRow: {
@@ -1175,6 +1464,91 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: "center",
     width: 36
+  },
+  sheetBackdrop: {
+    backgroundColor: "rgba(2, 8, 20, 0.52)",
+    flex: 1,
+    justifyContent: "flex-end"
+  },
+  sheetDismissArea: {
+    flex: 1
+  },
+  sheetCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    maxHeight: "76%",
+    padding: spacing.md
+  },
+  sheetHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  sheetTitle: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 18,
+    fontWeight: "700"
+  },
+  sheetCloseButton: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6
+  },
+  sheetCloseText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  sheetMetaText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginTop: spacing.xs
+  },
+  sheetLoaderWrap: {
+    alignItems: "center",
+    paddingVertical: spacing.sm
+  },
+  sheetCommentsScroll: {
+    marginTop: spacing.sm
+  },
+  sheetCommentsContent: {
+    gap: spacing.xs,
+    paddingBottom: spacing.sm
+  },
+  sheetCommentRow: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs
+  },
+  sheetCommentAuthor: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  sheetCommentText: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2
+  },
+  sheetCommentDate: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 10,
+    marginTop: 4
+  },
+  sheetEmptyText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12
   },
   disabled: {
     opacity: 0.6

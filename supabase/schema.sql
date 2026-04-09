@@ -53,6 +53,7 @@ create table public.attendees (
   auth_user_id uuid references auth.users(id) on delete set null,
   name text not null check (char_length(name) between 1 and 120),
   role text not null check (role in ('Student', 'Clinician', 'Academic', 'Entrepreneur', 'Industry')),
+  class_level text check (class_level is null or class_level in ('Hazırlık', '1', '2', '3', '4', '5', 'Mezun')),
   instagram text,
   linkedin text,
   avatar_url text,

@@ -9,6 +9,7 @@ create table if not exists public.attendees (
   auth_user_id uuid references auth.users(id) on delete set null,
   name        text not null check (char_length(name) between 1 and 120),
   role        text not null check (role in ('Student','Clinician','Academic','Entrepreneur','Industry')),
+  class_level text check (class_level is null or class_level in ('Hazırlık','1','2','3','4','5','Mezun')),
   instagram   text,
   linkedin    text,
   avatar_url  text,
@@ -20,7 +21,22 @@ create table if not exists public.attendees (
 -- Backfill for existing projects where attendees was created before linkedin column
 alter table public.attendees
   add column if not exists linkedin text,
-  add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
+  add column if not exists auth_user_id uuid references auth.users(id) on delete set null,
+  add column if not exists class_level text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'attendees_class_level_check'
+      and conrelid = 'public.attendees'::regclass
+  ) then
+    alter table public.attendees
+      add constraint attendees_class_level_check
+      check (class_level is null or class_level in ('Hazırlık','1','2','3','4','5','Mezun'));
+  end if;
+end $$;
 
 create unique index if not exists attendees_auth_user_id_uidx
   on public.attendees (auth_user_id)

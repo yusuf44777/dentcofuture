@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveMobileSession } from "@/lib/mobile/auth";
-import type { AttendeeRole } from "@/lib/types";
-import type { Attendee } from "@/lib/types";
+import type { Attendee, AttendeeClassLevel, AttendeeRole } from "@/lib/types";
 import { ensureNetworkingProfileForSession } from "@/lib/mobile/networking";
 
 export const runtime = "nodejs";
@@ -10,18 +9,14 @@ export const dynamic = "force-dynamic";
 type OnboardingBody = {
   name?: string;
   role?: AttendeeRole;
+  class_level?: AttendeeClassLevel | null;
   instagram?: string;
   linkedin?: string;
   outlier_score?: number;
 };
 
-const ALLOWED_ROLES: AttendeeRole[] = [
-  "Student",
-  "Clinician",
-  "Academic",
-  "Entrepreneur",
-  "Industry"
-];
+const ALLOWED_ROLES: AttendeeRole[] = ["Student", "Academic"];
+const ALLOWED_CLASS_LEVELS: AttendeeClassLevel[] = ["Hazırlık", "1", "2", "3", "4", "5", "Mezun"];
 
 function normalizeSocial(value: unknown) {
   if (typeof value !== "string") return null;
@@ -44,6 +39,10 @@ export async function POST(request: NextRequest) {
 
   const name = typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : "";
   const role = body.role;
+  const rawClassLevel = typeof body.class_level === "string" ? body.class_level.trim() : "";
+  const classLevel = ALLOWED_CLASS_LEVELS.includes(rawClassLevel as AttendeeClassLevel)
+    ? (rawClassLevel as AttendeeClassLevel)
+    : null;
   const instagram = normalizeSocial(body.instagram);
   const linkedin = normalizeSocial(body.linkedin);
   const outlierScore = Number.isFinite(Number(body.outlier_score)) ? Number(body.outlier_score) : 0;
@@ -52,7 +51,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ad soyad 2-120 karakter aralığında olmalı." }, { status: 400 });
   }
   if (!role || !ALLOWED_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Geçerli bir rol seçilmelidir." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Rol sadece Öğrenci veya Akademisyen olabilir." },
+      { status: 400 }
+    );
+  }
+  if (role === "Student" && !classLevel) {
+    return NextResponse.json({ error: "Öğrenci için sınıf seçimi zorunludur." }, { status: 400 });
+  }
+  if (rawClassLevel.length > 0 && !classLevel) {
+    return NextResponse.json({ error: "Geçersiz sınıf değeri gönderildi." }, { status: 400 });
   }
   if (outlierScore < 0 || outlierScore > 100) {
     return NextResponse.json({ error: "Outlier puanı 0-100 aralığında olmalı." }, { status: 400 });
@@ -63,6 +71,7 @@ export async function POST(request: NextRequest) {
     auth_user_id: resolved.session.authUserId,
     name,
     role,
+    class_level: role === "Student" ? classLevel : null,
     instagram,
     linkedin,
     outlier_score: Math.round(outlierScore)
@@ -104,7 +113,21 @@ export async function POST(request: NextRequest) {
   }
 
   if (existingByAuth) {
-    const attendee = existingByAuth as Attendee;
+    const updateExistingResult = await supabase
+      .from("attendees")
+      .update(basePayload)
+      .eq("id", existingByAuth.id)
+      .select("*")
+      .single();
+
+    if (updateExistingResult.error || !updateExistingResult.data) {
+      return NextResponse.json(
+        { error: `Profil güncellenemedi: ${updateExistingResult.error?.message ?? "Bilinmeyen hata"}` },
+        { status: 500 }
+      );
+    }
+
+    const attendee = updateExistingResult.data as Attendee;
     const networkingProfile = await ensureNetworkingProfileForSession({
       ...resolved.session,
       attendee

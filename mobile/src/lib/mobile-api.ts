@@ -1,22 +1,58 @@
+import type { ImagePickerAsset } from "expo-image-picker";
 import { apiRequest } from "./api";
 import type {
+  AttendeeClassLevel,
   MobileLiveState,
   MobileMatchThread,
   MobileMe,
   MobileNetworkingFeed,
+  MobileNetworkingGalleryCommentsResponse,
   MobileNetworkingGalleryComment,
   MobileNetworkingGalleryFeed,
   MobileOtpSession,
   StaffCapability,
   StaffOverview
 } from "./mobile-contracts";
+import { supabase } from "../../utils/supabase";
 
 type OnboardingPayload = {
   name: string;
-  role: "Student" | "Clinician" | "Academic" | "Entrepreneur" | "Industry";
+  role: "Student" | "Academic";
+  class_level?: AttendeeClassLevel | null;
   instagram?: string;
   linkedin?: string;
   outlier_score?: number;
+};
+
+type GalleryUploadSessionResponse = {
+  ok: true;
+  upload: {
+    path: string;
+    token: string;
+    signedUrl: string;
+  };
+  normalized: {
+    mediaType: "photo" | "video";
+    mimeType: string;
+    fileSize: number;
+    uploaderName: string;
+    caption: string;
+  };
+};
+
+type GalleryFinalizeResponse = {
+  ok: true;
+  item: {
+    id: string;
+    uploader_name: string;
+    caption: string | null;
+    media_type: "photo" | "video";
+    mime_type: string;
+    file_path: string;
+    public_url: string;
+    file_size: number;
+    created_at: string;
+  };
 };
 
 type StepUpCreateResponse = {
@@ -202,6 +238,110 @@ export function createNetworkingGalleryComment(itemId: string, text: string) {
     {
       method: "POST",
       body: JSON.stringify({ itemId, text })
+    },
+    { auth: true }
+  );
+}
+
+export function fetchNetworkingGalleryComments(itemId: string, limit = 40) {
+  const normalizedLimit = Number.isFinite(limit)
+    ? Math.max(10, Math.min(120, Math.floor(limit)))
+    : 40;
+
+  return apiRequest<MobileNetworkingGalleryCommentsResponse>(
+    `/api/mobile/networking/gallery/comments?itemId=${encodeURIComponent(itemId)}&limit=${normalizedLimit}`,
+    undefined,
+    { auth: true }
+  );
+}
+
+function inferFileNameFromAsset(asset: ImagePickerAsset) {
+  if (asset.fileName && asset.fileName.trim().length > 0) {
+    return asset.fileName.trim();
+  }
+
+  const fromUri = asset.uri.split("/").pop()?.trim() ?? "";
+  if (fromUri.length > 0) {
+    return fromUri;
+  }
+
+  return `outliers-${Date.now()}.jpg`;
+}
+
+function inferImageMimeType(fileName: string, fallback?: string | null) {
+  if (fallback && fallback.startsWith("image/")) {
+    return fallback;
+  }
+
+  const lowered = fileName.toLowerCase();
+  if (lowered.endsWith(".png")) return "image/png";
+  if (lowered.endsWith(".webp")) return "image/webp";
+  if (lowered.endsWith(".heic")) return "image/heic";
+  if (lowered.endsWith(".heif")) return "image/heif";
+  if (lowered.endsWith(".gif")) return "image/gif";
+  return "image/jpeg";
+}
+
+export async function createNetworkingGalleryPost(input: {
+  asset: ImagePickerAsset;
+  caption?: string;
+  uploaderName: string;
+}) {
+  const fileName = inferFileNameFromAsset(input.asset);
+  const fileResponse = await fetch(input.asset.uri);
+  if (!fileResponse.ok) {
+    throw new Error("Seçilen fotoğraf okunamadı.");
+  }
+
+  const fileBlob = await fileResponse.blob();
+  const fileSize = Number(fileBlob.size ?? 0);
+  const mimeType = inferImageMimeType(fileName, input.asset.mimeType ?? fileBlob.type);
+  if (!mimeType.startsWith("image/")) {
+    throw new Error("Bu sürümde sadece fotoğraf yükleyebilirsin.");
+  }
+
+  if (!Number.isFinite(fileSize) || fileSize <= 0) {
+    throw new Error("Geçerli bir fotoğraf seçmelisin.");
+  }
+
+  const session = await apiRequest<GalleryUploadSessionResponse>(
+    "/api/gallery/upload-session",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        fileName,
+        mimeType,
+        fileSize,
+        uploaderName: input.uploaderName,
+        caption: input.caption ?? ""
+      })
+    },
+    { auth: true }
+  );
+
+  if (session.normalized.mediaType !== "photo") {
+    throw new Error("Bu sürümde sadece fotoğraf yükleme açık.");
+  }
+
+  const uploadResult = await supabase.storage
+    .from("event-gallery")
+    .uploadToSignedUrl(session.upload.path, session.upload.token, fileBlob);
+
+  if (uploadResult.error) {
+    throw new Error(`Fotoğraf yüklenemedi: ${uploadResult.error.message}`);
+  }
+
+  return apiRequest<GalleryFinalizeResponse>(
+    "/api/gallery/finalize",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        path: session.upload.path,
+        mimeType: session.normalized.mimeType,
+        fileSize: session.normalized.fileSize,
+        uploaderName: session.normalized.uploaderName,
+        caption: session.normalized.caption
+      })
     },
     { auth: true }
   );

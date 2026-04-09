@@ -1,87 +1,151 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, LogOut, MapPin, Save, Send, Trophy, UserRound } from "lucide-react-native";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, ChevronDown, LogOut, MapPin, Save, UserRound } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { fetchRafflePublic, submitFeedback, submitOnboarding } from "../../src/lib/mobile-api";
-import type { AttendeeRole } from "../../src/lib/mobile-contracts";
+import { submitOnboarding } from "../../src/lib/mobile-api";
+import type { AttendeeClassLevel, AttendeeRole } from "../../src/lib/mobile-contracts";
+import {
+  calculateOutlierScore,
+  getOutlierTitle,
+  QUIZ_QUESTIONS
+} from "../../src/lib/outlier-quiz";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { useAuthSessionStore } from "../../src/store/auth-session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
-const ROLES: AttendeeRole[] = ["Student", "Clinician", "Academic", "Entrepreneur", "Industry"];
-const ROLE_LABELS: Record<AttendeeRole, string> = {
+type ProfileRole = "Student" | "Academic";
+
+type QuizAnswerMap = Record<number, number>;
+
+const PROFILE_ROLES: ProfileRole[] = ["Student", "Academic"];
+
+const ROLE_LABELS: Record<ProfileRole, string> = {
   Student: "Öğrenci",
-  Clinician: "Klinisyen",
-  Academic: "Akademisyen",
-  Entrepreneur: "Girişimci",
-  Industry: "Sektör"
+  Academic: "Akademisyen"
 };
+
+const CLASS_LEVEL_OPTIONS: AttendeeClassLevel[] = ["Hazırlık", "1", "2", "3", "4", "5", "Mezun"];
+const QUIZ_SCALE_VALUES = [1, 2, 3, 4, 5];
+
+function isProfileRole(value: AttendeeRole | null | undefined): value is ProfileRole {
+  return value === "Student" || value === "Academic";
+}
+
+function normalizeClassLevel(value: string | null | undefined): AttendeeClassLevel | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return CLASS_LEVEL_OPTIONS.includes(value as AttendeeClassLevel)
+    ? (value as AttendeeClassLevel)
+    : null;
+}
 
 export default function ParticipantMoreScreen() {
   const queryClient = useQueryClient();
   const clear = useAuthSessionStore((state) => state.clear);
   const { me } = useMobileMe();
 
+  const attendee = me?.attendee ?? null;
+  const hasAttendee = Boolean(attendee?.id);
+
   const [name, setName] = useState("");
-  const [role, setRole] = useState<AttendeeRole>("Student");
+  const [role, setRole] = useState<ProfileRole | null>(null);
+  const [classLevel, setClassLevel] = useState<AttendeeClassLevel | null>(null);
+  const [isClassLevelOpen, setIsClassLevelOpen] = useState(false);
   const [instagram, setInstagram] = useState("");
   const [linkedin, setLinkedin] = useState("");
-  const [outlierScore, setOutlierScore] = useState("0");
-  const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  const [quizAnswers, setQuizAnswers] = useState<QuizAnswerMap>({});
+  const [quizUnlocked, setQuizUnlocked] = useState(hasAttendee);
 
   useEffect(() => {
-    if (!me?.attendee) {
+    if (!attendee) {
       return;
     }
 
-    setName(me.attendee.name ?? "");
-    setRole(me.attendee.role ?? "Student");
-    setInstagram(me.attendee.instagram ?? "");
-    setLinkedin(me.attendee.linkedin ?? "");
-    setOutlierScore(String(me.attendee.outlier_score ?? 0));
-  }, [me?.attendee]);
+    setName(attendee.name ?? "");
+    setRole(isProfileRole(attendee.role) ? attendee.role : null);
+    setClassLevel(normalizeClassLevel(attendee.class_level));
+    setInstagram(attendee.instagram ?? "");
+    setLinkedin(attendee.linkedin ?? "");
+    setQuizUnlocked(true);
+  }, [attendee]);
+
+  useEffect(() => {
+    if (role !== "Student") {
+      setClassLevel(null);
+      setIsClassLevelOpen(false);
+    }
+  }, [role]);
+
+  const answeredCount = useMemo(
+    () => QUIZ_QUESTIONS.filter((question) => typeof quizAnswers[question.id] === "number").length,
+    [quizAnswers]
+  );
+
+  const isQuizComplete = answeredCount === QUIZ_QUESTIONS.length;
+
+  const quizScore = useMemo(
+    () => calculateOutlierScore(QUIZ_QUESTIONS.map((question) => quizAnswers[question.id] ?? 0)),
+    [quizAnswers]
+  );
+
+  const profileOutlierScore = attendee?.outlier_score ?? quizScore;
+  const showQuizStep = !hasAttendee && !quizUnlocked;
+  const requiresRoleReset = attendee ? !isProfileRole(attendee.role) : false;
+
+  const canSaveProfile =
+    name.trim().length >= 2 &&
+    role !== null &&
+    (role === "Academic" || classLevel !== null) &&
+    (!showQuizStep || isQuizComplete);
 
   const onboardingMutation = useMutation({
-    mutationFn: () =>
-      submitOnboarding({
+    mutationFn: async () => {
+      if (!role) {
+        throw new Error("Rol seçimi zorunlu.");
+      }
+
+      if (role === "Student" && !classLevel) {
+        throw new Error("Öğrenci için sınıf seçimi zorunlu.");
+      }
+
+      if (!hasAttendee && !isQuizComplete) {
+        throw new Error("Önce Outlier testini tamamlamalısın.");
+      }
+
+      return submitOnboarding({
         name,
         role,
+        class_level: role === "Student" ? classLevel : null,
         instagram: instagram.trim() || undefined,
         linkedin: linkedin.trim() || undefined,
-        outlier_score: Number(outlierScore)
-      }),
+        outlier_score: profileOutlierScore
+      });
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["mobile-me"] }),
         queryClient.invalidateQueries({ queryKey: ["mobile-leaderboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] })
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] })
       ]);
     }
   });
 
-  const feedbackMutation = useMutation({
-    mutationFn: (message: string) => submitFeedback(message),
-    onSuccess: () => {
-      setFeedbackMessage("");
-    }
-  });
-
-  const rafflePublicQuery = useQuery({
-    queryKey: ["mobile-raffle-public"],
-    queryFn: fetchRafflePublic,
-    refetchInterval: 30_000
-  });
-
-  const canSaveProfile = useMemo(() => {
-    const score = Number(outlierScore);
-    return name.trim().length >= 2 && Number.isFinite(score) && score >= 0 && score <= 100;
-  }, [name, outlierScore]);
+  const answerQuizQuestion = (questionId: number, value: number) => {
+    setQuizAnswers((current) => ({
+      ...current,
+      [questionId]: value
+    }));
+  };
 
   return (
     <ScreenShell
-      title="Diğer"
-      subtitle="Profil, geri bildirim ve etkinlik detaylarını tek yerden yönet."
+      title="Profilim"
+      subtitle="Önce Outlier testini tamamla, sonra profilini kaydet ve tüm participant modüllerinin kilidini aç."
     >
       <View style={styles.eventCard}>
         <View style={styles.row}>
@@ -98,8 +162,126 @@ export default function ParticipantMoreScreen() {
         </View>
       </View>
 
+      {showQuizStep ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Aşama 1 • Outlier Testi</Text>
+          <Text style={styles.helpText}>
+            Profil oluşturmadan önce testi tamamlamalısın. Test sonucu profil puanına otomatik yazılır.
+          </Text>
+
+          {QUIZ_QUESTIONS.map((question) => {
+            const selectedValue = quizAnswers[question.id];
+
+            return (
+              <View key={question.id} style={styles.quizQuestionCard}>
+                <Text style={styles.quizQuestionTitle}>
+                  {question.id}. {question.text}
+                </Text>
+
+                {question.type === "scale" ? (
+                  <>
+                    <View style={styles.scaleRow}>
+                      {QUIZ_SCALE_VALUES.map((value) => (
+                        <Pressable
+                          key={`${question.id}-${value}`}
+                          style={({ pressed }) => [
+                            styles.scaleValueButton,
+                            selectedValue === value ? styles.scaleValueButtonSelected : null,
+                            pressed ? styles.pressed : null
+                          ]}
+                          onPress={() => answerQuizQuestion(question.id, value)}
+                        >
+                          <Text
+                            style={[
+                              styles.scaleValueText,
+                              selectedValue === value ? styles.scaleValueTextSelected : null
+                            ]}
+                          >
+                            {value}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <View style={styles.scaleLegend}>
+                      <Text style={styles.scaleLegendText}>{question.scaleMin}</Text>
+                      <Text style={styles.scaleLegendText}>{question.scaleMax}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.choiceWrap}>
+                    {(question.options ?? []).map((option) => (
+                      <Pressable
+                        key={`${question.id}-${option.value}-${option.label}`}
+                        style={({ pressed }) => [
+                          styles.choiceButton,
+                          selectedValue === option.value ? styles.choiceButtonSelected : null,
+                          pressed ? styles.pressed : null
+                        ]}
+                        onPress={() => answerQuizQuestion(question.id, option.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.choiceText,
+                            selectedValue === option.value ? styles.choiceTextSelected : null
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+
+          <Text style={styles.progressText}>Yanıtlanan: {answeredCount}/{QUIZ_QUESTIONS.length}</Text>
+
+          <Pressable
+            disabled={!isQuizComplete}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed ? styles.pressed : null,
+              !isQuizComplete ? styles.disabled : null
+            ]}
+            onPress={() => {
+              setQuizUnlocked(true);
+            }}
+          >
+            <Text style={styles.primaryButtonText}>Teste Devam Et</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {!hasAttendee && quizUnlocked ? (
+        <View style={styles.outlierResultCard}>
+          <View>
+            <Text style={styles.outlierResultTitle}>Outlier Sonucun</Text>
+            <Text style={styles.outlierResultSubtitle}>{getOutlierTitle(profileOutlierScore)}</Text>
+          </View>
+          <Text style={styles.outlierResultScore}>{profileOutlierScore}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.retakeButton, pressed ? styles.pressed : null]}
+            onPress={() => {
+              setQuizUnlocked(false);
+            }}
+          >
+            <Text style={styles.retakeButtonText}>Testi Düzenle</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Katılımcı Profili</Text>
+        <Text style={styles.cardTitle}>{hasAttendee ? "Profil Bilgileri" : "Aşama 2 • Profil Bilgileri"}</Text>
+
+        {requiresRoleReset ? (
+          <View style={styles.warningCard}>
+            <Text style={styles.warningText}>
+              Eski rolün artık desteklenmiyor. Kaydetmeden önce Öğrenci veya Akademisyen seçmelisin.
+            </Text>
+          </View>
+        ) : null}
+
         <TextInput
           style={styles.input}
           value={name}
@@ -107,8 +289,10 @@ export default function ParticipantMoreScreen() {
           placeholder="Ad Soyad"
           placeholderTextColor={colors.inkMuted}
         />
+
+        <Text style={styles.fieldLabel}>Rol</Text>
         <View style={styles.roleRow}>
-          {ROLES.map((candidateRole) => (
+          {PROFILE_ROLES.map((candidateRole) => (
             <Pressable
               key={candidateRole}
               style={({ pressed }) => [
@@ -126,6 +310,58 @@ export default function ParticipantMoreScreen() {
             </Pressable>
           ))}
         </View>
+
+        {role === "Student" ? (
+          <View style={styles.dropdownBlock}>
+            <Text style={styles.fieldLabel}>Sınıf</Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.dropdownButton,
+                isClassLevelOpen ? styles.dropdownButtonOpen : null,
+                pressed ? styles.pressed : null
+              ]}
+              onPress={() => {
+                setIsClassLevelOpen((current) => !current);
+              }}
+            >
+              <Text style={[styles.dropdownText, classLevel ? styles.dropdownTextSelected : null]}>
+                {classLevel ?? "Sınıf seç"}
+              </Text>
+              <ChevronDown color={colors.inkMuted} size={16} />
+            </Pressable>
+
+            {isClassLevelOpen ? (
+              <View style={styles.dropdownMenu}>
+                {CLASS_LEVEL_OPTIONS.map((value) => (
+                  <Pressable
+                    key={value}
+                    style={({ pressed }) => [
+                      styles.dropdownOption,
+                      classLevel === value ? styles.dropdownOptionSelected : null,
+                      pressed ? styles.pressed : null
+                    ]}
+                    onPress={() => {
+                      setClassLevel(value);
+                      setIsClassLevelOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        classLevel === value ? styles.dropdownOptionTextSelected : null
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : role === "Academic" ? (
+          <Text style={styles.helpText}>Akademisyen için sınıf seçimi zorunlu değildir.</Text>
+        ) : null}
+
         <TextInput
           style={styles.input}
           value={instagram}
@@ -134,6 +370,7 @@ export default function ParticipantMoreScreen() {
           placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />
+
         <TextInput
           style={styles.input}
           value={linkedin}
@@ -142,14 +379,12 @@ export default function ParticipantMoreScreen() {
           placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />
-        <TextInput
-          style={styles.input}
-          value={outlierScore}
-          onChangeText={(value) => setOutlierScore(value.replace(/[^0-9]/g, "").slice(0, 3))}
-          placeholder="Outlier puanı (0-100)"
-          placeholderTextColor={colors.inkMuted}
-          keyboardType="number-pad"
-        />
+
+        <View style={styles.scoreRow}>
+          <Text style={styles.scoreLabel}>Outlier Puanı</Text>
+          <Text style={styles.scoreValue}>{profileOutlierScore}</Text>
+        </View>
+
         {onboardingMutation.error ? (
           <Text style={styles.errorText}>
             {onboardingMutation.error instanceof Error
@@ -157,6 +392,7 @@ export default function ParticipantMoreScreen() {
               : "Profil güncellenemedi."}
           </Text>
         ) : null}
+
         <Pressable
           disabled={!canSaveProfile || onboardingMutation.isPending}
           style={({ pressed }) => [
@@ -179,48 +415,6 @@ export default function ParticipantMoreScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Geri Bildirim</Text>
-        <TextInput
-          multiline
-          numberOfLines={4}
-          style={[styles.input, styles.feedbackInput]}
-          value={feedbackMessage}
-          onChangeText={(value) => setFeedbackMessage(value.slice(0, 500))}
-          placeholder="Etkinlik deneyimini paylaş..."
-          placeholderTextColor={colors.inkMuted}
-        />
-        <Pressable
-          disabled={feedbackMutation.isPending || feedbackMessage.trim().length < 2}
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed ? styles.pressed : null,
-            feedbackMutation.isPending || feedbackMessage.trim().length < 2 ? styles.disabled : null
-          ]}
-          onPress={() => {
-            feedbackMutation.mutate(feedbackMessage.trim());
-          }}
-        >
-          <Send color={colors.accent} size={14} />
-          <Text style={styles.secondaryButtonText}>Gönder</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>Çekiliş</Text>
-          <Trophy color={colors.copper} size={16} />
-        </View>
-        {rafflePublicQuery.isLoading ? <ActivityIndicator color={colors.accent} size="small" /> : null}
-        <Text style={styles.helpText}>Aktif katılımcı: {rafflePublicQuery.data?.participants_active ?? 0}</Text>
-        {(rafflePublicQuery.data?.recent_draws ?? []).slice(0, 4).map((draw) => (
-          <View key={draw.id} style={styles.drawRow}>
-            <Text style={styles.drawTitle}>{draw.prize_title}</Text>
-            <Text style={styles.drawWinner}>{draw.winner_name}</Text>
-          </View>
-        ))}
-      </View>
-
       <Pressable
         style={({ pressed }) => [styles.logoutButton, pressed ? styles.pressed : null]}
         onPress={() => {
@@ -241,6 +435,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     padding: spacing.md
   },
+  row: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: spacing.xs
+  },
+  eventText: {
+    color: colors.inkMuted,
+    flex: 1,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17,
+    marginLeft: spacing.xs
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -254,23 +461,161 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: spacing.sm
   },
-  row: {
-    alignItems: "center",
-    flexDirection: "row",
-    marginBottom: spacing.xs
+  helpText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing.sm
   },
-  rowBetween: {
-    alignItems: "center",
+  quizQuestionCard: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+    padding: spacing.sm
+  },
+  quizQuestionTitle: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginBottom: spacing.sm
+  },
+  scaleRow: {
     flexDirection: "row",
     justifyContent: "space-between"
   },
-  eventText: {
+  scaleValueButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36
+  },
+  scaleValueButtonSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent
+  },
+  scaleValueText: {
     color: colors.inkMuted,
-    flex: 1,
     fontFamily: typography.body,
     fontSize: 12,
-    lineHeight: 17,
-    marginLeft: spacing.xs
+    fontWeight: "800"
+  },
+  scaleValueTextSelected: {
+    color: "#FFFFFF"
+  },
+  scaleLegend: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.xs
+  },
+  scaleLegendText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11
+  },
+  choiceWrap: {
+    gap: spacing.xs
+  },
+  choiceButton: {
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 9
+  },
+  choiceButtonSelected: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent
+  },
+  choiceText: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  choiceTextSelected: {
+    color: colors.accent,
+    fontWeight: "700"
+  },
+  progressText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginBottom: spacing.sm
+  },
+  outlierResultCard: {
+    alignItems: "center",
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    padding: spacing.md
+  },
+  outlierResultTitle: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center"
+  },
+  outlierResultSubtitle: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 2,
+    textAlign: "center"
+  },
+  outlierResultScore: {
+    color: colors.accent,
+    fontFamily: typography.display,
+    fontSize: 32,
+    fontWeight: "800",
+    marginTop: spacing.xs
+  },
+  retakeButton: {
+    backgroundColor: colors.surface,
+    borderColor: colors.accent,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7
+  },
+  retakeButtonText: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  warningCard: {
+    backgroundColor: colors.warningSoft,
+    borderRadius: radii.md,
+    marginBottom: spacing.sm,
+    padding: spacing.sm
+  },
+  warningText: {
+    color: colors.warning,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  fieldLabel: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: spacing.xs
   },
   input: {
     backgroundColor: colors.surfaceMuted,
@@ -286,13 +631,11 @@ const styles = StyleSheet.create({
   },
   roleRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     marginBottom: spacing.sm
   },
   roleChip: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
-    marginBottom: spacing.xs,
     marginRight: spacing.xs,
     paddingHorizontal: 12,
     paddingVertical: 8
@@ -309,9 +652,80 @@ const styles = StyleSheet.create({
   roleChipTextSelected: {
     color: colors.accent
   },
-  feedbackInput: {
-    minHeight: 90,
-    textAlignVertical: "top"
+  dropdownBlock: {
+    marginBottom: spacing.sm
+  },
+  dropdownButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 11
+  },
+  dropdownButtonOpen: {
+    borderColor: colors.accent
+  },
+  dropdownText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 14
+  },
+  dropdownTextSelected: {
+    color: colors.ink
+  },
+  dropdownMenu: {
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginTop: spacing.xs,
+    overflow: "hidden"
+  },
+  dropdownOption: {
+    borderBottomColor: colors.line,
+    borderBottomWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
+  },
+  dropdownOptionSelected: {
+    backgroundColor: colors.accentSoft
+  },
+  dropdownOptionText: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13
+  },
+  dropdownOptionTextSelected: {
+    color: colors.accent,
+    fontWeight: "700"
+  },
+  scoreRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
+  },
+  scoreLabel: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  scoreValue: {
+    color: colors.accent,
+    fontFamily: typography.display,
+    fontSize: 18,
+    fontWeight: "800"
   },
   primaryButton: {
     alignItems: "center",
@@ -328,44 +742,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginLeft: spacing.xs
   },
-  secondaryButton: {
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10
-  },
-  secondaryButtonText: {
-    color: colors.accent,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800",
-    marginLeft: spacing.xs
-  },
-  helpText: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 13,
-    marginBottom: spacing.xs
-  },
-  drawRow: {
-    borderBottomColor: colors.line,
-    borderBottomWidth: 1,
-    paddingVertical: 7
-  },
-  drawTitle: {
-    color: colors.ink,
+  errorText: {
+    color: colors.danger,
     fontFamily: typography.body,
     fontSize: 12,
-    fontWeight: "700"
-  },
-  drawWinner: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
-    marginTop: 2
+    marginBottom: spacing.sm
   },
   logoutButton: {
     alignItems: "center",
@@ -383,12 +764,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     marginLeft: spacing.xs
-  },
-  errorText: {
-    color: colors.danger,
-    fontFamily: typography.body,
-    fontSize: 12,
-    marginBottom: spacing.sm
   },
   disabled: {
     opacity: 0.6

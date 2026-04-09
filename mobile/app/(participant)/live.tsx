@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Brain, Flame, Hand, Lightbulb, CircleHelp } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
@@ -83,6 +84,10 @@ export default function ParticipantLiveScreen() {
     () => Object.values(liveQuery.data?.reactionCounts ?? {}).reduce((sum, count) => sum + count, 0),
     [liveQuery.data?.reactionCounts]
   );
+
+  if (me?.role === "participant" && !me.attendee) {
+    return <Redirect href={"/(participant)/more" as never} />;
+  }
 
   return (
     <ScreenShell
