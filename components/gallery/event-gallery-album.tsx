@@ -426,7 +426,7 @@ export function EventGalleryAlbum() {
       <section className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-xs text-cyan-900">
         <p className="flex items-center gap-2 font-medium">
           <Camera className="h-4 w-4" />
-          Yüklenen medya dosyaları otomatik olarak Supabase üzerinde saklanır ve Google Drive&apos;a yedeklenir.
+          Yüklenen medya dosyaları galeri storage moduna göre Supabase veya Google Drive üzerinden servis edilir.
         </p>
       </section>
     </div>

@@ -25,6 +25,33 @@ const VIDEO_MIME_TYPES = new Set([
 
 export type GalleryMediaType = "photo" | "video";
 export type GalleryBackupStatus = "pending" | "synced" | "failed" | "disabled";
+export type GalleryStorageMode = "supabase" | "drive";
+
+export function resolveGalleryStorageMode(): GalleryStorageMode {
+  const rawValue = process.env.GALLERY_STORAGE_MODE?.trim().toLowerCase() ?? "";
+
+  if (["drive", "drive-only", "drive_only", "google-drive", "google_drive"].includes(rawValue)) {
+    return "drive";
+  }
+
+  return "supabase";
+}
+
+export function shouldRemoveSupabaseCopyAfterDriveSync() {
+  if (resolveGalleryStorageMode() === "drive") {
+    return true;
+  }
+
+  return readBooleanEnv("GALLERY_REMOVE_SUPABASE_COPY_AFTER_DRIVE_SYNC", false);
+}
+
+export function shouldRequireDriveSync() {
+  if (resolveGalleryStorageMode() === "drive") {
+    return true;
+  }
+
+  return readBooleanEnv("GALLERY_REQUIRE_DRIVE_SYNC", false);
+}
 
 export function getErrorMessage(error: unknown, fallback: string) {
   if (process.env.NODE_ENV === "production") {
@@ -110,4 +137,20 @@ function inferFileExtension(fileName: string) {
   }
 
   return normalized;
+}
+
+function readBooleanEnv(name: string, defaultValue: boolean) {
+  const rawValue = process.env[name];
+  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+    return defaultValue;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return defaultValue;
 }

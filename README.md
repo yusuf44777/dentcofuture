@@ -135,6 +135,10 @@ Gerekli:
 - `GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL` (service account e-postası)
 - `GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY` (özel anahtar, `\n` formatı desteklenir)
 - `GOOGLE_DRIVE_FOLDER_ID` (opsiyonel, boşsa varsayılan klasör kullanılır)
+- `GOOGLE_DRIVE_MAKE_PUBLIC` (opsiyonel, varsayılan `true`; Drive dosyasına public read izni verir)
+- `GALLERY_STORAGE_MODE` (`supabase` veya `drive`; `drive` modunda galeri URL'leri Drive'dan servis edilir)
+- `GALLERY_REMOVE_SUPABASE_COPY_AFTER_DRIVE_SYNC` (opsiyonel, varsayılan `false`; `true` ise Drive senkronundan sonra Supabase kopyası silinir)
+- `GALLERY_REQUIRE_DRIVE_SYNC` (opsiyonel, varsayılan `false`; `true` ise Drive sync başarısızsa finalize bloklanır)
 - `MOBILE_ALLOWED_PARTICIPANTS` (`email|phone` format, virgulle ayrılmış liste)
 - `MOBILE_LOGIN_SECRET` (mobil e-posta+telefon girişi için server-side parola türetme anahtarı)
 - `OPENAI_API_KEY`
@@ -146,6 +150,8 @@ Gerekli:
 - `DASHBOARD_SUPABASE_EMAIL` (opsiyonel: panel için kullanılacak Supabase e-posta hesabı)
 - `DASHBOARD_AUTH_SECRET` (opsiyonel, dashboard cookie imzası için; boşsa `CRON_SECRET` kullanılır)
 - `NEXT_PUBLIC_APP_URL` (QR URL üretimi için)
+
+Not: Supabase depolamayı minimumda tutmak için pratik ayar `GALLERY_STORAGE_MODE=drive` ve `GOOGLE_DRIVE_MAKE_PUBLIC=true` kullanmaktır. Bu modda dosya Drive URL'iyle paylaşılır ve Supabase'teki geçici kopya finalize sonrası temizlenir.
 
 ## 3. Local Çalıştırma
 

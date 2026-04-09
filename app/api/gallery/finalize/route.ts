@@ -7,9 +7,12 @@ import {
   MAX_GALLERY_UPLOAD_BYTES,
   getErrorMessage,
   isValidGalleryObjectPath,
+  resolveGalleryStorageMode,
   resolveGalleryMediaType,
   sanitizeCaption,
   sanitizeUploaderName,
+  shouldRemoveSupabaseCopyAfterDriveSync,
+  shouldRequireDriveSync,
   type GalleryBackupStatus
 } from "@/lib/gallery";
 
@@ -38,6 +41,11 @@ type GalleryItem = {
   drive_error: string | null;
   created_at: string;
 };
+
+function isStorageObjectMissing(message: string) {
+  const normalized = message.trim().toLowerCase();
+  return normalized.includes("not found") || normalized.includes("does not exist");
+}
 
 export async function POST(request: NextRequest) {
   let payload: FinalizePayload = {};
@@ -79,6 +87,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = createSupabaseAdminClient();
+    const cleanupUploadedObject = async () => {
+      const { error: removeError } = await supabase.storage.from(GALLERY_BUCKET_NAME).remove([path]);
+      if (removeError && !isStorageObjectMissing(removeError.message)) {
+        console.warn("Gecici galeri dosyasi temizlenemedi", {
+          path,
+          error: removeError.message
+        });
+      }
+    };
+
     const { data: objectData, error: downloadError } = await supabase.storage
       .from(GALLERY_BUCKET_NAME)
       .download(path);
@@ -107,7 +125,47 @@ export async function POST(request: NextRequest) {
     const driveStatus: GalleryBackupStatus = driveBackup.status;
     const driveFileId = driveBackup.status === "synced" ? driveBackup.fileId : null;
     const driveError = driveBackup.status === "synced" ? null : driveBackup.error;
-    const publicUrl = supabase.storage.from(GALLERY_BUCKET_NAME).getPublicUrl(path).data.publicUrl;
+    const storageMode = resolveGalleryStorageMode();
+    const requireDriveSync = shouldRequireDriveSync();
+    const removeSupabaseCopy = shouldRemoveSupabaseCopyAfterDriveSync();
+    const driveIsSynced = driveBackup.status === "synced";
+    const drivePublicUrl = driveIsSynced ? driveBackup.publicUrl : null;
+
+    if (requireDriveSync && !driveIsSynced) {
+      await cleanupUploadedObject();
+      return NextResponse.json(
+        {
+          error:
+            driveBackup.error ||
+            "Drive senkronu zorunlu ama dosya Google Drive'a aktarilamadi. Ayarlari kontrol edin."
+        },
+        { status: 500 }
+      );
+    }
+
+    if (removeSupabaseCopy && driveIsSynced && !drivePublicUrl) {
+      await cleanupUploadedObject();
+      return NextResponse.json(
+        {
+          error:
+            "Drive depolama aktif ama public URL uretilemedi. GOOGLE_DRIVE_MAKE_PUBLIC=true ayarlayin."
+        },
+        { status: 500 }
+      );
+    }
+
+    const supabasePublicUrl = supabase.storage.from(GALLERY_BUCKET_NAME).getPublicUrl(path).data.publicUrl;
+    let publicUrl = drivePublicUrl ?? supabasePublicUrl;
+
+    if (removeSupabaseCopy && driveIsSynced && drivePublicUrl) {
+      const { error: removeStorageError } = await supabase.storage.from(GALLERY_BUCKET_NAME).remove([path]);
+      if (removeStorageError && !isStorageObjectMissing(removeStorageError.message)) {
+        throw new Error(`Supabase gecici dosyasi silinemedi: ${removeStorageError.message}`);
+      }
+      publicUrl = drivePublicUrl;
+    } else if (storageMode === "drive" && drivePublicUrl) {
+      publicUrl = drivePublicUrl;
+    }
 
     const { data: item, error: upsertError } = await supabase
       .from("event_gallery_items")
@@ -142,7 +200,12 @@ export async function POST(request: NextRequest) {
       item: item as GalleryItem,
       backup: {
         status: driveBackup.status,
-        message: driveBackup.status === "synced" ? "Google Drive yedeği tamamlandı." : driveBackup.error
+        message:
+          driveBackup.status === "synced"
+            ? removeSupabaseCopy && driveBackup.publicUrl
+              ? "Google Drive yedeği tamamlandı. Supabase kopyası temizlendi."
+              : "Google Drive yedeği tamamlandı."
+            : driveBackup.error
       }
     });
   } catch (error) {

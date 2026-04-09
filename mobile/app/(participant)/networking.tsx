@@ -75,11 +75,10 @@ export default function ParticipantNetworkingScreen() {
   const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
-  const [selectedUploadAsset, setSelectedUploadAsset] = useState<ImagePicker.ImagePickerAsset | null>(
-    null
-  );
+  const [selectedUploadAssets, setSelectedUploadAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [uploadMessage, setUploadMessage] = useState("");
   const [activeCommentItemId, setActiveCommentItemId] = useState<string | null>(null);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
 
@@ -176,9 +175,13 @@ export default function ParticipantNetworkingScreen() {
   });
 
   const galleryUploadMutation = useMutation({
+    onMutate: () => {
+      setUploadError("");
+      setUploadMessage("");
+    },
     mutationFn: async () => {
-      if (!selectedUploadAsset) {
-        throw new Error("Önce bir fotoğraf seç.");
+      if (selectedUploadAssets.length === 0) {
+        throw new Error("Önce en az bir fotoğraf seç.");
       }
 
       const uploaderName = me?.attendee?.name;
@@ -186,16 +189,45 @@ export default function ParticipantNetworkingScreen() {
         throw new Error("Profil bilgisi eksik.");
       }
 
-      return createNetworkingGalleryPost({
-        asset: selectedUploadAsset,
-        caption: uploadCaption.trim(),
-        uploaderName
-      });
+      let uploadedCount = 0;
+      const failedFiles: string[] = [];
+
+      for (const asset of selectedUploadAssets) {
+        try {
+          await createNetworkingGalleryPost({
+            asset,
+            caption: uploadCaption.trim(),
+            uploaderName
+          });
+          uploadedCount += 1;
+        } catch (error) {
+          const fileName = asset.fileName?.trim() || "isimsiz-dosya";
+          const detail = error instanceof Error ? error.message : "Bilinmeyen hata";
+          failedFiles.push(`${fileName}: ${detail}`);
+        }
+      }
+
+      if (uploadedCount === 0) {
+        throw new Error(failedFiles[0] ?? "Fotoğraflar paylaşılamadı.");
+      }
+
+      return {
+        uploadedCount,
+        failedFiles
+      };
     },
-    onSuccess: async () => {
-      setSelectedUploadAsset(null);
+    onSuccess: async (result) => {
+      setSelectedUploadAssets([]);
       setUploadCaption("");
-      setUploadError("");
+      if (result.failedFiles.length > 0) {
+        setUploadError(
+          `${result.uploadedCount} fotoğraf paylaşıldı, ${result.failedFiles.length} dosya yüklenemedi.`
+        );
+        setUploadMessage("");
+      } else {
+        setUploadError("");
+        setUploadMessage(`${result.uploadedCount} fotoğraf başarıyla paylaşıldı.`);
+      }
       await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
     }
   });
@@ -256,11 +288,14 @@ export default function ParticipantNetworkingScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setUploadError("Galeriye erişim izni gerekiyor.");
+      setUploadMessage("");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images",
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
       allowsEditing: false,
       quality: 0.9
     });
@@ -269,22 +304,45 @@ export default function ParticipantNetworkingScreen() {
       return;
     }
 
-    const selectedAsset = result.assets[0];
-    if (!selectedAsset) {
-      return;
-    }
+    const validAssets = result.assets.filter((asset) => {
+      if (typeof asset.mimeType !== "string" || asset.mimeType.length === 0) {
+        return true;
+      }
 
-    if (
-      typeof selectedAsset.mimeType === "string" &&
-      selectedAsset.mimeType.length > 0 &&
-      !selectedAsset.mimeType.startsWith("image/")
-    ) {
+      return asset.mimeType.startsWith("image/");
+    });
+
+    if (validAssets.length === 0) {
       setUploadError("Bu sürümde sadece fotoğraf paylaşılabilir.");
+      setUploadMessage("");
       return;
     }
 
-    setSelectedUploadAsset(selectedAsset);
+    const mergedAssets = [...selectedUploadAssets];
+    const seenUris = new Set(mergedAssets.map((asset) => asset.uri));
+
+    for (const asset of validAssets) {
+      if (mergedAssets.length >= 10) {
+        break;
+      }
+
+      if (seenUris.has(asset.uri)) {
+        continue;
+      }
+
+      mergedAssets.push(asset);
+      seenUris.add(asset.uri);
+    }
+
+    const skippedCount = validAssets.length - (mergedAssets.length - selectedUploadAssets.length);
+
+    setSelectedUploadAssets(mergedAssets);
     setUploadError("");
+    setUploadMessage(
+      skippedCount > 0
+        ? `${mergedAssets.length} fotoğraf seçildi. En fazla 10 dosya yüklenebilir.`
+        : `${mergedAssets.length} fotoğraf seçildi.`
+    );
   };
 
   const openCommentSheet = (itemId: string) => {
@@ -589,8 +647,24 @@ export default function ParticipantNetworkingScreen() {
               Bu sürümde yalnızca fotoğraf paylaşımı açık. Video paylaşımı yakında eklenecek.
             </Text>
 
-            {selectedUploadAsset ? (
-              <Image source={{ uri: selectedUploadAsset.uri }} resizeMode="cover" style={styles.uploadPreview} />
+            {selectedUploadAssets.length > 0 ? (
+              <View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.uploadPreviewStrip}
+                >
+                  {selectedUploadAssets.map((asset, index) => (
+                    <Image
+                      key={`${asset.uri}-${index}`}
+                      source={{ uri: asset.uri }}
+                      resizeMode="cover"
+                      style={styles.uploadPreviewThumb}
+                    />
+                  ))}
+                </ScrollView>
+                <Text style={styles.uploadCountText}>{selectedUploadAssets.length} fotoğraf seçildi</Text>
+              </View>
             ) : (
               <View style={styles.uploadPlaceholder}>
                 <Text style={styles.uploadPlaceholderText}>Henüz fotoğraf seçilmedi.</Text>
@@ -604,8 +678,20 @@ export default function ParticipantNetworkingScreen() {
                   void pickPhotoForUpload();
                 }}
               >
-                <Text style={styles.uploadPickButtonText}>Fotoğraf Seç</Text>
+                <Text style={styles.uploadPickButtonText}>Fotoğrafları Seç</Text>
               </Pressable>
+              {selectedUploadAssets.length > 0 ? (
+                <Pressable
+                  style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    setSelectedUploadAssets([]);
+                    setUploadMessage("Seçim temizlendi.");
+                    setUploadError("");
+                  }}
+                >
+                  <Text style={styles.uploadClearButtonText}>Seçimi Temizle</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             <TextInput
@@ -617,6 +703,7 @@ export default function ParticipantNetworkingScreen() {
             />
 
             {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
+            {uploadMessage ? <Text style={styles.uploadSuccessText}>{uploadMessage}</Text> : null}
             {galleryUploadMutation.error ? (
               <Text style={styles.errorText}>
                 {galleryUploadMutation.error instanceof Error
@@ -626,11 +713,11 @@ export default function ParticipantNetworkingScreen() {
             ) : null}
 
             <Pressable
-              disabled={!selectedUploadAsset || galleryUploadMutation.isPending}
+              disabled={selectedUploadAssets.length === 0 || galleryUploadMutation.isPending}
               style={({ pressed }) => [
                 styles.uploadShareButton,
                 pressed ? styles.pressed : null,
-                !selectedUploadAsset || galleryUploadMutation.isPending ? styles.disabled : null
+                selectedUploadAssets.length === 0 || galleryUploadMutation.isPending ? styles.disabled : null
               ]}
               onPress={() => {
                 galleryUploadMutation.mutate();
@@ -639,7 +726,9 @@ export default function ParticipantNetworkingScreen() {
               {galleryUploadMutation.isPending ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.uploadShareButtonText}>Paylaş</Text>
+                <Text style={styles.uploadShareButtonText}>
+                  Paylaş ({selectedUploadAssets.length})
+                </Text>
               )}
             </Pressable>
           </View>
@@ -964,12 +1053,21 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: colors.accent
   },
-  uploadPreview: {
+  uploadPreviewStrip: {
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  uploadPreviewThumb: {
     backgroundColor: colors.backgroundDeep,
     borderRadius: radii.md,
-    height: 180,
-    marginTop: spacing.sm,
-    width: "100%"
+    height: 116,
+    width: 116
+  },
+  uploadCountText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: spacing.xs
   },
   uploadPlaceholder: {
     alignItems: "center",
@@ -987,7 +1085,9 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   uploadButtonRow: {
+    alignItems: "center",
     flexDirection: "row",
+    gap: spacing.xs,
     marginTop: spacing.sm
   },
   uploadPickButton: {
@@ -1005,6 +1105,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700"
   },
+  uploadClearButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8
+  },
+  uploadClearButtonText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700"
+  },
   uploadShareButton: {
     alignItems: "center",
     backgroundColor: colors.accent,
@@ -1018,6 +1133,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     fontWeight: "800"
+  },
+  uploadSuccessText: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginBottom: spacing.xs
   },
   metricRow: {
     flexDirection: "row",

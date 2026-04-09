@@ -1,4 +1,5 @@
 import type { ImagePickerAsset } from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { apiRequest } from "./api";
 import type {
   AttendeeClassLevel,
@@ -13,7 +14,6 @@ import type {
   StaffCapability,
   StaffOverview
 } from "./mobile-contracts";
-import { supabase } from "../../utils/supabase";
 
 type OnboardingPayload = {
   name: string;
@@ -288,14 +288,17 @@ export async function createNetworkingGalleryPost(input: {
   uploaderName: string;
 }) {
   const fileName = inferFileNameFromAsset(input.asset);
-  const fileResponse = await fetch(input.asset.uri);
-  if (!fileResponse.ok) {
-    throw new Error("Seçilen fotoğraf okunamadı.");
+  const mimeType = inferImageMimeType(fileName, input.asset.mimeType ?? null);
+  let fileSize = Number(input.asset.fileSize ?? 0);
+
+  if (!Number.isFinite(fileSize) || fileSize <= 0) {
+    const fileInfo = await FileSystem.getInfoAsync(input.asset.uri);
+    if (!fileInfo.exists || typeof fileInfo.size !== "number") {
+      throw new Error("Seçilen fotoğraf dosyası okunamadı.");
+    }
+    fileSize = Number(fileInfo.size);
   }
 
-  const fileBlob = await fileResponse.blob();
-  const fileSize = Number(fileBlob.size ?? 0);
-  const mimeType = inferImageMimeType(fileName, input.asset.mimeType ?? fileBlob.type);
   if (!mimeType.startsWith("image/")) {
     throw new Error("Bu sürümde sadece fotoğraf yükleyebilirsin.");
   }
@@ -323,12 +326,17 @@ export async function createNetworkingGalleryPost(input: {
     throw new Error("Bu sürümde sadece fotoğraf yükleme açık.");
   }
 
-  const uploadResult = await supabase.storage
-    .from("event-gallery")
-    .uploadToSignedUrl(session.upload.path, session.upload.token, fileBlob);
+  const uploadResult = await FileSystem.uploadAsync(session.upload.signedUrl, input.asset.uri, {
+    httpMethod: "PUT",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      "content-type": session.normalized.mimeType
+    }
+  });
 
-  if (uploadResult.error) {
-    throw new Error(`Fotoğraf yüklenemedi: ${uploadResult.error.message}`);
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
+    const detail = uploadResult.body?.trim().slice(0, 220);
+    throw new Error(`Fotoğraf yüklenemedi: ${detail || `HTTP ${uploadResult.status}`}`);
   }
 
   return apiRequest<GalleryFinalizeResponse>(

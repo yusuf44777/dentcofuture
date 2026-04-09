@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isModeratorRequestAuthorized } from "@/lib/auth/moderator-request";
+import { deleteFileFromGoogleDrive } from "@/lib/google-drive-backup";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { GALLERY_BUCKET_NAME, getErrorMessage } from "@/lib/gallery";
 
@@ -38,7 +39,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const supabase = createSupabaseAdminClient();
     const { data: item, error: itemError } = await supabase
       .from("event_gallery_items")
-      .select("id, file_path")
+      .select("id, file_path, drive_file_id")
       .eq("id", itemId)
       .maybeSingle();
 
@@ -55,6 +56,17 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .remove([item.file_path]);
     if (removeStorageError && !removeStorageError.message.toLowerCase().includes("not found")) {
       throw new Error(`Medya dosyası silinemedi: ${removeStorageError.message}`);
+    }
+
+    if (typeof item.drive_file_id === "string" && item.drive_file_id.trim().length > 0) {
+      const driveDeleteResult = await deleteFileFromGoogleDrive(item.drive_file_id);
+      if (driveDeleteResult.status === "failed") {
+        console.warn("Google Drive dosyası silinemedi", {
+          itemId,
+          driveFileId: item.drive_file_id,
+          error: driveDeleteResult.error
+        });
+      }
     }
 
     const { error: deleteError } = await supabase.from("event_gallery_items").delete().eq("id", itemId);

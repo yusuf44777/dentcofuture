@@ -10,6 +10,7 @@ type GoogleDriveConfig = {
   clientEmail: string;
   privateKey: string;
   folderId: string;
+  makePublic: boolean;
 };
 
 type GoogleTokenCache = {
@@ -29,6 +30,20 @@ export type GoogleDriveBackupResult =
       status: "synced";
       fileId: string;
       link: string | null;
+      publicUrl: string | null;
+    }
+  | {
+      status: "failed";
+      error: string;
+    };
+
+export type GoogleDriveDeleteResult =
+  | {
+      status: "disabled";
+      error: string;
+    }
+  | {
+      status: "deleted";
     }
   | {
       status: "failed";
@@ -55,15 +70,75 @@ export async function backupBytesToGoogleDrive(input: BackupInput): Promise<Goog
     const accessToken = await getAccessToken(config);
     const uploadResponse = await uploadToGoogleDrive(accessToken, config, input);
 
+    let publicUrl: string | null = null;
+    if (config.makePublic) {
+      await ensurePublicReadPermission(accessToken, uploadResponse.id);
+      publicUrl = buildDrivePublicUrl(uploadResponse.id);
+    }
+
     return {
       status: "synced",
       fileId: uploadResponse.id,
-      link: uploadResponse.webViewLink ?? null
+      link: uploadResponse.webViewLink ?? null,
+      publicUrl
     };
   } catch (error) {
     return {
       status: "failed",
       error: normalizeErrorMessage(error, "Google Drive yedeklemesi başarısız oldu.")
+    };
+  }
+}
+
+export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleDriveDeleteResult> {
+  const trimmedFileId = fileId.trim();
+  if (!trimmedFileId) {
+    return {
+      status: "deleted"
+    };
+  }
+
+  const config = getGoogleDriveConfig();
+  if (!config) {
+    return {
+      status: "disabled",
+      error:
+        "Google Drive silme pasif. GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL ve GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY tanımlı değil."
+    };
+  }
+
+  try {
+    const accessToken = await getAccessToken(config);
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(trimmedFileId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!response.ok && response.status !== 404) {
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            error?: {
+              message?: string;
+            };
+          }
+        | null;
+      const errorMessage =
+        payload?.error?.message?.trim() || `HTTP ${response.status} ile silme başarısız oldu.`;
+      throw new Error(`Google Drive silme hatası: ${errorMessage}`);
+    }
+
+    return {
+      status: "deleted"
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      error: normalizeErrorMessage(error, "Google Drive dosyası silinemedi.")
     };
   }
 }
@@ -77,6 +152,7 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
     stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
     DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
   const privateKey = normalizePrivateKey(privateKeyRaw);
+  const makePublic = readBooleanEnv("GOOGLE_DRIVE_MAKE_PUBLIC", true);
 
   if (!clientEmail || !privateKey) {
     return null;
@@ -85,7 +161,8 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
   return {
     clientEmail,
     privateKey,
-    folderId
+    folderId,
+    makePublic
   };
 }
 
@@ -221,6 +298,63 @@ async function uploadToGoogleDrive(
     id: payload.id,
     webViewLink: payload.webViewLink
   };
+}
+
+async function ensurePublicReadPermission(accessToken: string, fileId: string) {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?fields=id`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        type: "anyone",
+        role: "reader"
+      })
+    }
+  );
+
+  if (response.ok) {
+    return;
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        error?: {
+          message?: string;
+        };
+      }
+    | null;
+  const message = payload?.error?.message?.trim() || `HTTP ${response.status}`;
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("already") && normalized.includes("permission")) {
+    return;
+  }
+
+  throw new Error(`Google Drive izin hatası: ${message}`);
+}
+
+function buildDrivePublicUrl(fileId: string) {
+  return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+}
+
+function readBooleanEnv(name: string, defaultValue: boolean) {
+  const rawValue = process.env[name];
+  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+    return defaultValue;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return defaultValue;
 }
 
 function base64UrlEncodeJson(value: Record<string, unknown>) {
