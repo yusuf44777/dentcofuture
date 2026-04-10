@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images } from "lucide-react";
+import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,35 +13,50 @@ const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
 
-const SPEAKERS = [
+type SpeakerBadge = "Innovator" | "Artist" | "Entrepreneur" | "AI Pioneer";
+
+type SpeakerItem = {
+  name: string;
+  title: string;
+  badge: SpeakerBadge;
+  bio: string;
+  imageSrc?: string;
+  posterHref?: string;
+  posterButtonLabel?: string;
+};
+
+const SPEAKERS: SpeakerItem[] = [
   {
     name: "Slot #1",
     title: "Sürpriz İsim",
-    badge: "AI Pioneer" as const,
+    badge: "AI Pioneer",
     bio: "Sahneye çıkacak ilk sürpriz isim etkinlik günü açıklanacak."
   },
   {
-    name: "Slot #2",
-    title: "Sürpriz İsim",
-    badge: "Innovator" as const,
-    bio: "Bu oturumdaki konuşmacı etkinlikten kısa süre önce duyurulacak."
+    name: "Doç. Dr. Gaye Keser",
+    title: "Doç. Dr. Gaye Keser",
+    badge: "AI Pioneer",
+    bio: "Marmara Üniversitesi Diş Hekimliği Fakültesi Ağız, Diş ve Çene Radyolojisi Anabilim Dalı'nda değerli çalışmalar yürüten hocamız; özellikle yapay zekâ, derin öğrenme uygulamaları ve oral kanserler üzerine yaptığı çığır açan araştırmalarla tanınıyor.",
+    imageSrc: "/gaye_keser.png",
+    posterHref: "/gaye_keser_afis.png",
+    posterButtonLabel: "Afişi Aç"
   },
   {
     name: "Slot #3",
     title: "Sürpriz İsim",
-    badge: "Artist" as const,
+    badge: "Artist",
     bio: "Üçüncü sürpriz konuşmacı için geri sayım başladı."
   },
   {
     name: "Slot #4",
     title: "Sürpriz İsim",
-    badge: "Entrepreneur" as const,
+    badge: "Entrepreneur",
     bio: "Dördüncü konuşmacı slotu sürpriz isim için ayrıldı."
   },
   {
     name: "Slot #5",
     title: "Sürpriz İsim",
-    badge: "Innovator" as const,
+    badge: "Innovator",
     bio: "Final konuşmacısı etkinlik günü sahnede açıklanacak."
   }
 ];
@@ -57,7 +73,7 @@ const SCHEDULE: ScheduleItem[] = [
   { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
   { time: "11:30-12:00", title: "Sürpriz Konuşmacı #1 (Yakında Açıklanacak)", type: "talk" },
   { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
-  { time: "12:30-13:00", title: "Sürpriz Konuşmacı #2 (Yakında Açıklanacak)", type: "talk" },
+  { time: "12:30-13:00", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk", speaker: "Doç. Dr. Gaye Keser" },
   { time: "13:00-13:30", title: "Sürpriz Konuşmacı #3 (Yakında Açıklanacak)", type: "talk" },
   { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
   { time: "14:20-14:50", title: "Sürpriz Konuşmacı #4 (Yakında Açıklanacak)", type: "talk" },
@@ -65,7 +81,7 @@ const SCHEDULE: ScheduleItem[] = [
   { time: "15:20-15:40", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];
 
-const BADGE_MAP: Record<string, {
+const BADGE_MAP: Record<SpeakerBadge, {
   label: string;
   iconClass: string;
   variant: "innovator" | "artist" | "entrepreneur" | "ai-pioneer";
@@ -287,11 +303,33 @@ export default function LandingPage() {
               {SPEAKERS.map((speaker) => (
                 <div key={speaker.name} className="w-full shrink-0 px-1">
                   <div className="card-surface-hover min-h-[280px] p-6 text-center sm:p-8">
-                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[rgba(108,99,255,0.15)] border-2 border-[rgba(108,99,255,0.3)] text-3xl">
-                      <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
-                    </div>
+                    {speaker.imageSrc ? (
+                      <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-2 border-[rgba(108,99,255,0.4)]">
+                        <Image
+                          src={speaker.imageSrc}
+                          alt={speaker.title}
+                          width={96}
+                          height={96}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[rgba(108,99,255,0.3)] bg-[rgba(108,99,255,0.15)] text-3xl">
+                        <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
+                      </div>
+                    )}
                     <h3 className="font-heading text-2xl font-bold">{speaker.title}</h3>
                     <p className="mt-3 text-sm leading-relaxed text-[rgba(240,240,255,0.45)]">{speaker.bio}</p>
+                    {speaker.posterHref ? (
+                      <a
+                        href={speaker.posterHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-5 inline-flex items-center justify-center rounded-full border border-[rgba(108,99,255,0.45)] bg-[rgba(108,99,255,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:border-[#6C63FF] hover:bg-[rgba(108,99,255,0.3)]"
+                      >
+                        {speaker.posterButtonLabel ?? "Afişi Gör"}
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ))}
