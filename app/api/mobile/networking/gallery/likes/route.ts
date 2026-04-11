@@ -26,48 +26,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Geçersiz galeri kimliği." }, { status: 400 });
   }
 
-  const itemResult = await resolved.session.supabase
-    .from("event_gallery_items")
-    .select("id")
-    .eq("id", itemId)
-    .maybeSingle();
-  if (itemResult.error) {
-    return NextResponse.json(
-      { error: `Galeri kaydı doğrulanamadı: ${itemResult.error.message}` },
-      { status: 500 }
-    );
-  }
-  if (!itemResult.data) {
-    return NextResponse.json({ error: "Galeri kaydı bulunamadı." }, { status: 404 });
-  }
-
-  const existingLikeResult = await resolved.session.supabase
+  const removeResult = await resolved.session.supabase
     .from("networking_gallery_likes")
-    .select("id")
+    .delete()
     .eq("gallery_item_id", itemId)
     .eq("attendee_id", attendeeId)
-    .maybeSingle();
+    .select("id");
 
-  if (existingLikeResult.error) {
+  if (removeResult.error) {
     return NextResponse.json(
-      { error: `Beğeni durumu kontrol edilemedi: ${existingLikeResult.error.message}` },
+      { error: `Beğeni kaldırılamadı: ${removeResult.error.message}` },
       { status: 500 }
     );
   }
 
   let liked = false;
-
-  if (existingLikeResult.data?.id) {
-    const removeResult = await resolved.session.supabase
-      .from("networking_gallery_likes")
-      .delete()
-      .eq("id", existingLikeResult.data.id);
-    if (removeResult.error) {
-      return NextResponse.json(
-        { error: `Beğeni kaldırılamadı: ${removeResult.error.message}` },
-        { status: 500 }
-      );
-    }
+  if ((removeResult.data ?? []).length > 0) {
     liked = false;
   } else {
     const insertResult = await resolved.session.supabase
@@ -78,6 +52,9 @@ export async function POST(request: NextRequest) {
       });
 
     if (insertResult.error) {
+      if (insertResult.error.code === "23503") {
+        return NextResponse.json({ error: "Galeri kaydı bulunamadı." }, { status: 404 });
+      }
       return NextResponse.json(
         { error: `Beğeni eklenemedi: ${insertResult.error.message}` },
         { status: 500 }

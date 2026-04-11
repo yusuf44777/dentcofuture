@@ -4,6 +4,7 @@ import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Maximize2, Minimize2, Send, Swords, Trophy } from "lucide-react-native";
 import { WebView } from "react-native-webview";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchGameScores, submitGameScore } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
@@ -18,6 +19,17 @@ export default function ParticipantGameScreen() {
   const [waveInput, setWaveInput] = useState("1");
   const [webViewLoading, setWebViewLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  async function openFullscreen() {
+    setIsFullscreen(true);
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+  }
+
+  async function closeFullscreen() {
+    StatusBar.setHidden(false);
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    setIsFullscreen(false);
+  }
 
   const scoresQuery = useQuery({
     queryKey: ["mobile-game-scores"],
@@ -58,7 +70,7 @@ export default function ParticipantGameScreen() {
         visible={isFullscreen}
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setIsFullscreen(false)}
+        onRequestClose={() => { void closeFullscreen(); }}
       >
         <StatusBar hidden />
         <View style={styles.fullscreenContainer}>
@@ -72,10 +84,7 @@ export default function ParticipantGameScreen() {
           />
           <Pressable
             style={({ pressed }) => [styles.exitFullscreenBtn, pressed ? styles.pressed : null]}
-            onPress={() => {
-              StatusBar.setHidden(false);
-              setIsFullscreen(false);
-            }}
+            onPress={() => { void closeFullscreen(); }}
           >
             <Minimize2 color="#FFFFFF" size={18} />
           </Pressable>
@@ -86,7 +95,7 @@ export default function ParticipantGameScreen() {
       <View style={styles.webViewCard}>
         <Pressable
           style={({ pressed }) => [styles.fullscreenBtn, pressed ? styles.pressed : null]}
-          onPress={() => setIsFullscreen(true)}
+          onPress={() => { void openFullscreen(); }}
         >
           <Maximize2 color={colors.copper} size={16} />
           <Text style={styles.fullscreenBtnText}>Tam Ekran</Text>

@@ -3,11 +3,7 @@ import { createNetworkingInteraction, isValidNetworkingInteractionAction } from 
 import { resolveMobileSession, type MobileSession } from "@/lib/mobile/auth";
 import { isValidUuid, readJsonBody } from "@/lib/mobile/http";
 import { mapPublicNetworkingProfileToMobile } from "@/lib/mobile/mappers";
-import {
-  ensureNetworkingProfileForSession,
-  getNetworkingProfilesByIds,
-  upsertAcceptedMatchFromProfileIds
-} from "@/lib/mobile/networking";
+import { ensureNetworkingProfileForSession } from "@/lib/mobile/networking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,21 +22,12 @@ async function awardMatchPoints(
     return;
   }
 
-  const { data: attendees, error } = await session.supabase
-    .from("attendees")
-    .select("id, points")
-    .in("id", uniqueIds);
-
-  if (error) {
-    return;
-  }
-
   await Promise.all(
-    (attendees ?? []).map((attendee) =>
-      session.supabase
-        .from("attendees")
-        .update({ points: (attendee.points ?? 0) + 25 })
-        .eq("id", attendee.id)
+    uniqueIds.map((attendeeId) =>
+      session.supabase.rpc("increment_points", {
+        p_id: attendeeId,
+        p_pts: 25
+      })
     )
   );
 }
@@ -78,27 +65,12 @@ export async function POST(request: NextRequest) {
     action
   });
 
-  let matchRecord: {
-    id: string;
-    attendee_a: string;
-    attendee_b: string;
-    status: string;
-    created_at: string;
-  } | null = null;
-
   if (interaction.matched) {
-    matchRecord = await upsertAcceptedMatchFromProfileIds(
-      resolved.session,
-      actorProfile.id,
-      targetProfileId
-    );
-
-    if (matchRecord) {
-      await awardMatchPoints(resolved.session, [matchRecord.attendee_a, matchRecord.attendee_b]);
-    }
+    await awardMatchPoints(resolved.session, [
+      actorProfile.attendee_id ?? resolved.session.attendee.id,
+      interaction.match?.profile.attendee_id ?? ""
+    ]);
   }
-
-  const linkedProfiles = await getNetworkingProfilesByIds(resolved.session, [targetProfileId]);
 
   return NextResponse.json({
     ok: true,
@@ -111,10 +83,9 @@ export async function POST(request: NextRequest) {
           ...interaction.match,
           profile: mapPublicNetworkingProfileToMobile(
             interaction.match.profile,
-            linkedProfiles.get(interaction.match.profile.id)?.attendee_id ?? null
+            interaction.match.profile.attendee_id ?? null
           )
         }
-      : null,
-    acceptedMatch: matchRecord
+      : null
   });
 }

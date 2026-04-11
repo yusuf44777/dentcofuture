@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Brain, Flame, Hand, Lightbulb, CircleHelp, Send } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchLiveState, sendLiveReaction, submitLiveQuestion, voteLivePoll } from "../../src/lib/mobile-api";
+import type { MobileLiveState } from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
@@ -43,6 +44,36 @@ function ReactionIcon({
   }
 }
 
+function patchPollVoteInCache(
+  state: MobileLiveState | undefined,
+  pollId: string,
+  optionIndex: number
+) {
+  if (!state?.activePoll || state.activePoll.id !== pollId) {
+    return state;
+  }
+
+  const key = String(optionIndex);
+  const nextPollTotals = { ...(state.pollTotals ?? {}) };
+  nextPollTotals[key] = (Number(nextPollTotals[key]) || 0) + 1;
+
+  const nextResults = {
+    ...(state.activePoll.results && typeof state.activePoll.results === "object"
+      ? state.activePoll.results
+      : {})
+  } as Record<string, number>;
+  nextResults[key] = (Number(nextResults[key]) || 0) + 1;
+
+  return {
+    ...state,
+    activePoll: {
+      ...state.activePoll,
+      results: nextResults
+    },
+    pollTotals: nextPollTotals
+  };
+}
+
 export default function ParticipantLiveScreen() {
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
@@ -67,9 +98,60 @@ export default function ParticipantLiveScreen() {
   const voteMutation = useMutation({
     mutationFn: ({ pollId, optionIndex }: { pollId: string; optionIndex: number }) =>
       voteLivePoll(pollId, optionIndex),
-    onSuccess: async (_, variables) => {
-      setVotedPollId(variables.pollId);
-      await queryClient.invalidateQueries({ queryKey: ["mobile-live-state"] });
+    onMutate: async ({ pollId, optionIndex }) => {
+      await queryClient.cancelQueries({ queryKey: ["mobile-live-state"] });
+
+      const previousState = queryClient.getQueryData<MobileLiveState>(["mobile-live-state"]);
+      const previousVotedPollId = votedPollId;
+
+      setVotedPollId(pollId);
+      queryClient.setQueryData<MobileLiveState>(
+        ["mobile-live-state"],
+        (current) => patchPollVoteInCache(current, pollId, optionIndex)
+      );
+
+      return {
+        previousState,
+        previousVotedPollId
+      };
+    },
+    onSuccess: (result, variables, context) => {
+      if (result.alreadyVoted) {
+        if (context?.previousState) {
+          queryClient.setQueryData(["mobile-live-state"], context.previousState);
+        }
+        setVotedPollId(variables.pollId);
+        return;
+      }
+
+      const serverResults = result.results;
+      if (serverResults) {
+        queryClient.setQueryData<MobileLiveState>(["mobile-live-state"], (current) => {
+          if (!current?.activePoll || current.activePoll.id !== variables.pollId) {
+            return current;
+          }
+
+          const nextPollTotals = Object.entries(serverResults).reduce((acc, [key, value]) => {
+            acc[key] = Number(value) || 0;
+            return acc;
+          }, {} as Record<string, number>);
+
+          return {
+            ...current,
+            activePoll: {
+              ...current.activePoll,
+              results: serverResults
+            },
+            pollTotals: nextPollTotals
+          };
+        });
+      }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(["mobile-live-state"], context.previousState);
+      }
+      setVotedPollId(context?.previousVotedPollId ?? null);
     }
   });
 

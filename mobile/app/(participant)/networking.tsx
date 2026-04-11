@@ -39,7 +39,7 @@ import {
   sendNetworkingInteraction,
   toggleNetworkingGalleryLike
 } from "../../src/lib/mobile-api";
-import type { AttendeeRole } from "../../src/lib/mobile-contracts";
+import type { AttendeeRole, MobileNetworkingGalleryFeed } from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
@@ -65,6 +65,23 @@ function formatGalleryDate(value: string) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function patchGalleryLikeInCache(
+  feed: MobileNetworkingGalleryFeed | undefined,
+  itemId: string,
+  mutate: (
+    post: MobileNetworkingGalleryFeed["posts"][number]
+  ) => MobileNetworkingGalleryFeed["posts"][number]
+) {
+  if (!feed) {
+    return feed;
+  }
+
+  return {
+    ...feed,
+    posts: feed.posts.map((post) => (post.id === itemId ? mutate(post) : post))
+  };
 }
 
 export default function ParticipantNetworkingScreen() {
@@ -139,24 +156,73 @@ export default function ParticipantNetworkingScreen() {
       targetProfileId: string;
       action: "like" | "pass";
     }) => sendNetworkingInteraction(targetProfileId, action),
-    onSuccess: async (result) => {
+    onMutate: () => {
+      // Card swipe should feel instant; we optimistically advance while request is in-flight.
       setActiveIndex((current) => current + 1);
+      return { advanced: true };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.advanced) {
+        setActiveIndex((current) => Math.max(current - 1, 0));
+      }
+    },
+    onSuccess: async (result) => {
       if (result.match?.profile.attendeeId) {
         setSelectedAttendeeId(result.match.profile.attendeeId);
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] }),
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-matches"] }),
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-threads"] })
-      ]);
+      if (result.matched) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["mobile-networking-matches"] }),
+          queryClient.invalidateQueries({ queryKey: ["mobile-networking-threads"] })
+        ]);
+      }
     }
   });
 
   const galleryLikeMutation = useMutation({
     mutationFn: ({ itemId }: { itemId: string }) => toggleNetworkingGalleryLike(itemId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
+    onMutate: async ({ itemId }) => {
+      await queryClient.cancelQueries({ queryKey: ["mobile-networking-gallery-feed"] });
+      const previousFeed = queryClient.getQueryData<MobileNetworkingGalleryFeed>([
+        "mobile-networking-gallery-feed"
+      ]);
+
+      queryClient.setQueryData<MobileNetworkingGalleryFeed>(
+        ["mobile-networking-gallery-feed"],
+        (current) =>
+          patchGalleryLikeInCache(current, itemId, (post) => {
+            const nextLikedByMe = !post.likedByMe;
+            const nextLikesCount = Math.max(
+              0,
+              post.likesCount + (nextLikedByMe ? 1 : -1)
+            );
+
+            return {
+              ...post,
+              likedByMe: nextLikedByMe,
+              likesCount: nextLikesCount
+            };
+          })
+      );
+
+      return { previousFeed };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousFeed) {
+        queryClient.setQueryData(["mobile-networking-gallery-feed"], context.previousFeed);
+      }
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData<MobileNetworkingGalleryFeed>(
+        ["mobile-networking-gallery-feed"],
+        (current) =>
+          patchGalleryLikeInCache(current, result.itemId, (post) => ({
+            ...post,
+            likedByMe: result.liked,
+            likesCount: result.likesCount
+          }))
+      );
     }
   });
 
