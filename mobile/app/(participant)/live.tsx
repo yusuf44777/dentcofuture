@@ -74,6 +74,25 @@ function patchPollVoteInCache(
   };
 }
 
+function patchReactionInCache(
+  state: MobileLiveState | undefined,
+  emoji: "🔥" | "💡" | "🤯" | "👏" | "❓",
+  nextCount?: number
+) {
+  if (!state) {
+    return state;
+  }
+
+  const reactionCounts = { ...(state.reactionCounts ?? {}) };
+  reactionCounts[emoji] =
+    typeof nextCount === "number" ? Math.max(0, nextCount) : (Number(reactionCounts[emoji]) || 0) + 1;
+
+  return {
+    ...state,
+    reactionCounts
+  };
+}
+
 export default function ParticipantLiveScreen() {
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
@@ -157,8 +176,29 @@ export default function ParticipantLiveScreen() {
 
   const reactionMutation = useMutation({
     mutationFn: sendLiveReaction,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["mobile-live-state"] });
+    onMutate: async (emoji) => {
+      await queryClient.cancelQueries({ queryKey: ["mobile-live-state"] });
+      const previousState = queryClient.getQueryData<MobileLiveState>(["mobile-live-state"]);
+
+      queryClient.setQueryData<MobileLiveState>(
+        ["mobile-live-state"],
+        (current) => patchReactionInCache(current, emoji)
+      );
+
+      return { previousState };
+    },
+    onError: (_error, _emoji, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(["mobile-live-state"], context.previousState);
+      }
+    },
+    onSuccess: (result, emoji) => {
+      if (typeof result.emojiCount === "number") {
+        queryClient.setQueryData<MobileLiveState>(
+          ["mobile-live-state"],
+          (current) => patchReactionInCache(current, emoji, result.emojiCount)
+        );
+      }
     }
   });
 

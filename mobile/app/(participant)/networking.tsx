@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,7 +41,12 @@ import {
   sendNetworkingInteraction,
   toggleNetworkingGalleryLike
 } from "../../src/lib/mobile-api";
-import type { AttendeeRole, MobileNetworkingGalleryFeed } from "../../src/lib/mobile-contracts";
+import type {
+  AttendeeRole,
+  MobileNetworkingGalleryComment,
+  MobileNetworkingGalleryCommentsResponse,
+  MobileNetworkingGalleryFeed
+} from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
@@ -67,7 +74,9 @@ function formatGalleryDate(value: string) {
   }).format(date);
 }
 
-function patchGalleryLikeInCache(
+const DOUBLE_TAP_WINDOW_MS = 280;
+
+function patchGalleryPostInCache(
   feed: MobileNetworkingGalleryFeed | undefined,
   itemId: string,
   mutate: (
@@ -101,6 +110,7 @@ export default function ParticipantNetworkingScreen() {
   const [isUploadSheetVisible, setIsUploadSheetVisible] = useState(false);
   const [activeCommentItemId, setActiveCommentItemId] = useState<string | null>(null);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const [lastPhotoTap, setLastPhotoTap] = useState<{ itemId: string; at: number } | null>(null);
 
   const feedQuery = useQuery({
     queryKey: ["mobile-networking-feed"],
@@ -191,7 +201,7 @@ export default function ParticipantNetworkingScreen() {
       queryClient.setQueryData<MobileNetworkingGalleryFeed>(
         ["mobile-networking-gallery-feed"],
         (current) =>
-          patchGalleryLikeInCache(current, itemId, (post) => {
+          patchGalleryPostInCache(current, itemId, (post) => {
             const nextLikedByMe = !post.likedByMe;
             const nextLikesCount = Math.max(
               0,
@@ -217,7 +227,7 @@ export default function ParticipantNetworkingScreen() {
       queryClient.setQueryData<MobileNetworkingGalleryFeed>(
         ["mobile-networking-gallery-feed"],
         (current) =>
-          patchGalleryLikeInCache(current, result.itemId, (post) => ({
+          patchGalleryPostInCache(current, result.itemId, (post) => ({
             ...post,
             likedByMe: result.liked,
             likesCount: result.likesCount
@@ -229,17 +239,127 @@ export default function ParticipantNetworkingScreen() {
   const galleryCommentMutation = useMutation({
     mutationFn: ({ itemId, text }: { itemId: string; text: string }) =>
       createNetworkingGalleryComment(itemId, text),
-    onSuccess: async (_, variables) => {
+    onMutate: async ({ itemId, text }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["mobile-networking-gallery-feed"] }),
+        queryClient.cancelQueries({ queryKey: ["mobile-networking-gallery-comments", itemId] })
+      ]);
+
+      const previousFeed = queryClient.getQueryData<MobileNetworkingGalleryFeed>([
+        "mobile-networking-gallery-feed"
+      ]);
+      const previousComments = queryClient.getQueryData<MobileNetworkingGalleryCommentsResponse>([
+        "mobile-networking-gallery-comments",
+        itemId
+      ]);
+      const previousDraft = commentDrafts[itemId] ?? "";
+
+      const optimisticComment: MobileNetworkingGalleryComment = {
+        id: `temp-comment-${Date.now()}`,
+        itemId,
+        attendeeId: attendeeId ?? "me",
+        attendeeName: me?.attendee?.name ?? "Sen",
+        attendeeRole: me?.attendee?.role ?? null,
+        text,
+        createdAt: new Date().toISOString()
+      };
+
       setCommentDrafts((current) => ({
         ...current,
-        [variables.itemId]: ""
+        [itemId]: ""
       }));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] }),
-        queryClient.invalidateQueries({
-          queryKey: ["mobile-networking-gallery-comments", variables.itemId]
-        })
-      ]);
+
+      queryClient.setQueryData<MobileNetworkingGalleryFeed>(
+        ["mobile-networking-gallery-feed"],
+        (current) =>
+          patchGalleryPostInCache(current, itemId, (post) => ({
+            ...post,
+            commentsCount: post.commentsCount + 1,
+            recentComments: [optimisticComment, ...post.recentComments].slice(0, 3)
+          }))
+      );
+
+      queryClient.setQueryData<MobileNetworkingGalleryCommentsResponse>(
+        ["mobile-networking-gallery-comments", itemId],
+        (current) => {
+          if (!current) {
+            return {
+              ok: true,
+              itemId,
+              comments: [optimisticComment],
+              total: 1
+            };
+          }
+
+          return {
+            ...current,
+            comments: [...current.comments, optimisticComment],
+            total: current.total + 1
+          };
+        }
+      );
+
+      return {
+        itemId,
+        optimisticCommentId: optimisticComment.id,
+        previousFeed,
+        previousComments,
+        previousDraft
+      };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData(["mobile-networking-gallery-feed"], context.previousFeed);
+      queryClient.setQueryData(
+        ["mobile-networking-gallery-comments", context.itemId],
+        context.previousComments
+      );
+      setCommentDrafts((current) => ({
+        ...current,
+        [context.itemId]: context.previousDraft ?? ""
+      }));
+    },
+    onSuccess: (result, _variables, context) => {
+      queryClient.setQueryData<MobileNetworkingGalleryFeed>(
+        ["mobile-networking-gallery-feed"],
+        (current) =>
+          patchGalleryPostInCache(current, result.itemId, (post) => {
+            const withoutTemp = post.recentComments.filter(
+              (comment) => comment.id !== context?.optimisticCommentId
+            );
+            return {
+              ...post,
+              commentsCount: result.commentsCount,
+              recentComments: [result.comment, ...withoutTemp].slice(0, 3)
+            };
+          })
+      );
+
+      queryClient.setQueryData<MobileNetworkingGalleryCommentsResponse>(
+        ["mobile-networking-gallery-comments", result.itemId],
+        (current) => {
+          if (!current) {
+            return {
+              ok: true,
+              itemId: result.itemId,
+              comments: [result.comment],
+              total: result.commentsCount
+            };
+          }
+
+          const nextComments = [
+            ...current.comments.filter((comment) => comment.id !== context?.optimisticCommentId),
+            result.comment
+          ];
+
+          return {
+            ...current,
+            comments: nextComments,
+            total: result.commentsCount
+          };
+        }
+      );
     }
   });
 
@@ -426,6 +546,31 @@ export default function ParticipantNetworkingScreen() {
       ...current,
       [itemId]: value.slice(0, 280)
     }));
+  };
+
+  const pendingGalleryLikeItemId =
+    galleryLikeMutation.isPending ? (galleryLikeMutation.variables?.itemId ?? null) : null;
+  const pendingGalleryCommentItemId =
+    galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
+
+  const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
+    const now = Date.now();
+    if (
+      lastPhotoTap &&
+      lastPhotoTap.itemId === itemId &&
+      now - lastPhotoTap.at <= DOUBLE_TAP_WINDOW_MS
+    ) {
+      setLastPhotoTap(null);
+      if (!likedByMe && pendingGalleryLikeItemId !== itemId) {
+        galleryLikeMutation.mutate({ itemId });
+      }
+      return;
+    }
+
+    setLastPhotoTap({
+      itemId,
+      at: now
+    });
   };
 
   if (me?.role === "participant" && !me.attendee) {
@@ -775,11 +920,18 @@ export default function ParticipantNetworkingScreen() {
                   </View>
 
                   {post.mediaType === "photo" ? (
-                    <Image
-                      source={{ uri: post.publicUrl }}
-                      resizeMode="cover"
-                      style={styles.galleryMedia}
-                    />
+                    <Pressable
+                      disabled={pendingGalleryLikeItemId === post.id}
+                      onPress={() => {
+                        handlePhotoDoubleTapLike(post.id, post.likedByMe);
+                      }}
+                    >
+                      <Image
+                        source={{ uri: post.publicUrl }}
+                        resizeMode="cover"
+                        style={styles.galleryMedia}
+                      />
+                    </Pressable>
                   ) : (
                     <Pressable
                       style={({ pressed }) => [
@@ -799,12 +951,15 @@ export default function ParticipantNetworkingScreen() {
 
                   <View style={styles.galleryActionRow}>
                     <Pressable
-                      disabled={galleryLikeMutation.isPending}
+                      disabled={pendingGalleryLikeItemId === post.id}
                       style={({ pressed }) => [
                         styles.galleryActionButton,
                         pressed ? styles.pressed : null
                       ]}
                       onPress={() => {
+                        if (pendingGalleryLikeItemId === post.id) {
+                          return;
+                        }
                         galleryLikeMutation.mutate({ itemId: post.id });
                       }}
                     >
@@ -870,11 +1025,13 @@ export default function ParticipantNetworkingScreen() {
                       onChangeText={(value) => updateCommentDraft(post.id, value)}
                     />
                     <Pressable
-                      disabled={galleryCommentMutation.isPending || draft.trim().length < 1}
+                      disabled={
+                        pendingGalleryCommentItemId === post.id || draft.trim().length < 1
+                      }
                       style={({ pressed }) => [
                         styles.gallerySendButton,
                         pressed ? styles.pressed : null,
-                        galleryCommentMutation.isPending || draft.trim().length < 1
+                        pendingGalleryCommentItemId === post.id || draft.trim().length < 1
                           ? styles.disabled
                           : null
                       ]}
@@ -903,7 +1060,10 @@ export default function ParticipantNetworkingScreen() {
           setIsUploadSheetVisible(false);
         }}
       >
-        <View style={styles.sheetBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.sheetBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <Pressable
             style={styles.sheetDismissArea}
             onPress={() => {
@@ -1012,7 +1172,7 @@ export default function ParticipantNetworkingScreen() {
               )}
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -1023,7 +1183,10 @@ export default function ParticipantNetworkingScreen() {
           setIsCommentSheetVisible(false);
         }}
       >
-        <View style={styles.sheetBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.sheetBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <Pressable
             style={styles.sheetDismissArea}
             onPress={() => {
@@ -1096,13 +1259,13 @@ export default function ParticipantNetworkingScreen() {
                 />
                 <Pressable
                   disabled={
-                    galleryCommentMutation.isPending ||
+                    pendingGalleryCommentItemId === activeCommentItemId ||
                     (commentDrafts[activeCommentItemId] ?? "").trim().length < 1
                   }
                   style={({ pressed }) => [
                     styles.gallerySendButton,
                     pressed ? styles.pressed : null,
-                    galleryCommentMutation.isPending ||
+                    pendingGalleryCommentItemId === activeCommentItemId ||
                     (commentDrafts[activeCommentItemId] ?? "").trim().length < 1
                       ? styles.disabled
                       : null
@@ -1119,7 +1282,7 @@ export default function ParticipantNetworkingScreen() {
               </View>
             ) : null}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenShell>
   );

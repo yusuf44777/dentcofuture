@@ -15,7 +15,8 @@ const config: ExpoConfig = {
     bundleIdentifier: "com.communitive.dentlinkco"
   },
   android: {
-    package: "com.communitive.dentlinkco"
+    package: "com.communitive.dentlinkco",
+    softwareKeyboardLayoutMode: "resize"
   },
   experiments: {
     typedRoutes: true

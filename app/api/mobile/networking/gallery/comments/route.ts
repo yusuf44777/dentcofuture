@@ -141,23 +141,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Yorum 1-280 karakter aralığında olmalı." }, { status: 400 });
   }
 
-  const itemResult = await resolved.session.supabase
-    .from("event_gallery_items")
-    .select("id")
-    .eq("id", itemId)
-    .maybeSingle();
-
-  if (itemResult.error) {
-    return NextResponse.json(
-      { error: `Galeri kaydı doğrulanamadı: ${itemResult.error.message}` },
-      { status: 500 }
-    );
-  }
-
-  if (!itemResult.data) {
-    return NextResponse.json({ error: "Galeri kaydı bulunamadı." }, { status: 404 });
-  }
-
   const insertResult = await resolved.session.supabase
     .from("networking_gallery_comments")
     .insert({
@@ -169,6 +152,9 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertResult.error) {
+    if (insertResult.error.code === "23503") {
+      return NextResponse.json({ error: "Galeri kaydı bulunamadı." }, { status: 404 });
+    }
     return NextResponse.json(
       { error: `Yorum eklenemedi: ${insertResult.error.message}` },
       { status: 500 }

@@ -179,7 +179,7 @@ export function voteLivePoll(pollId: string, optionIndex: number) {
 }
 
 export function sendLiveReaction(emoji: "🔥" | "💡" | "🤯" | "👏" | "❓") {
-  return apiRequest<{ ok: true; emojiCount: number }>(
+  return apiRequest<{ ok: true; emojiCount?: number; myReactionCount?: number }>(
     "/api/mobile/live/reactions",
     {
       method: "POST",

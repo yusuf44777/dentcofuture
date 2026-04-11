@@ -1,5 +1,13 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View, type ScrollViewProps } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ScrollViewProps
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Ellipse } from "react-native-svg";
@@ -36,27 +44,34 @@ export function ScreenShell({
       </Svg>
 
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          {...scrollProps}
+        <KeyboardAvoidingView
+          style={styles.keyboardWrap}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.heroCard}>
-            <View style={styles.heroHeader}>
-              <View style={styles.heroTextBlock}>
-                <View style={styles.kickerRow}>
-                  <View style={styles.kickerDot} />
-                  <Text style={styles.kicker}>DENTCO OUTLIER</Text>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            {...scrollProps}
+          >
+            <View style={styles.heroCard}>
+              <View style={styles.heroHeader}>
+                <View style={styles.heroTextBlock}>
+                  <View style={styles.kickerRow}>
+                    <View style={styles.kickerDot} />
+                    <Text style={styles.kicker}>DENTCO OUTLIER</Text>
+                  </View>
+                  <Text style={styles.title}>{title}</Text>
+                  <Text style={styles.subtitle}>{subtitle}</Text>
                 </View>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>{subtitle}</Text>
+                {rightAction}
               </View>
-              {rightAction}
             </View>
-          </View>
 
-          {children}
-        </ScrollView>
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -74,6 +89,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject
   },
   safeArea: {
+    flex: 1
+  },
+  keyboardWrap: {
     flex: 1
   },
   scrollContent: {

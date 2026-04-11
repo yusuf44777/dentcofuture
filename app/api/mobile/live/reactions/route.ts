@@ -44,19 +44,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Tepki kaydedilemedi: ${insertResult.error.message}` }, { status: 500 });
   }
 
-  const [emojiCountResult, myCountResult] = await Promise.all([
-    supabase.from("reactions").select("id", { count: "exact", head: true }).eq("emoji", emoji),
-    supabase
-      .from("reactions")
-      .select("id", { count: "exact", head: true })
-      .eq("attendee_id", resolved.session.attendee.id)
-  ]);
+  const myCountResult = await supabase
+    .from("reactions")
+    .select("id", { count: "exact", head: true })
+    .eq("attendee_id", resolved.session.attendee.id);
 
-  if (emojiCountResult.error || myCountResult.error) {
+  if (myCountResult.error) {
     return NextResponse.json(
       {
         error:
-          emojiCountResult.error?.message ??
           myCountResult.error?.message ??
           "Tepki sayaçları güncellenemedi."
       },
@@ -67,17 +63,15 @@ export async function POST(request: NextRequest) {
   // Lightweight gamification: every 10 reactions grants +5 points.
   const myReactionCount = myCountResult.count ?? 0;
   if (myReactionCount > 0 && myReactionCount % 10 === 0) {
-    const nextPoints = (resolved.session.attendee.points ?? 0) + 5;
-    await supabase
-      .from("attendees")
-      .update({ points: nextPoints })
-      .eq("id", resolved.session.attendee.id);
+    await supabase.rpc("increment_points", {
+      p_id: resolved.session.attendee.id,
+      p_pts: 5
+    });
   }
 
   return NextResponse.json({
     ok: true,
     reaction: insertResult.data,
-    emojiCount: emojiCountResult.count ?? 0,
     myReactionCount
   });
 }
