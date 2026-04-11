@@ -2,7 +2,7 @@ import type { PropsWithChildren, ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View, type ScrollViewProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, Ellipse } from "react-native-svg";
 import { colors, radii, spacing, typography } from "../theme/tokens";
 
 type ScreenShellProps = PropsWithChildren<{
@@ -22,16 +22,17 @@ export function ScreenShell({
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={["#030816", "#07132B", "#0A1C3D"]}
+        colors={["#040311", "#0F062E", "#1A0B4B"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       />
 
       <Svg pointerEvents="none" style={styles.blobLayer}>
-        <Circle cx="14%" cy="9%" r="118" fill="rgba(94, 212, 255, 0.13)" />
-        <Circle cx="88%" cy="15%" r="92" fill="rgba(47, 123, 255, 0.14)" />
-        <Circle cx="78%" cy="88%" r="132" fill="rgba(32, 66, 123, 0.34)" />
+        <Circle cx="10%" cy="8%" r="110" fill="rgba(139,92,246,0.12)" />
+        <Circle cx="92%" cy="12%" r="80" fill="rgba(109,40,217,0.18)" />
+        <Ellipse cx="75%" cy="92%" rx="140" ry="110" fill="rgba(75,0,130,0.22)" />
+        <Circle cx="20%" cy="75%" r="60" fill="rgba(201,169,110,0.06)" />
       </Svg>
 
       <SafeAreaView style={styles.safeArea}>
@@ -43,7 +44,10 @@ export function ScreenShell({
           <View style={styles.heroCard}>
             <View style={styles.heroHeader}>
               <View style={styles.heroTextBlock}>
-                <Text style={styles.kicker}>DENTCO OUTLIER</Text>
+                <View style={styles.kickerRow}>
+                  <View style={styles.kickerDot} />
+                  <Text style={styles.kicker}>DENTCO OUTLIER</Text>
+                </View>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle}>{subtitle}</Text>
               </View>
@@ -78,8 +82,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm
   },
   heroCard: {
-    backgroundColor: "rgba(10, 24, 51, 0.84)",
-    borderColor: "rgba(94, 212, 255, 0.2)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(139,92,246,0.2)",
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.lg,
@@ -94,26 +98,37 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: spacing.md
   },
+  kickerRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: spacing.xs
+  },
+  kickerDot: {
+    backgroundColor: colors.copper,
+    borderRadius: 999,
+    height: 5,
+    marginRight: 6,
+    width: 5
+  },
   kicker: {
     color: colors.copper,
     fontFamily: typography.body,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs
+    letterSpacing: 2,
   },
   title: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "700",
-    lineHeight: 34
+    lineHeight: 33
   },
   subtitle: {
     color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: spacing.sm
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: spacing.xs
   }
 });

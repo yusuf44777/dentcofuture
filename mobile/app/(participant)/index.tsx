@@ -1,10 +1,18 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { Crown, Music2, Star, Trophy, Zap } from "lucide-react-native";
+import { WebView } from "react-native-webview";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchLeaderboard, fetchLiveState } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
+import { getOutlierTitle } from "../../src/lib/outlier-quiz";
+
+const SPOTIFY_EMBED_URI =
+  "https://open.spotify.com/embed/playlist/2iLymYqtGacjpfbJBSxOjA?utm_source=generator&theme=0";
+
+const RANK_COLORS = ["#C9A96E", "#A8A9AD", "#B87333"];
 
 export default function ParticipantHomeScreen() {
   const router = useRouter();
@@ -26,10 +34,10 @@ export default function ParticipantHomeScreen() {
 
   if (query.isLoading || !me) {
     return (
-      <ScreenShell title="Katılımcı Merkezi" subtitle="Profil hazırlanıyor.">
+      <ScreenShell title="Hoş Geldin" subtitle="Profil hazırlanıyor...">
         <View style={styles.loaderCard}>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loaderText}>Rol ve katılımcı bilgisi yükleniyor.</Text>
+          <Text style={styles.loaderText}>Yükleniyor...</Text>
         </View>
       </ScreenShell>
     );
@@ -39,55 +47,131 @@ export default function ParticipantHomeScreen() {
     return <Redirect href={"/(staff)" as never} />;
   }
 
+  const myRank = leaderboardQuery.data?.me?.rank;
+  const myPoints = me.attendee?.points ?? 0;
+  const outlierScore = me.attendee?.outlier_score ?? 0;
+  const outlierTitle = outlierScore > 0 ? getOutlierTitle(outlierScore) : null;
+  const liveQuestionCount = liveQuery.data?.questions.length ?? 0;
+  const activePoll = liveQuery.data?.activePoll;
+
   return (
     <ScreenShell
-      title="Katılımcı Merkezi"
-      subtitle="Canlı oturum, networking ve oyun puanlarını tek akışta takip edin."
+      title={me.attendee?.name ? `Merhaba, ${me.attendee.name.split(" ")[0]}` : "Merkez"}
+      subtitle={outlierTitle ? `${outlierTitle} · DentCo Outliers 2026` : "DentCo Outliers 2026 · İstanbul"}
     >
-      <View style={styles.metricRow}>
-        <MetricCard label="Puanın" value={String(me.attendee?.points ?? 0)} />
-        <MetricCard label="Canlı Soru" value={String(liveQuery.data?.questions.length ?? 0)} />
-        <MetricCard label="Liderlik" value={String(leaderboardQuery.data?.me?.rank ?? "-")} />
-      </View>
-
       {!me.attendee ? (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Profil Tamamlama Gerekli</Text>
-          <Text style={styles.warningText}>Canlı ve networking modüllerini kullanmak için profil bilgilerini tamamlayın.</Text>
+          <Text style={styles.warningTitle}>Profil tamamlanmadı</Text>
+          <Text style={styles.warningText}>Canlı, oyun ve Outliers modüllerini açmak için profilini tamamla.</Text>
           <Pressable
             style={({ pressed }) => [styles.ctaButton, pressed ? styles.pressed : null]}
-            onPress={() => {
-              router.push("/(participant)/more" as never);
-            }}
+            onPress={() => router.push("/(participant)/more" as never)}
           >
-            <Text style={styles.ctaButtonText}>Profili Tamamla</Text>
+            <Text style={styles.ctaButtonText}>Profili Tamamla →</Text>
           </Pressable>
         </View>
       ) : null}
 
-      <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>Canlı Durum Özeti</Text>
-        <Text style={styles.panelText}>Aktif anket: {liveQuery.data?.activePoll?.question ?? "Yok"}</Text>
-        <Text style={styles.panelText}>Toplam reaksiyon: {Object.values(liveQuery.data?.reactionCounts ?? {}).reduce((sum, item) => sum + item, 0)}</Text>
+      {/* Metric Row */}
+      <View style={styles.metricRow}>
+        <MetricCard
+          label="Puanın"
+          value={String(myPoints)}
+          icon={<Star color={colors.copper} size={14} />}
+          accent={colors.copper}
+        />
+        <MetricCard
+          label="Canlı Soru"
+          value={String(liveQuestionCount)}
+          icon={<Zap color={colors.accent} size={14} />}
+          accent={colors.accent}
+        />
+        <MetricCard
+          label="Sıralama"
+          value={myRank ? `#${myRank}` : "—"}
+          icon={<Trophy color="#C9A96E" size={14} />}
+          accent="#C9A96E"
+        />
       </View>
 
-      <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>İlk 5 Liderlik</Text>
-        {(leaderboardQuery.data?.leaderboard ?? []).slice(0, 5).map((item, index) => (
-          <View key={item.id} style={styles.rankRow}>
-            <Text style={styles.rankText}>{index + 1}. {item.name}</Text>
-            <Text style={styles.rankPoints}>{item.points}</Text>
+      {/* Spotify Playlist */}
+      <View style={styles.spotifyCard}>
+        <View style={styles.spotifyHeader}>
+          <Music2 color={colors.copper} size={14} />
+          <Text style={styles.spotifyLabel}>ETKİNLİK PLAYLİSTİ</Text>
+        </View>
+        <View style={styles.spotifyWebViewWrap}>
+          <WebView
+            source={{ uri: SPOTIFY_EMBED_URI }}
+            style={styles.spotifyWebView}
+            scrollEnabled={false}
+            javaScriptEnabled
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+          />
+        </View>
+      </View>
+
+      {/* Active Poll Banner */}
+      {activePoll ? (
+        <Pressable
+          style={({ pressed }) => [styles.pollBanner, pressed ? styles.pressed : null]}
+          onPress={() => router.push("/(participant)/live" as never)}
+        >
+          <View style={styles.liveDot} />
+          <View style={styles.pollBannerText}>
+            <Text style={styles.pollBannerTag}>AKTİF ANKET</Text>
+            <Text style={styles.pollBannerQuestion} numberOfLines={1}>{activePoll.question}</Text>
           </View>
-        ))}
+          <Text style={styles.pollBannerArrow}>›</Text>
+        </Pressable>
+      ) : null}
+
+      {/* Leaderboard */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Crown color={colors.copper} size={16} />
+          <Text style={styles.cardTitle}>Liderlik Tablosu</Text>
+        </View>
+        {leaderboardQuery.isLoading ? (
+          <ActivityIndicator color={colors.accent} size="small" />
+        ) : (
+          (leaderboardQuery.data?.leaderboard ?? []).slice(0, 5).map((item, index) => (
+            <View key={item.id} style={styles.rankRow}>
+              <View style={styles.rankLeft}>
+                <Text style={[styles.rankNumber, { color: RANK_COLORS[index] ?? colors.inkMuted }]}>
+                  {index + 1}
+                </Text>
+                <Text style={styles.rankName}>{item.name}</Text>
+              </View>
+              <View style={[styles.rankBadge, index === 0 ? styles.rankBadgeGold : null]}>
+                <Text style={[styles.rankPoints, index === 0 ? styles.rankPointsGold : null]}>
+                  {item.points}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
       </View>
     </ScreenShell>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({
+  label,
+  value,
+  icon,
+  accent
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent: string;
+}) {
   return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricValue}>{value}</Text>
+    <View style={[styles.metricCard, { borderColor: `${accent}30` }]}>
+      <View style={styles.metricIconRow}>{icon}</View>
+      <Text style={[styles.metricValue, { color: accent }]}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
@@ -106,81 +190,162 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: spacing.sm
   },
-  metricRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.lg
-  },
-  metricCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    flex: 1,
-    padding: spacing.md
-  },
-  metricValue: {
-    color: colors.ink,
-    fontFamily: typography.display,
-    fontSize: 24,
-    fontWeight: "700"
-  },
-  metricLabel: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "700"
-  },
   warningCard: {
-    backgroundColor: colors.warningSoft,
+    backgroundColor: "rgba(245,158,11,0.1)",
+    borderColor: "rgba(245,158,11,0.25)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.lg,
     padding: spacing.lg
   },
   warningTitle: {
     color: colors.warning,
     fontFamily: typography.body,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800"
   },
   warningText: {
     color: colors.warning,
     fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: spacing.xs
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+    opacity: 0.85
   },
   ctaButton: {
-    alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: colors.copper,
+    backgroundColor: colors.warning,
     borderRadius: radii.pill,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10
+    paddingVertical: 8
   },
   ctaButtonText: {
-    color: "#FFFFFF",
+    color: "#1A1000",
     fontFamily: typography.body,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800"
   },
-  panelCard: {
-    backgroundColor: colors.surface,
+  metricRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  metricCard: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    padding: spacing.sm
+  },
+  metricIconRow: {
+    marginBottom: 6
+  },
+  metricValue: {
+    fontFamily: typography.display,
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 26
+  },
+  metricLabel: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginTop: 2
+  },
+  spotifyCard: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(201,169,110,0.2)",
     borderRadius: radii.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    overflow: "hidden"
+  },
+  spotifyHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs
+  },
+  spotifyLabel: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5
+  },
+  spotifyWebViewWrap: {
+    height: 152,
+    overflow: "hidden"
+  },
+  spotifyWebView: {
+    flex: 1,
+    backgroundColor: "transparent"
+  },
+  pollBanner: {
+    alignItems: "center",
+    backgroundColor: "rgba(139,92,246,0.1)",
+    borderColor: "rgba(139,92,246,0.3)",
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  liveDot: {
+    backgroundColor: "#F87171",
+    borderRadius: 999,
+    height: 8,
+    marginRight: 10,
+    width: 8
+  },
+  pollBannerText: {
+    flex: 1
+  },
+  pollBannerTag: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1
+  },
+  pollBannerQuestion: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 2
+  },
+  pollBannerArrow: {
+    color: colors.accent,
+    fontSize: 22,
+    fontWeight: "300",
+    marginLeft: spacing.xs
+  },
+  card: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(139,92,246,0.15)",
+    borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
   },
-  panelTitle: {
-    color: colors.ink,
-    fontFamily: typography.display,
-    fontSize: 18,
-    fontWeight: "700",
+  cardHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
     marginBottom: spacing.sm
   },
-  panelText: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
+  cardTitle: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 17,
+    fontWeight: "700"
   },
   rankRow: {
     alignItems: "center",
@@ -188,19 +353,44 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8
+    paddingVertical: 9
   },
-  rankText: {
+  rankLeft: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  rankNumber: {
+    fontFamily: typography.display,
+    fontSize: 13,
+    fontWeight: "800",
+    width: 20
+  },
+  rankName: {
     color: colors.ink,
     fontFamily: typography.body,
     fontSize: 13,
     fontWeight: "700"
   },
+  rankBadge: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3
+  },
+  rankBadgeGold: {
+    backgroundColor: "rgba(201,169,110,0.15)",
+    borderColor: "rgba(201,169,110,0.3)",
+    borderWidth: 1
+  },
   rankPoints: {
-    color: colors.accent,
+    color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800"
+  },
+  rankPointsGold: {
+    color: colors.copper
   },
   pressed: {
     opacity: 0.82

@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Gamepad2, House, Radio, UserRound } from "lucide-react-native";
+import { Gamepad2, House, Radio, UserRound, Users } from "lucide-react-native";
 import { colors } from "../../src/theme/tokens";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 
@@ -15,8 +15,17 @@ export default function ParticipantLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.line
+          backgroundColor: "#0A0820",
+          borderTopColor: "rgba(139,92,246,0.2)",
+          borderTopWidth: 1,
+          height: 62,
+          paddingBottom: 8,
+          paddingTop: 4
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "700",
+          letterSpacing: 0.3
         }
       }}
     >
@@ -24,7 +33,7 @@ export default function ParticipantLayout() {
         name="index"
         options={{
           title: "Ana Sayfa",
-          tabBarIcon: ({ color, size }) => <House color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <House color={color} size={size - 2} />
         }}
       />
       <Tabs.Screen
@@ -32,7 +41,7 @@ export default function ParticipantLayout() {
         options={{
           title: "Canlı",
           href: isProfileLocked ? null : undefined,
-          tabBarIcon: ({ color, size }) => <Radio color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Radio color={color} size={size - 2} />
         }}
       />
       <Tabs.Screen
@@ -40,7 +49,7 @@ export default function ParticipantLayout() {
         options={{
           title: "Outliers",
           href: isProfileLocked ? null : undefined,
-          tabBarIcon: ({ color, size }) => <House color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Users color={color} size={size - 2} />
         }}
       />
       <Tabs.Screen
@@ -48,14 +57,14 @@ export default function ParticipantLayout() {
         options={{
           title: "Oyun",
           href: isProfileLocked ? null : undefined,
-          tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size - 2} />
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: "Profilim",
-          tabBarIcon: ({ color, size }) => <UserRound color={color} size={size} />
+          tabBarIcon: ({ color, size }) => <UserRound color={color} size={size - 2} />
         }}
       />
       <Tabs.Screen

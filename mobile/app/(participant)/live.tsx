@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Brain, Flame, Hand, Lightbulb, CircleHelp } from "lucide-react-native";
+import { Brain, Flame, Hand, Lightbulb, CircleHelp, Send } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchLiveState, sendLiveReaction, submitLiveQuestion, voteLivePoll } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
@@ -29,17 +29,17 @@ function ReactionIcon({
 }) {
   switch (icon) {
     case "flame":
-      return <Flame color={color} size={18} />;
+      return <Flame color={color} size={20} />;
     case "idea":
-      return <Lightbulb color={color} size={18} />;
+      return <Lightbulb color={color} size={20} />;
     case "mind":
-      return <Brain color={color} size={18} />;
+      return <Brain color={color} size={20} />;
     case "applause":
-      return <Hand color={color} size={18} />;
+      return <Hand color={color} size={20} />;
     case "question":
-      return <CircleHelp color={color} size={18} />;
+      return <CircleHelp color={color} size={20} />;
     default:
-      return <CircleHelp color={color} size={18} />;
+      return <CircleHelp color={color} size={20} />;
   }
 }
 
@@ -107,9 +107,16 @@ export default function ParticipantLiveScreen() {
         </View>
       ) : null}
 
+      {/* Question Submit */}
       {me?.attendee ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Soru Gönder</Text>
+          <View style={styles.cardHeader}>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveBadgeText}>CANLI</Text>
+            </View>
+            <Text style={styles.cardTitle}>Soru Gönder</Text>
+          </View>
           <TextInput
             multiline
             numberOfLines={3}
@@ -119,15 +126,25 @@ export default function ParticipantLiveScreen() {
             value={questionText}
             onChangeText={(value) => setQuestionText(value.slice(0, 200))}
           />
-          <Pressable
-            disabled={questionMutation.isPending || questionText.trim().length < 1}
-            style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null, questionMutation.isPending || questionText.trim().length < 1 ? styles.disabled : null]}
-            onPress={() => {
-              questionMutation.mutate(questionText.trim());
-            }}
-          >
-            <Text style={styles.primaryButtonText}>{questionMutation.isPending ? "Gönderiliyor..." : "Soruyu Gönder"}</Text>
-          </Pressable>
+          <View style={styles.questionFooter}>
+            <Text style={styles.charCount}>{questionText.length}/200</Text>
+            <Pressable
+              disabled={questionMutation.isPending || questionText.trim().length < 1}
+              style={({ pressed }) => [
+                styles.sendButton,
+                pressed ? styles.pressed : null,
+                questionMutation.isPending || questionText.trim().length < 1 ? styles.disabled : null
+              ]}
+              onPress={() => questionMutation.mutate(questionText.trim())}
+            >
+              {questionMutation.isPending
+                ? <ActivityIndicator color="#FFF" size="small" />
+                : <>
+                    <Send color="#FFF" size={13} />
+                    <Text style={styles.sendButtonText}>Gönder</Text>
+                  </>}
+            </Pressable>
+          </View>
         </View>
       ) : (
         <View style={styles.warningCard}>
@@ -135,28 +152,35 @@ export default function ParticipantLiveScreen() {
         </View>
       )}
 
+      {/* Active Poll */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Aktif Anket</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Aktif Anket</Text>
+        </View>
         {liveQuery.data?.activePoll ? (
           <>
             <Text style={styles.pollQuestion}>{liveQuery.data.activePoll.question}</Text>
             {liveQuery.data.activePoll.options.map((option, index) => {
               const count = Number(liveQuery.data?.pollTotals?.[String(index)] ?? 0);
+              const isVoted = votedPollId === liveQuery.data?.activePoll?.id;
               return (
                 <Pressable
                   key={`${option}-${index}`}
-                  disabled={voteMutation.isPending || votedPollId === liveQuery.data?.activePoll?.id}
-                  style={({ pressed }) => [styles.optionButton, pressed ? styles.pressed : null]}
+                  disabled={voteMutation.isPending || isVoted}
+                  style={({ pressed }) => [
+                    styles.optionButton,
+                    isVoted ? styles.optionButtonVoted : null,
+                    pressed ? styles.pressed : null
+                  ]}
                   onPress={() => {
-                    if (!liveQuery.data?.activePoll) {
-                      return;
-                    }
-
+                    if (!liveQuery.data?.activePoll) return;
                     voteMutation.mutate({ pollId: liveQuery.data.activePoll.id, optionIndex: index });
                   }}
                 >
-                  <Text style={styles.optionText}>{option}</Text>
-                  <Text style={styles.optionCount}>{count}</Text>
+                  <Text style={[styles.optionText, isVoted ? styles.optionTextVoted : null]}>{option}</Text>
+                  <View style={styles.optionCountBadge}>
+                    <Text style={styles.optionCount}>{count}</Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -166,32 +190,50 @@ export default function ParticipantLiveScreen() {
         )}
       </View>
 
+      {/* Reactions */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Anlık Tepkiler ({totalReactions})</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Tepkiler</Text>
+          <View style={styles.totalBadge}>
+            <Text style={styles.totalBadgeText}>{totalReactions}</Text>
+          </View>
+        </View>
         <View style={styles.reactionRow}>
-          {REACTIONS.map((reaction) => (
-            <Pressable
-              key={reaction.code}
-              disabled={reactionMutation.isPending}
-              style={({ pressed }) => [styles.reactionButton, pressed ? styles.pressed : null]}
-              onPress={() => {
-                reactionMutation.mutate(reaction.code);
-              }}
-            >
-              <ReactionIcon color={colors.accent} icon={reaction.icon} />
-              <Text style={styles.reactionLabel}>{reaction.label}</Text>
-              <Text style={styles.reactionCount}>{liveQuery.data?.reactionCounts?.[reaction.code] ?? 0}</Text>
-            </Pressable>
-          ))}
+          {REACTIONS.map((reaction) => {
+            const count = liveQuery.data?.reactionCounts?.[reaction.code] ?? 0;
+            return (
+              <Pressable
+                key={reaction.code}
+                disabled={reactionMutation.isPending}
+                style={({ pressed }) => [
+                  styles.reactionButton,
+                  pressed ? styles.reactionButtonPressed : null
+                ]}
+                onPress={() => reactionMutation.mutate(reaction.code)}
+              >
+                <ReactionIcon color={colors.accent} icon={reaction.icon} />
+                <Text style={styles.reactionCount}>{count}</Text>
+                <Text style={styles.reactionLabel}>{reaction.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
+      {/* Featured Questions */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Öne Çıkan Sorular</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Öne Çıkan Sorular</Text>
+        </View>
+        {(liveQuery.data?.questions ?? []).length === 0 ? (
+          <Text style={styles.mutedText}>Henüz soru gönderilmedi.</Text>
+        ) : null}
         {(liveQuery.data?.questions ?? []).slice(0, 8).map((item) => (
           <View key={item.id} style={styles.questionRow}>
             <Text style={styles.questionText}>{item.text}</Text>
-            <Text style={styles.questionMeta}>{item.votes} oy</Text>
+            <View style={styles.questionMeta}>
+              <Text style={styles.questionMetaText}>{item.votes} oy</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -202,7 +244,7 @@ export default function ParticipantLiveScreen() {
 const styles = StyleSheet.create({
   loaderCard: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.03)",
     borderRadius: radii.lg,
     marginBottom: spacing.md,
     padding: spacing.lg
@@ -215,7 +257,9 @@ const styles = StyleSheet.create({
   },
   errorCard: {
     backgroundColor: colors.dangerSoft,
+    borderColor: "rgba(248,113,113,0.3)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
   },
@@ -227,7 +271,9 @@ const styles = StyleSheet.create({
   },
   warningCard: {
     backgroundColor: colors.warningSoft,
+    borderColor: "rgba(245,158,11,0.25)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
   },
@@ -238,62 +284,114 @@ const styles = StyleSheet.create({
     lineHeight: 19
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(139,92,246,0.15)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
+  },
+  cardHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginBottom: spacing.sm
   },
   cardTitle: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: spacing.sm
+    fontSize: 17,
+    fontWeight: "700"
+  },
+  liveBadge: {
+    alignItems: "center",
+    backgroundColor: "rgba(248,113,113,0.15)",
+    borderColor: "rgba(248,113,113,0.3)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3
+  },
+  liveDot: {
+    backgroundColor: colors.danger,
+    borderRadius: 999,
+    height: 6,
+    width: 6
+  },
+  liveBadgeText: {
+    color: colors.danger,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8
   },
   textarea: {
     backgroundColor: colors.surfaceMuted,
-    borderColor: colors.line,
+    borderColor: "rgba(139,92,246,0.3)",
     borderRadius: radii.md,
     borderWidth: 1,
     color: colors.ink,
     fontFamily: typography.body,
     fontSize: 14,
+    lineHeight: 20,
     minHeight: 88,
     padding: spacing.sm,
     textAlignVertical: "top"
   },
-  primaryButton: {
+  questionFooter: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.xs
+  },
+  charCount: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11
+  },
+  sendButton: {
     alignItems: "center",
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
-    marginTop: spacing.sm,
-    paddingVertical: 10
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9
   },
-  primaryButtonText: {
-    color: "#FFFFFF",
+  sendButtonText: {
+    color: "#FFF",
     fontFamily: typography.body,
     fontSize: 13,
     fontWeight: "800"
   },
-  disabled: {
-    opacity: 0.6
-  },
   pollQuestion: {
     color: colors.ink,
     fontFamily: typography.body,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
+    lineHeight: 21,
     marginBottom: spacing.sm
   },
   optionButton: {
     alignItems: "center",
     backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderLeftWidth: 0,
     borderRadius: radii.md,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 10
+    paddingVertical: 11
+  },
+  optionButtonVoted: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+    borderLeftColor: colors.accent,
+    borderLeftWidth: 3
   },
   optionText: {
     color: colors.ink,
@@ -302,60 +400,95 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700"
   },
+  optionTextVoted: {
+    color: colors.accent
+  },
+  optionCountBadge: {
+    backgroundColor: "rgba(139,92,246,0.15)",
+    borderRadius: radii.pill,
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 2
+  },
   optionCount: {
     color: colors.accent,
     fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800"
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center"
   },
   mutedText: {
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 13
   },
+  totalBadge: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2
+  },
+  totalBadgeText: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800"
+  },
   reactionRow: {
     flexDirection: "row",
-    gap: spacing.sm
+    gap: spacing.xs
   },
   reactionButton: {
     alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: "rgba(139,92,246,0.08)",
+    borderColor: "rgba(139,92,246,0.2)",
     borderRadius: radii.md,
+    borderWidth: 1,
     flex: 1,
-    paddingVertical: 10
+    paddingVertical: 12
+  },
+  reactionButtonPressed: {
+    backgroundColor: "rgba(139,92,246,0.2)",
+    borderColor: colors.accent
+  },
+  reactionCount: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 5
   },
   reactionLabel: {
     color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 4
-  },
-  reactionCount: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     marginTop: 2
   },
   questionRow: {
     borderBottomColor: colors.line,
     borderBottomWidth: 1,
-    paddingVertical: 8
+    paddingVertical: 10
   },
   questionText: {
     color: colors.ink,
     fontFamily: typography.body,
     fontSize: 13,
-    lineHeight: 18
+    lineHeight: 19
   },
   questionMeta: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
     marginTop: 4
   },
+  questionMetaText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  disabled: {
+    opacity: 0.5
+  },
   pressed: {
-    opacity: 0.82
+    opacity: 0.8
   }
 });

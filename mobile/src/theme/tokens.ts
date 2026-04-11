@@ -1,22 +1,22 @@
 import { Platform } from "react-native";
 
 export const colors = {
-  background: "#040B1E",
-  backgroundDeep: "#020714",
-  surface: "#0C1833",
-  surfaceMuted: "#132447",
-  ink: "#F1F6FF",
-  inkMuted: "#95A8CB",
-  accent: "#2F7BFF",
-  accentSoft: "#1A2F5A",
-  copper: "#5ED4FF",
-  copperSoft: "#17324A",
-  line: "#243960",
-  positive: "#35D7A5",
-  warning: "#FFBE55",
-  warningSoft: "rgba(255, 190, 85, 0.18)",
-  danger: "#FF6E9B",
-  dangerSoft: "rgba(255, 110, 155, 0.18)"
+  background: "#07061A",
+  backgroundDeep: "#040310",
+  surface: "#0E0A26",
+  surfaceMuted: "#140E30",
+  ink: "#EDE8FF",
+  inkMuted: "#7B6EA8",
+  accent: "#8B5CF6",
+  accentSoft: "#1C1040",
+  copper: "#C9A96E",
+  copperSoft: "#221809",
+  line: "#221B4A",
+  positive: "#34D399",
+  warning: "#F59E0B",
+  warningSoft: "rgba(245, 158, 11, 0.15)",
+  danger: "#F87171",
+  dangerSoft: "rgba(248, 113, 113, 0.15)"
 } as const;
 
 export const spacing = {
@@ -50,13 +50,13 @@ export const typography = {
 
 export const shadows = Platform.select({
   ios: {
-    shadowColor: "#01040B",
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 }
   },
   android: {
-    elevation: 8
+    elevation: 10
   },
   default: {}
 });

@@ -430,8 +430,10 @@ export default function ParticipantMoreScreen() {
 
 const styles = StyleSheet.create({
   eventCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(201,169,110,0.06)",
+    borderColor: "rgba(201,169,110,0.18)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
   },
@@ -449,15 +451,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: "rgba(139,92,246,0.15)",
     borderRadius: radii.lg,
+    borderWidth: 1,
     marginBottom: spacing.md,
     padding: spacing.md
   },
   cardTitle: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     marginBottom: spacing.sm
   },
@@ -494,9 +498,9 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radii.pill,
     borderWidth: 1,
-    height: 36,
+    height: 38,
     justifyContent: "center",
-    width: 36
+    width: 38
   },
   scaleValueButtonSelected: {
     backgroundColor: colors.accent,
@@ -530,11 +534,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 9
+    paddingVertical: 10
   },
   choiceButtonSelected: {
     backgroundColor: colors.accentSoft,
-    borderColor: colors.accent
+    borderColor: colors.accent,
+    borderLeftColor: colors.accent,
+    borderLeftWidth: 3
   },
   choiceText: {
     color: colors.ink,
@@ -554,38 +560,39 @@ const styles = StyleSheet.create({
   },
   outlierResultCard: {
     alignItems: "center",
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+    backgroundColor: "rgba(201,169,110,0.08)",
+    borderColor: "rgba(201,169,110,0.3)",
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.md,
-    padding: spacing.md
+    padding: spacing.lg
   },
   outlierResultTitle: {
-    color: colors.accent,
+    color: colors.copper,
     fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
     textAlign: "center"
   },
   outlierResultSubtitle: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
-    marginTop: 2,
+    marginTop: 4,
     textAlign: "center"
   },
   outlierResultScore: {
-    color: colors.accent,
+    color: colors.copper,
     fontFamily: typography.display,
-    fontSize: 32,
+    fontSize: 44,
     fontWeight: "800",
     marginTop: spacing.xs
   },
   retakeButton: {
-    backgroundColor: colors.surface,
-    borderColor: colors.accent,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(201,169,110,0.3)",
     borderRadius: radii.pill,
     borderWidth: 1,
     marginTop: spacing.sm,
@@ -593,14 +600,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7
   },
   retakeButtonText: {
-    color: colors.accent,
+    color: colors.copper,
     fontFamily: typography.body,
     fontSize: 12,
     fontWeight: "700"
   },
   warningCard: {
     backgroundColor: colors.warningSoft,
+    borderColor: "rgba(245,158,11,0.25)",
     borderRadius: radii.md,
+    borderWidth: 1,
     marginBottom: spacing.sm,
     padding: spacing.sm
   },
@@ -613,8 +622,9 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
     marginBottom: spacing.xs
   },
   input: {
@@ -627,7 +637,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 11
+    paddingVertical: 12
   },
   roleRow: {
     flexDirection: "row",
@@ -635,13 +645,16 @@ const styles = StyleSheet.create({
   },
   roleChip: {
     backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
     borderRadius: radii.pill,
+    borderWidth: 1,
     marginRight: spacing.xs,
-    paddingHorizontal: 12,
-    paddingVertical: 8
+    paddingHorizontal: 14,
+    paddingVertical: 9
   },
   roleChipSelected: {
-    backgroundColor: colors.accentSoft
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent
   },
   roleChipText: {
     color: colors.inkMuted,
@@ -664,7 +677,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: spacing.sm,
-    paddingVertical: 11
+    paddingVertical: 12
   },
   dropdownButtonOpen: {
     borderColor: colors.accent
@@ -689,7 +702,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
     borderBottomWidth: 1,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 10
+    paddingVertical: 11
   },
   dropdownOptionSelected: {
     backgroundColor: colors.accentSoft
@@ -705,8 +718,8 @@ const styles = StyleSheet.create({
   },
   scoreRow: {
     alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.line,
+    backgroundColor: "rgba(139,92,246,0.08)",
+    borderColor: "rgba(139,92,246,0.2)",
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: "row",
@@ -724,7 +737,7 @@ const styles = StyleSheet.create({
   scoreValue: {
     color: colors.accent,
     fontFamily: typography.display,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800"
   },
   primaryButton: {
@@ -733,12 +746,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     flexDirection: "row",
     justifyContent: "center",
-    minHeight: 42
+    minHeight: 44
   },
   primaryButtonText: {
     color: "#FFFFFF",
     fontFamily: typography.body,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     marginLeft: spacing.xs
   },
@@ -750,25 +763,27 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: colors.danger,
+    alignSelf: "center",
+    backgroundColor: "rgba(248,113,113,0.1)",
+    borderColor: "rgba(248,113,113,0.3)",
     borderRadius: radii.pill,
+    borderWidth: 1,
     flexDirection: "row",
     marginBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10
   },
   logoutText: {
-    color: "#FFFFFF",
+    color: colors.danger,
     fontFamily: typography.body,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     marginLeft: spacing.xs
   },
   disabled: {
-    opacity: 0.6
+    opacity: 0.5
   },
   pressed: {
-    opacity: 0.82
+    opacity: 0.8
   }
 });
