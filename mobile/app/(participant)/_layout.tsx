@@ -73,6 +73,15 @@ export default function ParticipantLayout() {
           href: null
         }}
       />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          href: null,
+          tabBarStyle: {
+            display: "none"
+          }
+        }}
+      />
     </Tabs>
   );
 }

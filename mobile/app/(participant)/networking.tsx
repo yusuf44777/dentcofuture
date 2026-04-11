@@ -18,26 +18,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Heart,
   Plus,
-  Linkedin,
   MessageCircle,
   Play,
   RefreshCw,
   Send,
-  UserRoundX,
-  Instagram
+  UserRoundX
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ScreenShell } from "../../src/components/screen-shell";
 import {
   createNetworkingGalleryPost,
   createNetworkingGalleryComment,
-  fetchMatchThread,
   fetchMessageThreads,
   fetchNetworkingFeed,
   fetchNetworkingGalleryComments,
   fetchNetworkingGalleryFeed,
   fetchNetworkingMatches,
-  sendMatchMessage,
   sendNetworkingInteraction,
   toggleNetworkingGalleryLike
 } from "../../src/lib/mobile-api";
@@ -100,8 +96,6 @@ export default function ParticipantNetworkingScreen() {
   const attendeeId = me?.attendee?.id ?? null;
   const [activeSection, setActiveSection] = useState<NetworkingSection>("gallery");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedAttendeeId, setSelectedAttendeeId] = useState<string | null>(null);
-  const [draftMessage, setDraftMessage] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [selectedUploadAssets, setSelectedUploadAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [uploadCaption, setUploadCaption] = useState("");
@@ -147,13 +141,6 @@ export default function ParticipantNetworkingScreen() {
     refetchInterval: 10_000
   });
 
-  const threadQuery = useQuery({
-    queryKey: ["mobile-networking-thread", selectedAttendeeId],
-    queryFn: () => fetchMatchThread(selectedAttendeeId as string),
-    enabled: Boolean(selectedAttendeeId),
-    refetchInterval: 7_000
-  });
-
   useEffect(() => {
     setActiveIndex(0);
   }, [feedQuery.data?.refreshedAt]);
@@ -177,10 +164,6 @@ export default function ParticipantNetworkingScreen() {
       }
     },
     onSuccess: async (result) => {
-      if (result.match?.profile.attendeeId) {
-        setSelectedAttendeeId(result.match.profile.attendeeId);
-      }
-
       if (result.matched) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["mobile-networking-matches"] }),
@@ -422,34 +405,25 @@ export default function ParticipantNetworkingScreen() {
     }
   });
 
-  const sendMessageMutation = useMutation({
-    mutationFn: ({ attendeeId, text }: { attendeeId: string; text: string }) =>
-      sendMatchMessage(attendeeId, text),
-    onSuccess: async () => {
-      setDraftMessage("");
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["mobile-networking-thread", selectedAttendeeId]
-        }),
-        queryClient.invalidateQueries({ queryKey: ["mobile-networking-threads"] })
-      ]);
-    }
-  });
-
   const activeProfile = useMemo(() => {
     return feedQuery.data?.queue?.[activeIndex] ?? null;
   }, [activeIndex, feedQuery.data?.queue]);
 
-  const selectedMatch = useMemo(() => {
-    if (!selectedAttendeeId) {
-      return null;
+  const latestThreadByAttendee = useMemo(() => {
+    const mapped = new Map<
+      string,
+      { id: string; text: string; createdAt: string; senderId: string } | null
+    >();
+
+    for (const thread of threadsQuery.data?.threads ?? []) {
+      if (!thread.attendee?.id) {
+        continue;
+      }
+      mapped.set(thread.attendee.id, thread.lastMessage);
     }
 
-    return (
-      (matchesQuery.data?.matches ?? []).find((item) => item.attendee?.id === selectedAttendeeId) ??
-      null
-    );
-  }, [matchesQuery.data?.matches, selectedAttendeeId]);
+    return mapped;
+  }, [threadsQuery.data?.threads]);
 
   const selectedCommentPost = useMemo(() => {
     if (!activeCommentItemId) {
@@ -716,24 +690,16 @@ export default function ParticipantNetworkingScreen() {
               <Text style={styles.mutedText}>Henüz karşılıklı eşleşme yok.</Text>
             ) : (
               (matchesQuery.data?.matches ?? []).map((match) => {
-                const attendeeId = match.attendee?.id ?? match.profile.attendeeId;
-                const isSelected = attendeeId ? attendeeId === selectedAttendeeId : false;
+                const matchAttendeeId = match.attendee?.id ?? match.profile.attendeeId;
+                const latestMessage = matchAttendeeId
+                  ? latestThreadByAttendee.get(matchAttendeeId) ?? null
+                  : null;
+                const previewText = latestMessage
+                  ? `${latestMessage.senderId === attendeeId ? "Sen: " : ""}${latestMessage.text}`
+                  : "Henüz mesaj yok. Sohbeti başlat.";
 
                 return (
-                  <Pressable
-                    key={match.profile.profileId}
-                    disabled={!attendeeId}
-                    style={({ pressed }) => [
-                      styles.matchRow,
-                      isSelected ? styles.matchRowSelected : null,
-                      pressed ? styles.pressed : null
-                    ]}
-                    onPress={() => {
-                      if (attendeeId) {
-                        setSelectedAttendeeId(attendeeId);
-                      }
-                    }}
-                  >
+                  <View key={match.profile.profileId} style={styles.matchRow}>
                     <View style={styles.matchIdentity}>
                       <Text style={styles.matchName}>{match.profile.fullName}</Text>
                       <Text style={styles.matchRole}>
@@ -741,113 +707,34 @@ export default function ParticipantNetworkingScreen() {
                           ? ROLE_LABELS[match.attendee.role as AttendeeRole] ?? "Katılımcı"
                           : "Katılımcı"}
                       </Text>
+                      <Text style={styles.matchPreview} numberOfLines={1}>
+                        {previewText}
+                      </Text>
                     </View>
-                    <MessageCircle color={colors.accent} size={16} />
-                  </Pressable>
+                    <Pressable
+                      disabled={!matchAttendeeId}
+                      style={({ pressed }) => [
+                        styles.matchChatButton,
+                        !matchAttendeeId ? styles.disabled : null,
+                        pressed ? styles.pressed : null
+                      ]}
+                      onPress={() => {
+                        if (!matchAttendeeId) {
+                          return;
+                        }
+                        router.push(
+                          `/(participant)/chat?attendeeId=${encodeURIComponent(matchAttendeeId)}` as never
+                        );
+                      }}
+                    >
+                      <MessageCircle color="#FFFFFF" size={14} />
+                      <Text style={styles.matchChatButtonText}>Sohbet et</Text>
+                    </Pressable>
+                  </View>
                 );
               })
             )}
           </View>
-
-          {selectedAttendeeId ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Sohbet</Text>
-              {selectedMatch?.attendee ? (
-                <View style={styles.contactRow}>
-                  <Text style={styles.contactLabel}>{selectedMatch.attendee.name}</Text>
-                  <View style={styles.contactActions}>
-                    <Pressable
-                      style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
-                      onPress={() => {
-                        const instagram = selectedMatch.attendee?.instagram;
-                        void openSocial(
-                          instagram
-                            ? `https://www.instagram.com/${instagram.replace(/^@+/, "")}/`
-                            : ""
-                        );
-                      }}
-                    >
-                      <Instagram color={colors.copper} size={16} />
-                    </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
-                      onPress={() => {
-                        const linkedin = selectedMatch.attendee?.linkedin;
-                        const normalized = linkedin ? linkedin.replace(/^https?:\/\//, "") : "";
-                        void openSocial(
-                          linkedin
-                            ? linkedin.startsWith("http")
-                              ? linkedin
-                              : `https://${normalized}`
-                            : ""
-                        );
-                      }}
-                    >
-                      <Linkedin color={colors.accent} size={16} />
-                    </Pressable>
-                  </View>
-                </View>
-              ) : null}
-
-              {threadQuery.isLoading ? (
-                <ActivityIndicator color={colors.accent} size="small" />
-              ) : (
-                <ScrollView style={styles.threadScroll} contentContainerStyle={styles.threadContent}>
-                  {(threadQuery.data?.thread.messages ?? []).map((message) => {
-                    const mine = message.senderId === attendeeId;
-                    return (
-                      <View
-                        key={message.id}
-                        style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
-                      >
-                        <Text style={[styles.bubbleText, mine ? styles.bubbleTextMine : null]}>
-                          {message.text}
-                        </Text>
-                        <Text style={[styles.bubbleMeta, mine ? styles.bubbleMetaMine : null]}>
-                          {new Date(message.createdAt).toLocaleTimeString("tr-TR", {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              )}
-
-              <View style={styles.composerRow}>
-                <TextInput
-                  style={styles.composerInput}
-                  placeholder="Mesaj yaz..."
-                  placeholderTextColor={colors.inkMuted}
-                  value={draftMessage}
-                  onChangeText={(value) => setDraftMessage(value.slice(0, 500))}
-                />
-                <Pressable
-                  disabled={sendMessageMutation.isPending || draftMessage.trim().length < 1}
-                  style={({ pressed }) => [
-                    styles.sendButton,
-                    pressed ? styles.pressed : null,
-                    sendMessageMutation.isPending || draftMessage.trim().length < 1
-                      ? styles.disabled
-                      : null
-                  ]}
-                  onPress={() => {
-                    if (!selectedAttendeeId) {
-                      return;
-                    }
-
-                    sendMessageMutation.mutate({
-                      attendeeId: selectedAttendeeId,
-                      text: draftMessage.trim()
-                    });
-                  }}
-                >
-                  <Send color="#FFFFFF" size={14} />
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
         </>
       ) : (
         <>
@@ -1605,10 +1492,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 10
   },
-  matchRowSelected: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent
-  },
   matchIdentity: {
     flex: 1
   },
@@ -1624,85 +1507,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 1
   },
-  contactRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm
-  },
-  contactLabel: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800"
-  },
-  contactActions: {
-    flexDirection: "row",
-    gap: spacing.xs
-  },
-  threadScroll: {
-    maxHeight: 230
-  },
-  threadContent: {
-    gap: spacing.xs
-  },
-  bubble: {
-    borderRadius: radii.md,
-    maxWidth: "86%",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  bubbleMine: {
-    alignSelf: "flex-end",
-    backgroundColor: colors.accent
-  },
-  bubbleOther: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.surfaceMuted
-  },
-  bubbleText: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
-  },
-  bubbleTextMine: {
-    color: "#FFFFFF"
-  },
-  bubbleMeta: {
+  matchPreview: {
     color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 4
   },
-  bubbleMetaMine: {
-    color: "rgba(255,255,255,0.82)"
-  },
-  composerRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    marginTop: spacing.sm
-  },
-  composerInput: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    color: colors.ink,
-    flex: 1,
-    fontFamily: typography.body,
-    fontSize: 13,
-    marginRight: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 10
-  },
-  sendButton: {
+  matchChatButton: {
     alignItems: "center",
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
-    height: 38,
+    flexDirection: "row",
+    gap: 6,
     justifyContent: "center",
-    width: 38
+    minHeight: 34,
+    paddingHorizontal: spacing.sm
+  },
+  matchChatButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800"
   },
   galleryPostCard: {
     backgroundColor: colors.surfaceMuted,
