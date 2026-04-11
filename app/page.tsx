@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images, Music2 } from "lucide-react";
 import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
+const SPOTIFY_PLAYLIST_ID = "2iLymYqtGacjpfbJBSxOjA";
 
 type SpeakerBadge = "Innovator" | "Artist" | "Entrepreneur" | "AI Pioneer";
 
@@ -125,7 +126,7 @@ function ParticleField() {
       vx: (Math.random() - 0.5) * 0.3,
       vy: (Math.random() - 0.5) * 0.3,
       size: Math.random() * 8 + 4,
-      op: Math.random() * 0.25 + 0.05,
+      op: Math.random() * 0.2 + 0.04,
       ph: Math.random() * Math.PI * 2,
       green: Math.random() > 0.5
     }));
@@ -151,9 +152,9 @@ function ParticleField() {
         if (p.x > canvas!.width + 20) p.x = -20;
         if (p.y < -20) p.y = canvas!.height + 20;
         if (p.y > canvas!.height + 20) p.y = -20;
-        ctx!.globalAlpha = p.op + Math.sin(fr * 0.02 + p.ph) * 0.05;
-        ctx!.fillStyle = p.green ? "#00E5A0" : "#6C63FF";
-        ctx!.strokeStyle = p.green ? "rgba(0,229,160,0.2)" : "rgba(108,99,255,0.2)";
+        ctx!.globalAlpha = p.op + Math.sin(fr * 0.02 + p.ph) * 0.04;
+        ctx!.fillStyle = p.green ? "#00E5A0" : "#7B6EFF";
+        ctx!.strokeStyle = p.green ? "rgba(0,229,160,0.15)" : "rgba(123,110,255,0.15)";
         ctx!.lineWidth = 0.5;
         drawTooth(p.x, p.y, p.size / 2);
         ctx!.fill(); ctx!.stroke();
@@ -166,7 +167,7 @@ function ParticleField() {
     window.addEventListener("resize", resize);
     return () => { cancelAnimationFrame(id); window.removeEventListener("resize", resize); };
   }, []);
-  return <canvas ref={ref} className="pointer-events-none absolute inset-0 opacity-60" />;
+  return <canvas ref={ref} className="pointer-events-none absolute inset-0 opacity-50" />;
 }
 
 function ApplicationCheckoutButton() {
@@ -177,7 +178,7 @@ function ApplicationCheckoutButton() {
       aria-disabled="true"
       className={cn(
         buttonVariants({ size: "xl", variant: "surface" }),
-        "h-16 w-full cursor-not-allowed px-10 text-lg opacity-70 sm:w-auto sm:text-xl"
+        "h-14 w-full cursor-not-allowed px-10 text-base opacity-60 sm:w-auto sm:text-lg"
       )}
     >
       Yakında
@@ -204,95 +205,176 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0A0A0F] text-white overflow-x-hidden">
+    <main className="min-h-screen bg-[#060918] text-white overflow-x-hidden">
+
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section ref={heroRef} className="relative flex min-h-screen items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(108,99,255,0.08)] blur-[100px]" />
-          <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-[rgba(0,229,160,0.05)] blur-[80px]" />
+        {/* Background gradients — poster colours */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Centre navy-indigo glow */}
+          <div className="absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(30,20,120,0.35)] blur-[120px]" />
+          {/* Top-right violet */}
+          <div className="absolute -top-20 right-0 h-[500px] w-[500px] rounded-full bg-[rgba(100,50,200,0.18)] blur-[100px]" />
+          {/* Bottom-left blue */}
+          <div className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-[rgba(10,40,160,0.2)] blur-[90px]" />
+          {/* Mint accent */}
+          <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-[rgba(0,229,160,0.04)] blur-[80px]" />
         </div>
-        <div className="absolute inset-0 grid-bg opacity-40" />
+        <div className="absolute inset-0 grid-bg opacity-30" />
         <ParticleField />
 
-        <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative z-10 px-6 text-center">
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-[rgba(240,240,255,0.5)]">
-            Communitive Dentistry • Üsküdar 2026
+        <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative z-10 px-6 text-center max-w-4xl mx-auto">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6 text-[10px] font-semibold uppercase tracking-[0.4em] text-[rgba(180,170,255,0.55)]"
+          >
+            Communitive Dentistry &nbsp;·&nbsp; Üsküdar &nbsp;·&nbsp; 2026
           </motion.p>
 
-          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="font-heading text-5xl font-extrabold leading-tight tracking-tight sm:text-7xl lg:text-8xl">
-            <span className="text-gradient-hero">DentCo</span>
+          {/* Display serif hero title */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="font-display italic text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl lg:text-[5.5rem]"
+          >
+            <span className="text-gradient-poster">DentCo</span>
             <br />
-            <span className="text-white">Outlier</span>
+            <span className="not-italic font-heading font-extrabold text-white">Outliers</span>
           </motion.h1>
 
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-            className="mt-4 text-lg text-[rgba(240,240,255,0.6)] sm:text-xl">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mt-5 text-base text-[rgba(210,205,255,0.55)] sm:text-lg tracking-wide"
+          >
             Diş hekimliğinde sınırları zorluyoruz
           </motion.p>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}
-            className="mt-1 text-sm text-[rgba(240,240,255,0.4)]">
-            16 Mayıs 2026 • İstanbul
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="mt-1 text-xs text-[rgba(180,170,255,0.4)] tracking-widest uppercase"
+          >
+            16 Mayıs 2026 &nbsp;·&nbsp; İstanbul
           </motion.p>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            className="mt-2 text-sm font-medium text-[rgba(240,240,255,0.6)]">
-            Düzenleyen: {EVENT_ORGANIZER}
-          </motion.p>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }}
-            className="mx-auto mt-1 max-w-3xl text-xs leading-relaxed text-[rgba(240,240,255,0.5)] sm:text-sm">
-            Adres: {EVENT_ADDRESS}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-3 text-xs leading-relaxed text-[rgba(180,170,255,0.35)]"
+          >
+            {EVENT_ORGANIZER} &nbsp;·&nbsp; {EVENT_ADDRESS}
           </motion.p>
 
           {/* Countdown */}
           {!past && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-              className="mt-10 flex justify-center gap-3 sm:gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="mt-12 flex justify-center gap-3 sm:gap-5"
+            >
               {[{ l: "Gün", v: d }, { l: "Saat", v: h }, { l: "Dk", v: m }, { l: "Sn", v: s }].map(({ l, v }) => (
-                <div key={l} className="flex flex-col items-center">
-                  <div className="flex h-16 w-14 items-center justify-center rounded-[12px] border border-[rgba(108,99,255,0.3)] bg-[rgba(108,99,255,0.1)] sm:h-20 sm:w-20">
-                    <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2,"0")}</span>
+                <div key={l} className="flex flex-col items-center gap-1.5">
+                  <div className="card-glass flex h-16 w-14 items-center justify-center sm:h-[72px] sm:w-[68px]">
+                    <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2, "0")}</span>
                   </div>
-                  <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-widest text-[rgba(240,240,255,0.4)]">{l}</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[rgba(180,170,255,0.4)]">{l}</span>
                 </div>
               ))}
             </motion.div>
           )}
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-            className="mt-10 flex justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="mt-10 flex justify-center"
+          >
             <ApplicationCheckoutButton />
           </motion.div>
         </motion.div>
 
-        <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[rgba(240,240,255,0.3)]">
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[rgba(180,170,255,0.25)]"
+        >
           <ChevronDown className="h-6 w-6" />
         </motion.div>
       </section>
 
       {/* ── Feature bar ──────────────────────────────────────────── */}
-      <section className="border-y border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] py-6">
-        <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-8 px-6">
+      <section className="border-y border-[rgba(123,110,255,0.1)] bg-[rgba(12,16,48,0.6)] backdrop-blur-sm py-5">
+        <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-6 sm:gap-10 px-6">
           {[
-            { icon: <Zap className="h-4 w-4"/>, text: "Canlı Soru-Cevap + Anketler" },
-            { icon: <Users className="h-4 w-4"/>, text: "Akıllı Networking" },
-            { icon: <Gamepad2 className="h-4 w-4"/>, text: "Molar Muhafızı Oyunu" },
-            { icon: <Images className="h-4 w-4"/>, text: "Etkinlik Galerisi" }
+            { icon: <Zap className="h-4 w-4" />, text: "Canlı Soru-Cevap + Anketler" },
+            { icon: <Users className="h-4 w-4" />, text: "Akıllı Networking" },
+            { icon: <Gamepad2 className="h-4 w-4" />, text: "Molar Muhafızı Oyunu" },
+            { icon: <Images className="h-4 w-4" />, text: "Etkinlik Galerisi" }
           ].map(({ icon, text }) => (
-            <div key={text} className="flex items-center gap-2 text-sm text-[rgba(240,240,255,0.5)]">
-              <span className="text-[#6C63FF]">{icon}</span>{text}
+            <div key={text} className="flex items-center gap-2.5 text-sm text-[rgba(200,195,255,0.45)]">
+              <span className="text-[#7B6EFF]">{icon}</span>
+              {text}
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Speakers ─────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#6C63FF]">Konuşmacılar</p>
-          <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Outlier&apos;larla Tanışın</h2>
+      {/* ── Spotify Playlist ──────────────────────────────────────── */}
+      <section className="mx-auto max-w-2xl px-6 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-8"
+        >
+          <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(196,154,42,0.25)] bg-[rgba(196,154,42,0.08)] px-4 py-1.5 mb-4">
+            <Music2 className="h-3.5 w-3.5 text-[#C49A2A]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C49A2A]">Etkinlik Soundtracki</span>
+          </div>
+          <h2 className="font-display italic text-2xl font-bold text-white sm:text-3xl">
+            DentCo Outliers <span className="text-gradient-gold not-italic font-heading font-extrabold">Playlist</span>
+          </h2>
+          <p className="mt-2 text-sm text-[rgba(200,195,255,0.4)]">Etkinlik öncesi, sırası ve sonrası için özenle seçildi.</p>
         </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="card-glass overflow-hidden rounded-2xl p-1"
+        >
+          <iframe
+            src={`https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLIST_ID}?utm_source=generator&theme=0`}
+            width="100%"
+            height="352"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            className="rounded-xl"
+            title="DentCo Outliers Spotify Playlist"
+          />
+        </motion.div>
+      </section>
+
+      {/* ── Speakers ─────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center"
+        >
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#7B6EFF]">Konuşmacılar</p>
+          <h2 className="font-display italic text-3xl font-bold sm:text-4xl">
+            Outlier&apos;larla <span className="not-italic font-heading font-extrabold text-gradient-purple">Tanışın</span>
+          </h2>
+        </motion.div>
+
         <div className="relative mx-auto mt-12 max-w-3xl">
           <div className="overflow-hidden">
             <motion.div
@@ -302,9 +384,9 @@ export default function LandingPage() {
             >
               {SPEAKERS.map((speaker) => (
                 <div key={speaker.name} className="w-full shrink-0 px-1">
-                  <div className="card-surface-hover min-h-[280px] p-6 text-center sm:p-8">
+                  <div className="card-glass min-h-[280px] p-6 text-center sm:p-8 transition-all duration-300">
                     {speaker.imageSrc ? (
-                      <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-2 border-[rgba(108,99,255,0.4)]">
+                      <div className="mx-auto mb-5 h-24 w-24 overflow-hidden rounded-full border-2 border-[rgba(123,110,255,0.5)] shadow-purple">
                         <Image
                           src={speaker.imageSrc}
                           alt={speaker.title}
@@ -314,18 +396,18 @@ export default function LandingPage() {
                         />
                       </div>
                     ) : (
-                      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-[rgba(108,99,255,0.3)] bg-[rgba(108,99,255,0.15)] text-3xl">
+                      <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-[rgba(196,154,42,0.3)] bg-[rgba(196,154,42,0.08)] text-[#C49A2A] text-2xl">
                         <i className={BADGE_MAP[speaker.badge].iconClass} aria-hidden="true" />
                       </div>
                     )}
-                    <h3 className="font-heading text-2xl font-bold">{speaker.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-[rgba(240,240,255,0.45)]">{speaker.bio}</p>
+                    <h3 className="font-heading text-xl font-bold tracking-tight">{speaker.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-[rgba(200,195,255,0.45)]">{speaker.bio}</p>
                     {speaker.posterHref ? (
                       <a
                         href={speaker.posterHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-5 inline-flex items-center justify-center rounded-full border border-[rgba(108,99,255,0.45)] bg-[rgba(108,99,255,0.15)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:border-[#6C63FF] hover:bg-[rgba(108,99,255,0.3)]"
+                        className="mt-5 inline-flex items-center justify-center rounded-full border border-[rgba(123,110,255,0.4)] bg-[rgba(123,110,255,0.12)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-all hover:border-[#7B6EFF] hover:bg-[rgba(123,110,255,0.25)]"
                       >
                         {speaker.posterButtonLabel ?? "Afişi Gör"}
                       </a>
@@ -341,7 +423,7 @@ export default function LandingPage() {
               type="button"
               onClick={handlePrevSpeaker}
               aria-label="Önceki konuşmacı"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(123,110,255,0.18)] bg-[rgba(12,16,48,0.6)] text-[rgba(200,195,255,0.6)] transition-all hover:border-[#7B6EFF] hover:text-white"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -353,8 +435,8 @@ export default function LandingPage() {
                   type="button"
                   onClick={() => setActiveSpeaker(i)}
                   aria-label={`${i + 1}. konuşmacı slaytı`}
-                  className={`h-2.5 rounded-full transition-all ${
-                    activeSpeaker === i ? "w-8 bg-[#6C63FF]" : "w-2.5 bg-[rgba(255,255,255,0.25)] hover:bg-[rgba(255,255,255,0.4)]"
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    activeSpeaker === i ? "w-8 bg-[#7B6EFF]" : "w-2 bg-[rgba(180,170,255,0.2)] hover:bg-[rgba(180,170,255,0.4)]"
                   }`}
                 />
               ))}
@@ -364,7 +446,7 @@ export default function LandingPage() {
               type="button"
               onClick={handleNextSpeaker}
               aria-label="Sonraki konuşmacı"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[rgba(240,240,255,0.8)] transition-colors hover:border-[#6C63FF] hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(123,110,255,0.18)] bg-[rgba(12,16,48,0.6)] text-[rgba(200,195,255,0.6)] transition-all hover:border-[#7B6EFF] hover:text-white"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -373,31 +455,48 @@ export default function LandingPage() {
       </section>
 
       {/* ── Schedule ─────────────────────────────────────────────── */}
-      <section className="relative py-24">
-        <div className="absolute inset-0 grid-bg opacity-20" />
+      <section className="relative py-20">
+        <div className="absolute inset-0 grid-bg opacity-15" />
         <div className="relative mx-auto max-w-3xl px-6">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-[#00E5A0]">Program</p>
-            <h2 className="font-heading text-center text-3xl font-extrabold sm:text-4xl">Günün Akışı</h2>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#00E5A0]">Program</p>
+            <h2 className="font-display italic text-3xl font-bold sm:text-4xl">
+              Günün <span className="not-italic font-heading font-extrabold text-gradient-mint">Akışı</span>
+            </h2>
           </motion.div>
-          <div className="mt-12 space-y-3">
+
+          <div className="mt-12 space-y-2.5">
             {SCHEDULE.map((item, i) => (
-              <motion.div key={`${item.time}-${i}`}
-                initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.04 }}
-                className={`flex items-start gap-4 rounded-[12px] border p-4 ${
-                  item.type === "break" ? "border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)]"
-                  : item.type === "panel" ? "border-[rgba(108,99,255,0.2)] bg-[rgba(108,99,255,0.07)]"
-                  : item.type === "interactive" ? "border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.07)]"
-                  : "border-[rgba(255,255,255,0.08)] bg-[#13131A] hover:border-[rgba(108,99,255,0.3)]"
-                }`}>
-                <span className="w-24 shrink-0 text-xs font-bold tabular-nums text-[rgba(240,240,255,0.4)]">{item.time}</span>
+              <motion.div
+                key={`${item.time}-${i}`}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.04 }}
+                className={`flex items-start gap-4 rounded-[14px] border p-4 transition-all duration-200 ${
+                  item.type === "break"
+                    ? "border-[rgba(123,110,255,0.06)] bg-[rgba(12,16,48,0.3)]"
+                    : item.type === "panel"
+                    ? "border-[rgba(123,110,255,0.2)] bg-[rgba(123,110,255,0.07)]"
+                    : item.type === "interactive"
+                    ? "border-[rgba(0,229,160,0.2)] bg-[rgba(0,229,160,0.06)]"
+                    : "border-[rgba(123,110,255,0.1)] bg-[rgba(12,16,48,0.5)] hover:border-[rgba(123,110,255,0.28)]"
+                }`}
+              >
+                <span className="w-24 shrink-0 text-[11px] font-bold tabular-nums text-[rgba(180,170,255,0.35)]">{item.time}</span>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-semibold ${item.type === "break" ? "text-[rgba(240,240,255,0.5)]" : "text-white"}`}>{item.title}</p>
-                  {item.speaker && <p className="mt-0.5 text-xs text-[rgba(240,240,255,0.4)]">{item.speaker}</p>}
+                  <p className={`text-sm font-semibold ${item.type === "break" ? "text-[rgba(200,195,255,0.4)]" : "text-white"}`}>
+                    {item.title}
+                  </p>
+                  {item.speaker && <p className="mt-0.5 text-xs text-[rgba(180,170,255,0.35)]">{item.speaker}</p>}
                 </div>
-                {item.type === "interactive" && <span className="shrink-0 text-xs font-semibold text-[#00E5A0]">Etkileşimli</span>}
-                {item.type === "panel" && <span className="shrink-0 text-xs font-semibold text-[#A78BFA]">Panel</span>}
+                {item.type === "interactive" && <span className="shrink-0 text-[11px] font-semibold text-[#00E5A0]">Etkileşimli</span>}
+                {item.type === "panel" && <span className="shrink-0 text-[11px] font-semibold text-[#B8ACFF]">Panel</span>}
               </motion.div>
             ))}
           </div>
@@ -406,13 +505,23 @@ export default function LandingPage() {
 
       {/* ── CTA ──────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-32 text-center">
-        <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(108,99,255,0.1)] blur-[120px]" />
-        <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="relative z-10 px-6">
-          <h2 className="font-heading text-4xl font-extrabold sm:text-6xl">
-            Sen de bir <span className="text-gradient-purple">Outlier</span> mısın?
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[rgba(30,20,120,0.3)] blur-[130px]" />
+        <div className="absolute left-1/4 top-1/4 h-[300px] w-[300px] rounded-full bg-[rgba(100,50,200,0.12)] blur-[80px]" />
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative z-10 px-6"
+        >
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.4em] text-[rgba(180,170,255,0.45)]">
+            Katılım
+          </p>
+          <h2 className="font-display italic text-4xl font-bold leading-tight sm:text-6xl">
+            Sen de bir{" "}
+            <span className="not-italic font-heading font-extrabold text-gradient-poster">Outlier</span>{" "}
+            mısın?
           </h2>
-          <p className="mt-4 text-lg text-[rgba(240,240,255,0.5)]">Başvurular yakında açılacak.</p>
+          <p className="mt-4 text-base text-[rgba(200,195,255,0.4)]">Başvurular yakında açılacak.</p>
           <div className="mt-8 flex justify-center">
             <ApplicationCheckoutButton />
           </div>
@@ -420,16 +529,16 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[rgba(255,255,255,0.06)] py-8 text-center">
-        <p className="text-xs text-[rgba(240,240,255,0.3)]">© 2026 Communitive Dentistry — DentCo Outlier</p>
-        <div className="mt-3 flex flex-wrap justify-center gap-6 text-xs text-[rgba(240,240,255,0.3)]">
+      <footer className="border-t border-[rgba(123,110,255,0.1)] py-8 text-center">
+        <p className="text-xs text-[rgba(180,170,255,0.25)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
+        <div className="mt-3 flex flex-wrap justify-center gap-6 text-xs text-[rgba(180,170,255,0.25)]">
           <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
             Android Uygulamasını İndir
           </a>
           <a href={IOS_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
             iOS Uygulamasını İndir
           </a>
-          <span className="text-[rgba(240,240,255,0.45)]">Başvurular yakında açılacak</span>
+          <span>Başvurular yakında açılacak</span>
         </div>
       </footer>
 

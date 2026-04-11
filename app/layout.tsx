@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Syne } from "next/font/google";
+import { Inter, Syne, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,6 +13,14 @@ const syne = Syne({
   variable: "--font-syne",
   display: "swap",
   weight: ["400", "600", "700", "800"]
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["400", "700", "900"],
+  style: ["normal", "italic"]
 });
 
 export const metadata: Metadata = {
@@ -31,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className={`${inter.variable} ${syne.variable}`}>
+    <html lang="tr" className={`${inter.variable} ${syne.variable} ${playfair.variable}`}>
       <head>
         <link
           rel="stylesheet"

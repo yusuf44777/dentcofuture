@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Trophy, ArrowLeft, Gamepad2 } from "lucide-react";
+import { Trophy, ArrowLeft, Gamepad2, Maximize2, Minimize2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -13,7 +13,22 @@ export default function GamePage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [leaderboard, setLeaderboard] = useState<(GameScore & { attendee?: { name: string } })[]>([]);
   const [pointsAwarded, setPointsAwarded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const attendeeId = typeof window !== "undefined" ? getStoredAttendeeId() : null;
+
+  function handleFullscreen() {
+    if (!document.fullscreenElement) {
+      iframeRef.current?.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => null);
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => null);
+    }
+  }
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   useEffect(() => {
     loadLeaderboard();
@@ -65,11 +80,21 @@ export default function GamePage() {
           <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
           <h1 className="font-heading text-lg font-extrabold">Molar Muhafızı</h1>
         </div>
-        {attendeeId && !pointsAwarded && (
-          <div className="ml-auto rounded-full bg-[rgba(0,229,160,0.15)] px-3 py-1 text-xs font-semibold text-[#00E5A0]">
-            +{POINTS.GAME_PLAY} puan oyun bonusu!
-          </div>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {attendeeId && !pointsAwarded && (
+            <div className="rounded-full bg-[rgba(0,229,160,0.15)] px-3 py-1 text-xs font-semibold text-[#00E5A0]">
+              +{POINTS.GAME_PLAY} puan oyun bonusu!
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleFullscreen}
+            aria-label={isFullscreen ? "Tam ekrandan çık" : "Tam ekran"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(123,110,255,0.2)] bg-[rgba(12,16,48,0.6)] text-[rgba(180,170,255,0.5)] transition-all hover:border-[rgba(123,110,255,0.5)] hover:text-white"
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col lg:flex-row">

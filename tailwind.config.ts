@@ -14,18 +14,23 @@ const config: Config = {
         heading: ["var(--font-syne)", "system-ui", "sans-serif"]
       },
       colors: {
-        bg: "#0A0A0F",
-        surface: "#13131A",
-        "surface-2": "#1A1A24",
+        bg: "#060918",
+        surface: "#0C1030",
+        "surface-2": "#131A45",
         purple: {
-          DEFAULT: "#6C63FF",
-          dim: "rgba(108,99,255,0.15)",
-          glow: "rgba(108,99,255,0.4)"
+          DEFAULT: "#7B6EFF",
+          dim: "rgba(123,110,255,0.15)",
+          glow: "rgba(123,110,255,0.4)"
         },
         mint: {
           DEFAULT: "#00E5A0",
           dim: "rgba(0,229,160,0.15)",
           glow: "rgba(0,229,160,0.4)"
+        },
+        gold: {
+          DEFAULT: "#C49A2A",
+          dim: "rgba(196,154,42,0.15)",
+          glow: "rgba(196,154,42,0.35)"
         },
         danger: "#FF4D6D"
       },

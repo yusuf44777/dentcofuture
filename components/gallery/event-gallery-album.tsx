@@ -83,28 +83,25 @@ function formatFileSize(bytes: number) {
 function getStatusLabel(status: GalleryBackupStatus) {
   switch (status) {
     case "synced":
-      return "Drive yedeği tamam";
+      return "Drive ✓";
     case "failed":
-      return "Drive yedeği hatalı";
+      return "Drive ✗";
     case "disabled":
-      return "Drive yedeği pasif";
+      return "Drive —";
     default:
-      return "Drive yedeği bekliyor";
+      return "Bekliyor";
   }
 }
 
 function getStatusClassName(status: GalleryBackupStatus) {
   if (status === "synced") {
-    return "bg-emerald-100 text-emerald-800";
+    return "bg-[rgba(0,229,160,0.12)] text-[#00E5A0] border border-[rgba(0,229,160,0.2)]";
   }
   if (status === "failed") {
-    return "bg-rose-100 text-rose-800";
-  }
-  if (status === "disabled") {
-    return "bg-cyan-100 text-cyan-900";
+    return "bg-[rgba(255,77,109,0.12)] text-[#FF4D6D] border border-[rgba(255,77,109,0.2)]";
   }
 
-  return "bg-cyan-100 text-cyan-900";
+  return "bg-[rgba(123,110,255,0.1)] text-[rgba(180,170,255,0.6)] border border-[rgba(123,110,255,0.15)]";
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -261,43 +258,52 @@ export function EventGalleryAlbum() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-cyan-100/70 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center gap-2 text-cyan-800">
-          <UploadCloud className="h-5 w-5" />
-          <h2 className="text-lg font-semibold tracking-tight">Etkinlik Albümüne Ekle</h2>
+      {/* Upload form */}
+      <section className="card-glass rounded-2xl p-5 sm:p-6">
+        <div className="mb-5 flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(123,110,255,0.15)]">
+            <UploadCloud className="h-4 w-4 text-[#7B6EFF]" />
+          </div>
+          <h2 className="font-heading text-base font-bold tracking-tight">Albüme Ekle</h2>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Ad Soyad</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(180,170,255,0.5)]">
+              Ad Soyad
+            </label>
             <input
               type="text"
               placeholder="Adınız Soyadınız"
               value={uploaderName}
               onChange={(event) => setUploaderName(event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+              className="h-11 w-full rounded-xl border border-[rgba(123,110,255,0.18)] bg-[rgba(12,16,48,0.7)] px-3 text-sm text-white placeholder:text-[rgba(180,170,255,0.3)] outline-none transition focus:border-[rgba(123,110,255,0.5)] focus:bg-[rgba(12,16,48,0.9)]"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-800">Fotoğraf / Video</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(180,170,255,0.5)]">
+              Fotoğraf / Video
+            </label>
             <input
               type="file"
               multiple
               accept="image/*,video/*"
               onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
-              className="block h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-cyan-900 hover:border-cyan-300"
+              className="block h-11 w-full rounded-xl border border-[rgba(123,110,255,0.18)] bg-[rgba(12,16,48,0.7)] px-3 py-2 text-sm text-[rgba(200,195,255,0.7)] file:mr-3 file:rounded-lg file:border-0 file:bg-[rgba(123,110,255,0.2)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#B8ACFF] hover:border-[rgba(123,110,255,0.35)] outline-none cursor-pointer"
             />
           </div>
         </div>
 
         <div className="mt-3 space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">Açıklama (Opsiyonel)</label>
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(180,170,255,0.5)]">
+            Açıklama (opsiyonel)
+          </label>
           <textarea
-            placeholder="Bu kareyi kısa bir notla paylaşabilirsiniz."
+            placeholder="Bu kareyi kısa bir notla paylaşabilirsiniz…"
             value={caption}
             onChange={(event) => setCaption(event.target.value)}
-            rows={3}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+            rows={2}
+            className="w-full rounded-xl border border-[rgba(123,110,255,0.18)] bg-[rgba(12,16,48,0.7)] px-3 py-2.5 text-sm text-white placeholder:text-[rgba(180,170,255,0.3)] outline-none transition focus:border-[rgba(123,110,255,0.5)] resize-none"
           />
         </div>
 
@@ -315,63 +321,59 @@ export function EventGalleryAlbum() {
               </>
             )}
           </Button>
-          <p className="text-xs text-slate-500">
-            Seçilen dosya: {selectedFiles.length > 0 ? selectedFiles.length : 0}
+          <p className="text-xs text-[rgba(180,170,255,0.35)]">
+            {selectedFiles.length > 0 ? `${selectedFiles.length} dosya seçildi` : "Dosya seçilmedi"}
           </p>
-          {uploadProgress ? <p className="text-xs text-cyan-700">{uploadProgress}</p> : null}
+          {uploadProgress ? <p className="text-xs text-[#7B6EFF]">{uploadProgress}</p> : null}
         </div>
 
-        {message ? <p className="mt-2 text-sm text-emerald-700">{message}</p> : null}
-        {error ? <p className="mt-2 text-sm text-rose-700">{error}</p> : null}
+        {message ? <p className="mt-2 text-sm text-[#00E5A0]">{message}</p> : null}
+        {error ? <p className="mt-2 text-sm text-[#FF4D6D]">{error}</p> : null}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-slate-900">
-            <Images className="h-5 w-5 text-cyan-700" />
-            <h2 className="text-lg font-semibold tracking-tight">Etkinlik Galerisi</h2>
+      {/* Gallery grid */}
+      <section className="card-glass rounded-2xl p-5 sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(123,110,255,0.15)]">
+              <Images className="h-4 w-4 text-[#7B6EFF]" />
+            </div>
+            <h2 className="font-heading text-base font-bold tracking-tight">Etkinlik Galerisi</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
+            {(["all", "photo", "video"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`h-8 rounded-full px-4 text-xs font-semibold transition-all ${
+                  filter === f
+                    ? "bg-[#7B6EFF] text-white"
+                    : "border border-[rgba(123,110,255,0.2)] text-[rgba(180,170,255,0.55)] hover:border-[rgba(123,110,255,0.4)] hover:text-white"
+                }`}
+              >
+                {f === "all" ? "Tümü" : f === "photo" ? "Fotoğraf" : "Video"}
+              </button>
+            ))}
+            <button
               type="button"
-              variant={filter === "all" ? "default" : "outline"}
-              className="h-9 px-3 text-xs"
-              onClick={() => setFilter("all")}
+              onClick={() => void loadItems()}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(123,110,255,0.2)] text-[rgba(180,170,255,0.4)] transition hover:border-[rgba(123,110,255,0.4)] hover:text-white"
             >
-              Tümü
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "photo" ? "default" : "outline"}
-              className="h-9 px-3 text-xs"
-              onClick={() => setFilter("photo")}
-            >
-              Fotoğraf
-            </Button>
-            <Button
-              type="button"
-              variant={filter === "video" ? "default" : "outline"}
-              className="h-9 px-3 text-xs"
-              onClick={() => setFilter("video")}
-            >
-              Video
-            </Button>
-            <Button type="button" variant="outline" className="h-9 px-3 text-xs" onClick={() => void loadItems()}>
-              <RefreshCw className="h-4 w-4" />
-              Yenile
-            </Button>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 py-8 text-sm text-[rgba(180,170,255,0.4)]">
             <LoaderCircle className="h-4 w-4 animate-spin" />
-            Galeri yükleniyor...
+            Galeri yükleniyor…
           </div>
         ) : null}
 
         {!loading && filteredItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-dashed border-[rgba(123,110,255,0.2)] px-4 py-10 text-center text-sm text-[rgba(180,170,255,0.35)]">
             Henüz galeriye medya eklenmedi.
           </div>
         ) : null}
@@ -380,14 +382,14 @@ export function EventGalleryAlbum() {
           {filteredItems.map((item) => (
             <article
               key={item.id}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm"
+              className="group overflow-hidden rounded-xl border border-[rgba(123,110,255,0.12)] bg-[rgba(12,16,48,0.7)] transition-all duration-200 hover:border-[rgba(123,110,255,0.3)] hover:shadow-purple"
             >
-              <div className="relative aspect-[4/3] bg-slate-200">
+              <div className="relative aspect-[4/3] bg-[rgba(12,16,48,0.9)]">
                 {item.media_type === "photo" ? (
                   <img
                     src={item.public_url}
                     alt={item.caption || "Etkinlik fotoğrafı"}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     loading="lazy"
                   />
                 ) : (
@@ -402,20 +404,20 @@ export function EventGalleryAlbum() {
 
               <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold text-slate-900">{item.uploader_name}</p>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${getStatusClassName(item.drive_backup_status)}`}
-                  >
+                  <p className="truncate text-sm font-semibold text-white">{item.uploader_name}</p>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${getStatusClassName(item.drive_backup_status)}`}>
                     {getStatusLabel(item.drive_backup_status)}
                   </span>
                 </div>
-                {item.caption ? <p className="line-clamp-2 text-sm text-slate-700">{item.caption}</p> : null}
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                {item.caption ? (
+                  <p className="line-clamp-2 text-xs leading-relaxed text-[rgba(200,195,255,0.5)]">{item.caption}</p>
+                ) : null}
+                <div className="flex items-center justify-between text-[11px] text-[rgba(180,170,255,0.3)]">
                   <span>{formatDate(item.created_at)}</span>
                   <span>{formatFileSize(item.file_size)}</span>
                 </div>
                 {item.drive_backup_status === "failed" && item.drive_error ? (
-                  <p className="text-xs text-rose-600">{item.drive_error}</p>
+                  <p className="text-[11px] text-[#FF4D6D]">{item.drive_error}</p>
                 ) : null}
               </div>
             </article>
@@ -423,11 +425,10 @@ export function EventGalleryAlbum() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-xs text-cyan-900">
-        <p className="flex items-center gap-2 font-medium">
-          <Camera className="h-4 w-4" />
-          Yüklenen medya dosyaları galeri storage moduna göre Supabase veya Google Drive üzerinden servis edilir.
-        </p>
+      {/* Info */}
+      <section className="flex items-start gap-2.5 rounded-xl border border-[rgba(123,110,255,0.12)] bg-[rgba(12,16,48,0.4)] px-4 py-3 text-xs text-[rgba(180,170,255,0.35)]">
+        <Camera className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#7B6EFF]" />
+        <p>Yüklenen medya dosyaları Google Drive yedeğiyle korunur ve etkinlik galerisinde herkesle paylaşılır.</p>
       </section>
     </div>
   );

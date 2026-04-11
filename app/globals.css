@@ -3,15 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0A0A0F;
-  --surface: #13131A;
-  --surface-2: #1A1A24;
-  --border: rgba(255, 255, 255, 0.08);
-  --purple: #6C63FF;
+  --bg: #060918;
+  --surface: #0C1030;
+  --surface-2: #131A45;
+  --border: rgba(123, 110, 255, 0.12);
+  --purple: #7B6EFF;
   --mint: #00E5A0;
+  --gold: #C49A2A;
   --danger: #FF4D6D;
-  --text: #F0F0FF;
-  --text-muted: rgba(240, 240, 255, 0.5);
+  --text: #EEEEFF;
+  --text-muted: rgba(220, 220, 255, 0.45);
 }
 
 * {
@@ -35,14 +36,15 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: rgba(108,99,255,0.4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(108,99,255,0.7); }
+::-webkit-scrollbar-thumb { background: rgba(123,110,255,0.35); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(123,110,255,0.6); }
 
 /* Typography */
 .font-heading { font-family: var(--font-syne), system-ui, sans-serif; }
+.font-display { font-family: var(--font-display), Georgia, serif; }
 
 .text-gradient-purple {
-  background: linear-gradient(135deg, #6C63FF 0%, #A78BFA 100%);
+  background: linear-gradient(135deg, #7B6EFF 0%, #B8ACFF 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -56,7 +58,22 @@ body {
 }
 
 .text-gradient-hero {
-  background: linear-gradient(135deg, #F0F0FF 0%, #6C63FF 50%, #00E5A0 100%);
+  background: linear-gradient(135deg, #EEEEFF 0%, #7B6EFF 55%, #00E5A0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Poster gradient — afişin lacivert → mor geçişi */
+.text-gradient-poster {
+  background: linear-gradient(135deg, #A8B4FF 0%, #7B6EFF 40%, #C49A2A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #E8C56A 0%, #C49A2A 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -73,18 +90,27 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s;
 }
 .card-surface-hover:hover {
-  border-color: rgba(108,99,255,0.4);
-  box-shadow: 0 0 20px rgba(108,99,255,0.1);
+  border-color: rgba(123,110,255,0.35);
+  box-shadow: 0 0 24px rgba(123,110,255,0.08);
+}
+
+/* Glass card */
+.card-glass {
+  background: rgba(12, 16, 48, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(123,110,255,0.18);
+  border-radius: 16px;
 }
 
 /* Grid bg */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(123,110,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(123,110,255,0.04) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 

@@ -72,9 +72,9 @@ export function AppPageSwitcher({
             key={route.href}
             href={route.href}
             className={cn(
-              buttonVariants({ variant: route.active ? "default" : "outline" }),
-              "h-10 px-4 text-sm",
-              !route.active && "bg-white/90"
+              route.active
+                ? "inline-flex h-10 items-center gap-2 rounded-full bg-[#7B6EFF] px-4 text-sm font-semibold text-white transition-all"
+                : "inline-flex h-10 items-center gap-2 rounded-full border border-[rgba(123,110,255,0.2)] bg-[rgba(12,16,48,0.6)] px-4 text-sm font-medium text-[rgba(180,170,255,0.6)] transition-all hover:border-[rgba(123,110,255,0.4)] hover:text-white"
             )}
           >
             <Icon className="h-4 w-4" />
@@ -86,8 +86,8 @@ export function AppPageSwitcher({
       {showSavedProfileButton && savedProfileId ? (
         <Button
           type="button"
-          variant="outline"
-          className="h-10 px-4 text-sm"
+          variant="ghost"
+          className="h-10 rounded-full border border-[rgba(123,110,255,0.2)] px-4 text-sm text-[rgba(180,170,255,0.6)] hover:border-[rgba(123,110,255,0.4)] hover:text-white"
           onClick={() => router.push(`/networking/waiting-room?id=${savedProfileId}`)}
         >
           <History className="h-4 w-4" />
