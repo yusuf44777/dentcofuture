@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createSign } from "node:crypto";
 
 const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -11,6 +12,11 @@ type GoogleDriveConfig = {
   privateKey: string;
   folderId: string;
   makePublic: boolean;
+};
+
+type GoogleServiceAccountJson = {
+  client_email?: string;
+  private_key?: string;
 };
 
 type GoogleTokenCache = {
@@ -144,10 +150,12 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
 }
 
 function getGoogleDriveConfig(): GoogleDriveConfig | null {
-  const clientEmail = stripWrappingQuotes(
-    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? ""
-  );
-  const privateKeyRaw = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
+  const credentialsFromJson = readGoogleServiceAccountFromEnv();
+  const clientEmail =
+    credentialsFromJson?.client_email?.trim() ||
+    stripWrappingQuotes(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "");
+  const privateKeyRaw =
+    credentialsFromJson?.private_key ?? process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
   const folderId =
     stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
     DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
@@ -164,6 +172,33 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
     folderId,
     makePublic
   };
+}
+
+function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
+  const rawBase64 = stripWrappingQuotes(
+    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64?.trim() ?? ""
+  );
+  if (rawBase64) {
+    try {
+      const decoded = Buffer.from(rawBase64, "base64").toString("utf8");
+      const parsed = JSON.parse(decoded) as GoogleServiceAccountJson;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  const rawJson = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON?.trim() ?? "";
+  if (rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson) as GoogleServiceAccountJson;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 async function getAccessToken(config: GoogleDriveConfig) {
@@ -378,7 +413,7 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
     lower.includes("pem") ||
     lower.includes("decoder routines")
   ) {
-    return "Google Drive private key formatı geçersiz. Vercel env'de anahtarı tırnaksız ekleyin ve satır sonlarının doğru olduğundan emin olun.";
+    return "Google Drive private key formatı geçersiz. Anahtarı tırnaksız girin veya GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 ile tüm service-account JSON'unu base64 olarak verin.";
   }
 
   if (lower.includes("invalid_grant") || lower.includes("oauth")) {
@@ -394,7 +429,19 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
 
 function normalizePrivateKey(value: string) {
   const unwrapped = stripWrappingQuotes(value.trim());
-  return unwrapped.replace(/\\n/g, "\n");
+  if (!unwrapped) {
+    return "";
+  }
+
+  let normalized = unwrapped;
+
+  // Some UIs double-escape line breaks (\\n) or keep CRLF endings.
+  normalized = normalized.replace(/\\r\\n/g, "\n");
+  normalized = normalized.replace(/\\n/g, "\n");
+  normalized = normalized.replace(/\r\n/g, "\n");
+  normalized = normalized.replace(/\r/g, "\n");
+
+  return normalized;
 }
 
 function stripWrappingQuotes(value: string) {
