@@ -3,16 +3,26 @@ import { createSign } from "node:crypto";
 
 const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const GOOGLE_DRIVE_UPLOAD_ENDPOINT =
-  "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink";
+  "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DEFAULT_GOOGLE_DRIVE_FOLDER_ID = "1QKdCWBWRWJAfPUWgd5QqhJHtLb8w6i95";
 
-type GoogleDriveConfig = {
-  clientEmail: string;
-  privateKey: string;
-  folderId: string;
-  makePublic: boolean;
-};
+type GoogleDriveConfig =
+  | {
+      authMode: "service_account";
+      clientEmail: string;
+      privateKey: string;
+      folderId: string;
+      makePublic: boolean;
+    }
+  | {
+      authMode: "oauth_refresh_token";
+      oauthClientId: string;
+      oauthClientSecret: string;
+      oauthRefreshToken: string;
+      folderId: string;
+      makePublic: boolean;
+    };
 
 type GoogleServiceAccountJson = {
   client_email?: string;
@@ -116,7 +126,7 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
   try {
     const accessToken = await getAccessToken(config);
     const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(trimmedFileId)}`,
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(trimmedFileId)}?supportsAllDrives=true`,
       {
         method: "DELETE",
         headers: {
@@ -150,23 +160,46 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
 }
 
 function getGoogleDriveConfig(): GoogleDriveConfig | null {
+  const folderId =
+    stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
+    DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
+  const makePublic = readBooleanEnv("GOOGLE_DRIVE_MAKE_PUBLIC", true);
+
+  // OAuth refresh token yöntemi (kişisel Drive)
+  const oauthClientId = stripWrappingQuotes(process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID?.trim() ?? "");
+  const oauthClientSecret = stripWrappingQuotes(
+    process.env.GOOGLE_DRIVE_OAUTH_CLIENT_SECRET?.trim() ?? ""
+  );
+  const oauthRefreshToken = stripWrappingQuotes(
+    process.env.GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN?.trim() ?? ""
+  );
+
+  if (oauthClientId && oauthClientSecret && oauthRefreshToken) {
+    return {
+      authMode: "oauth_refresh_token",
+      oauthClientId,
+      oauthClientSecret,
+      oauthRefreshToken,
+      folderId,
+      makePublic
+    };
+  }
+
+  // Service account yöntemi (Shared Drive)
   const credentialsFromJson = readGoogleServiceAccountFromEnv();
   const clientEmail =
     credentialsFromJson?.client_email?.trim() ||
     stripWrappingQuotes(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "");
   const privateKeyRaw =
     credentialsFromJson?.private_key ?? process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
-  const folderId =
-    stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
-    DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
   const privateKey = normalizePrivateKey(privateKeyRaw);
-  const makePublic = readBooleanEnv("GOOGLE_DRIVE_MAKE_PUBLIC", true);
 
   if (!clientEmail || !privateKey) {
     return null;
   }
 
   return {
+    authMode: "service_account",
     clientEmail,
     privateKey,
     folderId,
@@ -202,7 +235,64 @@ function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
 }
 
 async function getAccessToken(config: GoogleDriveConfig) {
-  const cacheKey = `${config.clientEmail}:${config.folderId}`;
+  if (config.authMode === "oauth_refresh_token") {
+    return getAccessTokenViaRefreshToken(config);
+  }
+  return getAccessTokenViaServiceAccount(config);
+}
+
+async function getAccessTokenViaRefreshToken(config: {
+  oauthClientId: string;
+  oauthClientSecret: string;
+  oauthRefreshToken: string;
+}) {
+  const cacheKey = `refresh:${config.oauthClientId}`;
+  const nowMs = Date.now();
+  if (tokenCache && tokenCache.cacheKey === cacheKey && tokenCache.expiresAtMs - 60_000 > nowMs) {
+    return tokenCache.accessToken;
+  }
+
+  const response = await fetch(GOOGLE_OAUTH_TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: config.oauthClientId,
+      client_secret: config.oauthClientSecret,
+      refresh_token: config.oauthRefreshToken
+    })
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | {
+        access_token?: string;
+        expires_in?: number;
+        error?: string;
+        error_description?: string;
+      }
+    | null;
+
+  if (!response.ok || !payload?.access_token) {
+    const description =
+      payload?.error_description?.trim() || payload?.error?.trim() || "OAuth token alınamadı.";
+    throw new Error(`Google OAuth hatası: ${description}`);
+  }
+
+  tokenCache = {
+    accessToken: payload.access_token,
+    expiresAtMs: nowMs + Math.max(300, payload.expires_in ?? 3600) * 1000,
+    cacheKey
+  };
+
+  return payload.access_token;
+}
+
+async function getAccessTokenViaServiceAccount(config: {
+  clientEmail: string;
+  privateKey: string;
+  folderId: string;
+}) {
+  const cacheKey = `sa:${config.clientEmail}:${config.folderId}`;
   const nowMs = Date.now();
   if (tokenCache && tokenCache.cacheKey === cacheKey && tokenCache.expiresAtMs - 60_000 > nowMs) {
     return tokenCache.accessToken;
@@ -337,7 +427,7 @@ async function uploadToGoogleDrive(
 
 async function ensurePublicReadPermission(accessToken: string, fileId: string) {
   const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?fields=id`,
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?fields=id&supportsAllDrives=true`,
     {
       method: "POST",
       headers: {
