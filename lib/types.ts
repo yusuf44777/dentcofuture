@@ -297,6 +297,7 @@ export interface AnalyticsRow {
 }
 export interface NetworkingProfileRow {
   id: string; full_name: string; headline: string | null; interest_area: string; goal: string;
+  dentistry_focus_areas: Json;
   profession: string | null; city: string | null; institution_name: string | null;
   years_experience: number | null; bio: string | null;
   topics: Json; collaboration_goals: Json; languages: Json;

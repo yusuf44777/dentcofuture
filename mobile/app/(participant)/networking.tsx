@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -95,7 +95,7 @@ export default function ParticipantNetworkingScreen() {
   const { me } = useMobileMe();
   const attendeeId = me?.attendee?.id ?? null;
   const [activeSection, setActiveSection] = useState<NetworkingSection>("gallery");
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [selectedUploadAssets, setSelectedUploadAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [uploadCaption, setUploadCaption] = useState("");
@@ -141,10 +141,6 @@ export default function ParticipantNetworkingScreen() {
     refetchInterval: 10_000
   });
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [feedQuery.data?.refreshedAt]);
-
   const interactionMutation = useMutation({
     mutationFn: ({
       targetProfileId,
@@ -153,17 +149,8 @@ export default function ParticipantNetworkingScreen() {
       targetProfileId: string;
       action: "like" | "pass";
     }) => sendNetworkingInteraction(targetProfileId, action),
-    onMutate: () => {
-      // Card swipe should feel instant; we optimistically advance while request is in-flight.
-      setActiveIndex((current) => current + 1);
-      return { advanced: true };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.advanced) {
-        setActiveIndex((current) => Math.max(current - 1, 0));
-      }
-    },
     onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] });
       if (result.matched) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["mobile-networking-matches"] }),
@@ -405,9 +392,57 @@ export default function ParticipantNetworkingScreen() {
     }
   });
 
-  const activeProfile = useMemo(() => {
-    return feedQuery.data?.queue?.[activeIndex] ?? null;
-  }, [activeIndex, feedQuery.data?.queue]);
+  const normalizedSearchQuery = useMemo(
+    () => searchQuery.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR"),
+    [searchQuery]
+  );
+
+  const recommendedProfiles = useMemo(() => {
+    const source = feedQuery.data?.recommended ?? feedQuery.data?.queue ?? [];
+    if (!normalizedSearchQuery) {
+      return source;
+    }
+
+    return source.filter((profile) => {
+      const haystack = [
+        profile.fullName,
+        profile.interestArea,
+        profile.goal,
+        profile.city ?? "",
+        ...(profile.dentistryFocusAreas ?? [])
+      ]
+        .join(" ")
+        .toLocaleLowerCase("tr-TR");
+
+      return haystack.includes(normalizedSearchQuery);
+    });
+  }, [feedQuery.data?.queue, feedQuery.data?.recommended, normalizedSearchQuery]);
+
+  const directoryProfiles = useMemo(() => {
+    const source = feedQuery.data?.directory ?? feedQuery.data?.queue ?? [];
+    if (!normalizedSearchQuery) {
+      return source;
+    }
+
+    return source.filter((profile) => {
+      const haystack = [
+        profile.fullName,
+        profile.interestArea,
+        profile.goal,
+        profile.city ?? "",
+        ...(profile.dentistryFocusAreas ?? [])
+      ]
+        .join(" ")
+        .toLocaleLowerCase("tr-TR");
+
+      return haystack.includes(normalizedSearchQuery);
+    });
+  }, [feedQuery.data?.directory, feedQuery.data?.queue, normalizedSearchQuery]);
+
+  const recommendationProfileIds = useMemo(
+    () => new Set((feedQuery.data?.recommended ?? feedQuery.data?.queue ?? []).map((item) => item.profileId)),
+    [feedQuery.data?.queue, feedQuery.data?.recommended]
+  );
 
   const latestThreadByAttendee = useMemo(() => {
     const mapped = new Map<
@@ -526,6 +561,8 @@ export default function ParticipantNetworkingScreen() {
     galleryLikeMutation.isPending ? (galleryLikeMutation.variables?.itemId ?? null) : null;
   const pendingGalleryCommentItemId =
     galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
+  const pendingInteractionTargetId =
+    interactionMutation.isPending ? (interactionMutation.variables?.targetProfileId ?? null) : null;
 
   const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
     const now = Date.now();
@@ -554,7 +591,7 @@ export default function ParticipantNetworkingScreen() {
   return (
     <ScreenShell
       title="Outliers"
-      subtitle="Feed'de paylaş, etkileşim kur, eşleş ve anında sohbet et."
+      subtitle="Feed'de paylaş, networking yap, bağlantı kur ve anında sohbet et."
     >
       <View style={styles.segmentWrap}>
         <Pressable
@@ -596,11 +633,8 @@ export default function ParticipantNetworkingScreen() {
       {activeSection === "discovery" ? (
         <>
           <View style={styles.metricRow}>
-            <Metric
-              label="Kalan Kart"
-              value={String(Math.max((feedQuery.data?.queue.length ?? 0) - activeIndex, 0))}
-            />
-            <Metric label="Eşleşme" value={String(matchesQuery.data?.total ?? 0)} />
+            <Metric label="Öneri" value={String((feedQuery.data?.recommended ?? feedQuery.data?.queue ?? []).length)} />
+            <Metric label="Katılımcı" value={String((feedQuery.data?.directory ?? feedQuery.data?.queue ?? []).length)} />
             <Metric label="Mesaj" value={String(threadsQuery.data?.threads.length ?? 0)} />
           </View>
 
@@ -613,17 +647,17 @@ export default function ParticipantNetworkingScreen() {
 
           {feedQuery.isError ? (
             <View style={styles.errorCard}>
-                <Text style={styles.errorText}>
-                  {feedQuery.error instanceof Error
-                    ? feedQuery.error.message
-                    : "Outliers akışı alınamadı."}
-                </Text>
-              </View>
-            ) : null}
+              <Text style={styles.errorText}>
+                {feedQuery.error instanceof Error
+                  ? feedQuery.error.message
+                  : "Outliers akışı alınamadı."}
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Keşif</Text>
+              <Text style={styles.cardTitle}>Katılımcı Arama</Text>
               <Pressable
                 style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
                 onPress={() => {
@@ -633,61 +667,133 @@ export default function ParticipantNetworkingScreen() {
                 <RefreshCw color={colors.inkMuted} size={16} />
               </Pressable>
             </View>
+            <TextInput
+              style={styles.discoverySearchInput}
+              placeholder="İsim, uzmanlık alanı, şehir..."
+              placeholderTextColor={colors.inkMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            <Text style={styles.mutedText}>
+              {feedQuery.data?.message ?? "Tüm katılımcılar listede, üstten aratarak hızlıca filtreleyebilirsin."}
+            </Text>
+          </View>
 
-            {activeProfile ? (
-              <>
-                <Text style={styles.profileName}>{activeProfile.fullName}</Text>
-                <Text style={styles.profileMeta}>
-                  {activeProfile.interestArea} • {activeProfile.goal}
-                </Text>
-                {activeProfile.bio ? <Text style={styles.profileBio}>{activeProfile.bio}</Text> : null}
-                <View style={styles.topicWrap}>
-                  {activeProfile.topics.slice(0, 3).map((topic) => (
-                    <View key={topic} style={styles.tag}>
-                      <Text style={styles.tagText}>{topic}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.actionRow}>
-                  <Pressable
-                    disabled={interactionMutation.isPending}
-                    style={({ pressed }) => [styles.passButton, pressed ? styles.pressed : null]}
-                    onPress={() => {
-                      interactionMutation.mutate({
-                        targetProfileId: activeProfile.profileId,
-                        action: "pass"
-                      });
-                    }}
-                  >
-                    <UserRoundX color={colors.danger} size={17} />
-                    <Text style={styles.passButtonText}>Pas</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={interactionMutation.isPending}
-                    style={({ pressed }) => [styles.likeButton, pressed ? styles.pressed : null]}
-                    onPress={() => {
-                      interactionMutation.mutate({
-                        targetProfileId: activeProfile.profileId,
-                        action: "like"
-                      });
-                    }}
-                  >
-                    <Heart color="#FFFFFF" fill="#FFFFFF" size={17} />
-                    <Text style={styles.likeButtonText}>Beğen</Text>
-                  </Pressable>
-                </View>
-              </>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Eşleşme Tavsiyeleri</Text>
+            {recommendedProfiles.length === 0 ? (
+              <Text style={styles.mutedText}>Aramana uygun öneri bulunamadı.</Text>
             ) : (
-              <Text style={styles.mutedText}>
-                Gösterilecek yeni profil kalmadı. Yenilemeyi deneyebilirsin.
-              </Text>
+              recommendedProfiles.slice(0, 30).map((profile) => (
+                <View key={profile.profileId} style={styles.discoveryProfileRow}>
+                  <View style={styles.discoveryProfileMeta}>
+                    <View style={styles.discoveryTitleRow}>
+                      <Text style={styles.discoveryProfileName}>{profile.fullName}</Text>
+                      {recommendationProfileIds.has(profile.profileId) ? (
+                        <View style={styles.discoveryRecommendationBadge}>
+                          <Text style={styles.discoveryRecommendationBadgeText}>Öneri</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.discoveryProfileInfo}>
+                      {profile.interestArea} • {profile.goal}
+                      {profile.city ? ` • ${profile.city}` : ""}
+                    </Text>
+                    {profile.matchReasons && profile.matchReasons.length > 0 ? (
+                      <Text style={styles.discoveryReasonText}>
+                        {profile.matchReasons.slice(0, 2).join(" • ")}
+                      </Text>
+                    ) : null}
+                    <View style={styles.topicWrap}>
+                      {profile.dentistryFocusAreas.slice(0, 3).map((item) => (
+                        <View key={`${profile.profileId}-${item}`} style={styles.tag}>
+                          <Text style={styles.tagText}>{item}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.discoveryActionColumn}>
+                    <Pressable
+                      disabled={interactionMutation.isPending}
+                      style={({ pressed }) => [
+                        styles.discoveryConnectButton,
+                        pressed ? styles.pressed : null,
+                        interactionMutation.isPending ? styles.disabled : null
+                      ]}
+                      onPress={() => {
+                        interactionMutation.mutate({
+                          targetProfileId: profile.profileId,
+                          action: "like"
+                        });
+                      }}
+                    >
+                      <Heart color="#FFFFFF" fill="#FFFFFF" size={14} />
+                      <Text style={styles.discoveryConnectButtonText}>
+                        {pendingInteractionTargetId === profile.profileId ? "İşleniyor" : "Bağlantı İste"}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={interactionMutation.isPending}
+                      style={({ pressed }) => [
+                        styles.discoveryHideButton,
+                        pressed ? styles.pressed : null,
+                        interactionMutation.isPending ? styles.disabled : null
+                      ]}
+                      onPress={() => {
+                        interactionMutation.mutate({
+                          targetProfileId: profile.profileId,
+                          action: "pass"
+                        });
+                      }}
+                    >
+                      <UserRoundX color={colors.danger} size={14} />
+                      <Text style={styles.discoveryHideButtonText}>Gizle</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Eşleşmeler</Text>
+            <Text style={styles.cardTitle}>Tüm Katılımcılar</Text>
+            {directoryProfiles.length === 0 ? (
+              <Text style={styles.mutedText}>Aramana uygun katılımcı bulunamadı.</Text>
+            ) : (
+              directoryProfiles.map((profile) => (
+                <View key={`directory-${profile.profileId}`} style={styles.discoveryDirectoryRow}>
+                  <View style={styles.discoveryProfileMeta}>
+                    <Text style={styles.discoveryProfileName}>{profile.fullName}</Text>
+                    <Text style={styles.discoveryProfileInfo}>
+                      {profile.interestArea} • {profile.goal}
+                      {profile.city ? ` • ${profile.city}` : ""}
+                    </Text>
+                  </View>
+                  <Pressable
+                    disabled={interactionMutation.isPending}
+                    style={({ pressed }) => [
+                      styles.discoveryDirectoryButton,
+                      pressed ? styles.pressed : null,
+                      interactionMutation.isPending ? styles.disabled : null
+                    ]}
+                    onPress={() => {
+                      interactionMutation.mutate({
+                        targetProfileId: profile.profileId,
+                        action: "like"
+                      });
+                    }}
+                  >
+                    <Text style={styles.discoveryDirectoryButtonText}>Bağlantı İste</Text>
+                  </Pressable>
+                </View>
+              ))
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Bağlantılar</Text>
             {(matchesQuery.data?.matches ?? []).length === 0 ? (
-              <Text style={styles.mutedText}>Henüz karşılıklı eşleşme yok.</Text>
+              <Text style={styles.mutedText}>Henüz karşılıklı bağlantı yok.</Text>
             ) : (
               (matchesQuery.data?.matches ?? []).map((match) => {
                 const matchAttendeeId = match.attendee?.id ?? match.profile.attendeeId;
@@ -1399,6 +1505,127 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     width: 32
+  },
+  discoverySearchInput: {
+    backgroundColor: colors.backgroundDeep,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
+  },
+  discoveryProfileRow: {
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: spacing.xs,
+    padding: spacing.sm
+  },
+  discoveryDirectoryRow: {
+    alignItems: "center",
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
+  },
+  discoveryProfileMeta: {
+    flex: 1,
+    marginRight: spacing.xs
+  },
+  discoveryTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  discoveryProfileName: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  discoveryProfileInfo: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginTop: 2
+  },
+  discoveryReasonText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginTop: spacing.xs
+  },
+  discoveryRecommendationBadge: {
+    backgroundColor: colors.copperSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  discoveryRecommendationBadgeText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800"
+  },
+  discoveryActionColumn: {
+    justifyContent: "space-between",
+    width: 118
+  },
+  discoveryConnectButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 10
+  },
+  discoveryConnectButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800",
+    marginLeft: 6
+  },
+  discoveryHideButton: {
+    alignItems: "center",
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: spacing.xs,
+    minHeight: 32,
+    paddingHorizontal: 10
+  },
+  discoveryHideButtonText: {
+    color: colors.danger,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800",
+    marginLeft: 6
+  },
+  discoveryDirectoryButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: spacing.sm
+  },
+  discoveryDirectoryButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800"
   },
   profileName: {
     color: colors.ink,

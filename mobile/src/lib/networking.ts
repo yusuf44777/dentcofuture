@@ -1,12 +1,14 @@
 import {
   NETWORKING_AVAILABILITY_OPTIONS,
   NETWORKING_COLLABORATION_GOAL_OPTIONS,
+  NETWORKING_DENTISTRY_FOCUS_OPTIONS,
   type NetworkingFeedResponse,
   NETWORKING_FUTURE_PATH_OPTIONS,
   NETWORKING_INTEREST_OPTIONS,
   type NetworkingInteractionAction,
   type NetworkingInteractionResponse,
   NETWORKING_LANGUAGE_OPTIONS,
+  NETWORKING_MAX_DENTISTRY_FOCUS_COUNT,
   NETWORKING_MAX_GOAL_COUNT,
   NETWORKING_MAX_LANGUAGE_COUNT,
   NETWORKING_MAX_TOPIC_COUNT,
@@ -30,6 +32,7 @@ export type ProfileFormValues = {
   fullName: string;
   headline: string;
   interestArea: string;
+  dentistryFocusAreas: string[];
   futurePath: string;
   profession: string;
   city: string;
@@ -50,6 +53,7 @@ export function createEmptyProfileForm(): ProfileFormValues {
     fullName: "",
     headline: "",
     interestArea: NETWORKING_INTEREST_OPTIONS[0],
+    dentistryFocusAreas: [],
     futurePath: NETWORKING_FUTURE_PATH_OPTIONS[0],
     profession: NETWORKING_PROFESSION_OPTIONS[0],
     city: "",
@@ -70,6 +74,8 @@ export function estimateProfileCompleteness(values: ProfileFormValues) {
   const checks = [
     values.fullName.trim().length > 1,
     values.headline.trim().length > 0,
+    values.interestArea.trim().length > 0,
+    values.dentistryFocusAreas.length > 0,
     values.city.trim().length > 0,
     values.institutionName.trim().length > 0,
     values.yearsExperience.trim().length > 0,
@@ -104,6 +110,7 @@ export function profileToFormValues(profile: NetworkingPublicProfile): ProfileFo
     fullName: profile.full_name,
     headline: profile.headline ?? "",
     interestArea: profile.interest_area,
+    dentistryFocusAreas: profile.dentistry_focus_areas ?? [],
     futurePath: profile.goal,
     profession: profile.profession ?? NETWORKING_PROFESSION_OPTIONS[0],
     city: profile.city ?? "",
@@ -145,6 +152,7 @@ function buildProfilePayload(values: ProfileFormValues) {
     fullName: values.fullName,
     headline: values.headline,
     interestArea: values.interestArea,
+    dentistryFocusAreas: values.dentistryFocusAreas,
     futurePath: values.futurePath,
     profession: values.profession,
     city: values.city,
@@ -211,6 +219,7 @@ export async function fetchNetworkingMatches(profileId: string) {
 
 export const networkingFilterOptions = {
   interestAreas: NETWORKING_INTEREST_OPTIONS,
+  dentistryFocusAreas: NETWORKING_DENTISTRY_FOCUS_OPTIONS,
   futurePaths: NETWORKING_FUTURE_PATH_OPTIONS,
   professions: NETWORKING_PROFESSION_OPTIONS,
   topics: NETWORKING_TOPIC_OPTIONS,
@@ -220,6 +229,7 @@ export const networkingFilterOptions = {
 };
 
 export const networkingSelectionLimits = {
+  dentistryFocusAreas: NETWORKING_MAX_DENTISTRY_FOCUS_COUNT,
   topics: NETWORKING_MAX_TOPIC_COUNT,
   collaborationGoals: NETWORKING_MAX_GOAL_COUNT,
   languages: NETWORKING_MAX_LANGUAGE_COUNT

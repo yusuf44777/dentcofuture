@@ -12,6 +12,8 @@ export const NETWORKING_INTEREST_OPTIONS = [
   "Dijital Diş Hekimliği"
 ] as const;
 
+export const NETWORKING_DENTISTRY_FOCUS_OPTIONS = NETWORKING_INTEREST_OPTIONS;
+
 export const NETWORKING_FUTURE_PATH_OPTIONS = [
   "DUS",
   "Kamu",
@@ -76,12 +78,14 @@ export const NETWORKING_AVAILABILITY_OPTIONS = [
 export const NETWORKING_MAX_TOPIC_COUNT = 6;
 export const NETWORKING_MAX_GOAL_COUNT = 4;
 export const NETWORKING_MAX_LANGUAGE_COUNT = 4;
+export const NETWORKING_MAX_DENTISTRY_FOCUS_COUNT = 4;
 
 export type NetworkingPublicProfile = {
   id: string;
   full_name: string;
   headline: string | null;
   interest_area: string;
+  dentistry_focus_areas: string[];
   goal: string;
   profession: string | null;
   city: string | null;
@@ -127,6 +131,8 @@ export type NetworkingDiscoveryResponse = {
 export type NetworkingFeedResponse = {
   status: "ready" | "empty";
   currentProfile: NetworkingPublicProfile | null;
+  recommended: NetworkingPublicProfile[];
+  directory: NetworkingPublicProfile[];
   queue: NetworkingPublicProfile[];
   likesSentCount: number;
   mutualMatchesCount: number;

@@ -137,6 +137,23 @@ export function ProfileEditor({
           }}
         />
 
+        <MultiChoiceGroup
+          label="Ek Diş Hekimliği Alanları"
+          helper={`En fazla ${networkingSelectionLimits.dentistryFocusAreas} seçim`}
+          options={networkingFilterOptions.dentistryFocusAreas}
+          selectedValues={values.dentistryFocusAreas}
+          onToggle={(nextValue) => {
+            setValues((currentValues) => ({
+              ...currentValues,
+              dentistryFocusAreas: toggleListValue(
+                currentValues.dentistryFocusAreas,
+                nextValue,
+                networkingSelectionLimits.dentistryFocusAreas
+              )
+            }));
+          }}
+        />
+
         <SingleChoiceGroup
           label="Kariyer Yönü"
           options={networkingFilterOptions.futurePaths}

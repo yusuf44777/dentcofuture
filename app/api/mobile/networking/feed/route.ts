@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
 
   const linkedProfiles = await getNetworkingProfilesByIds(resolved.session, [
     ...(feed.currentProfile ? [feed.currentProfile.id] : []),
-    ...feed.queue.map((item) => item.id)
+    ...feed.queue.map((item) => item.id),
+    ...feed.recommended.map((item) => item.id),
+    ...feed.directory.map((item) => item.id)
   ]);
 
   const payload: MobileNetworkingFeed = {
@@ -41,6 +43,12 @@ export async function GET(request: NextRequest) {
           linkedProfiles.get(feed.currentProfile.id)?.attendee_id ?? null
         )
       : null,
+    recommended: feed.recommended.map((item) =>
+      mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
+    ),
+    directory: feed.directory.map((item) =>
+      mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
+    ),
     queue: feed.queue.map((item) =>
       mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
     ),

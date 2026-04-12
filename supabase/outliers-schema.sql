@@ -51,11 +51,26 @@ begin
     where table_schema = 'public' and table_name = 'networking_profiles'
   ) then
     alter table public.networking_profiles
-      add column if not exists attendee_id uuid references public.attendees(id) on delete set null;
+      add column if not exists attendee_id uuid references public.attendees(id) on delete set null,
+      add column if not exists dentistry_focus_areas jsonb not null default '[]'::jsonb;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'networking_profiles_dentistry_focus_areas_check'
+        and conrelid = 'public.networking_profiles'::regclass
+    ) then
+      alter table public.networking_profiles
+        add constraint networking_profiles_dentistry_focus_areas_check
+        check (jsonb_typeof(dentistry_focus_areas) = 'array');
+    end if;
 
     create unique index if not exists networking_profiles_attendee_id_uidx
       on public.networking_profiles (attendee_id)
       where attendee_id is not null;
+
+    create index if not exists networking_profiles_dentistry_focus_gin_idx
+      on public.networking_profiles using gin (dentistry_focus_areas);
 
     -- Backfill by exact person name (safe deterministic pass)
     update public.networking_profiles np

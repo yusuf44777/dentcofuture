@@ -6,9 +6,11 @@ import { buildContactInfo } from "@/lib/networking-contact";
 import {
   NETWORKING_AVAILABILITY_OPTIONS,
   NETWORKING_COLLABORATION_GOAL_OPTIONS,
+  NETWORKING_DENTISTRY_FOCUS_OPTIONS,
   NETWORKING_FUTURE_PATH_OPTIONS,
   NETWORKING_INTEREST_OPTIONS,
   NETWORKING_LANGUAGE_OPTIONS,
+  NETWORKING_MAX_DENTISTRY_FOCUS_COUNT,
   NETWORKING_MAX_GOAL_COUNT,
   NETWORKING_MAX_LANGUAGE_COUNT,
   NETWORKING_MAX_TOPIC_COUNT,
@@ -33,6 +35,7 @@ const NETWORKING_PUBLIC_PROFILE_COLUMNS = `
   full_name,
   headline,
   interest_area,
+  dentistry_focus_areas,
   goal,
   profession,
   city,
@@ -51,6 +54,7 @@ const NETWORKING_PUBLIC_PROFILE_COLUMNS = `
 `;
 
 const INTEREST_OPTION_SET = new Set<string>(NETWORKING_INTEREST_OPTIONS);
+const DENTISTRY_FOCUS_OPTION_SET = new Set<string>(NETWORKING_DENTISTRY_FOCUS_OPTIONS);
 const FUTURE_PATH_OPTION_SET = new Set<string>(NETWORKING_FUTURE_PATH_OPTIONS);
 const PROFESSION_OPTION_SET = new Set<string>(NETWORKING_PROFESSION_OPTIONS);
 const TOPIC_OPTION_SET = new Set<string>(NETWORKING_TOPIC_OPTIONS);
@@ -131,6 +135,7 @@ function calculateProfileCompleteness(input: NetworkingProfileInput) {
   const checks = [
     input.fullName.length > 1,
     input.interestArea.length > 0,
+    input.dentistryFocusAreas.length > 0,
     input.futurePath.length > 0,
     input.profession.length > 0,
     input.headline.length > 0,
@@ -158,6 +163,11 @@ export function normalizeNetworkingProfileInput(raw: Record<string, unknown>) {
   const headline = normalizeOptionalText(typeof raw.headline === "string" ? raw.headline : "");
   const interestArea = normalizeText(
     typeof raw.interestArea === "string" ? raw.interestArea : ""
+  );
+  const dentistryFocusAreas = normalizeStringArray(
+    raw.dentistryFocusAreas ?? raw.dentistry_focus_areas,
+    DENTISTRY_FOCUS_OPTION_SET,
+    NETWORKING_MAX_DENTISTRY_FOCUS_COUNT
   );
   const futurePath = normalizeText(
     typeof raw.futurePath === "string"
@@ -239,6 +249,7 @@ export function normalizeNetworkingProfileInput(raw: Record<string, unknown>) {
     fullName,
     headline,
     interestArea,
+    dentistryFocusAreas,
     futurePath,
     profession,
     city,
@@ -264,6 +275,7 @@ export function mapNetworkingProfileRow(row: NetworkingProfileRow): NetworkingPu
     full_name: row.full_name,
     headline: row.headline,
     interest_area: row.interest_area,
+    dentistry_focus_areas: parseJsonStringArray(row.dentistry_focus_areas),
     goal: row.goal,
     profession: row.profession,
     city: row.city,
@@ -287,6 +299,7 @@ function buildNetworkingPayload(input: NetworkingProfileInput): NetworkingProfil
     full_name: input.fullName,
     headline: toNullable(input.headline),
     interest_area: input.interestArea,
+    dentistry_focus_areas: input.dentistryFocusAreas,
     goal: input.futurePath,
     profession: toNullable(input.profession),
     city: toNullable(input.city),
@@ -377,28 +390,134 @@ function getSharedItems(first: string[], second: string[]) {
   return first.filter((item) => secondSet.has(item));
 }
 
+type AttendeeSignal = {
+  id: string;
+  role: string | null;
+  class_level: string | null;
+  outlier_score: number;
+};
+
+const CLASS_LEVEL_RANKS: Record<string, number> = {
+  Hazirlik: 0,
+  Hazırlık: 0,
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  Mezun: 6
+};
+
+function normalizeClassLevelRank(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  return CLASS_LEVEL_RANKS[normalized] ?? null;
+}
+
 function getHoursSince(timestamp: string) {
   const diffMs = Date.now() - new Date(timestamp).getTime();
   return diffMs / (1000 * 60 * 60);
 }
 
-function scoreProfileMatch(currentProfile: NetworkingPublicProfile, candidate: NetworkingPublicProfile) {
+async function getAttendeeSignalsByProfileId(profiles: NetworkingPublicProfile[]) {
+  const attendeeIdByProfileId = new Map<string, string>();
+
+  for (const profile of profiles) {
+    if (profile.attendee_id) {
+      attendeeIdByProfileId.set(profile.id, profile.attendee_id);
+    }
+  }
+
+  const attendeeIds = Array.from(new Set(attendeeIdByProfileId.values()));
+  if (attendeeIds.length === 0) {
+    return new Map<string, AttendeeSignal>();
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("attendees")
+    .select("id, role, class_level, outlier_score")
+    .in("id", attendeeIds);
+
+  if (error) {
+    throw new Error(`Katilimci sinyalleri okunamadi: ${error.message}`);
+  }
+
+  const attendeeSignalById = new Map<string, AttendeeSignal>(
+    (data ?? []).map((row) => [
+      row.id,
+      {
+        id: row.id,
+        role: row.role ?? null,
+        class_level: row.class_level ?? null,
+        outlier_score: typeof row.outlier_score === "number" ? row.outlier_score : 0
+      }
+    ])
+  );
+
+  const result = new Map<string, AttendeeSignal>();
+  for (const [profileId, attendeeId] of attendeeIdByProfileId.entries()) {
+    const signal = attendeeSignalById.get(attendeeId);
+    if (signal) {
+      result.set(profileId, signal);
+    }
+  }
+
+  return result;
+}
+
+function sortScoredProfiles(first: NetworkingPublicProfile, second: NetworkingPublicProfile) {
+  const scoreGap = (second.match_score ?? 0) - (first.match_score ?? 0);
+  if (scoreGap !== 0) {
+    return scoreGap;
+  }
+
+  return new Date(second.last_active_at).getTime() - new Date(first.last_active_at).getTime();
+}
+
+function scoreProfileMatch(
+  currentProfile: NetworkingPublicProfile,
+  candidate: NetworkingPublicProfile,
+  attendeeSignalsByProfileId: Map<string, AttendeeSignal> = new Map()
+) {
   let score = 0;
   const reasons: string[] = [];
 
-  if (candidate.interest_area === currentProfile.interest_area) {
-    score += 32;
-    reasons.push(`${candidate.interest_area} odaği ortak`);
+  const currentFocusAreas = Array.from(
+    new Set([currentProfile.interest_area, ...currentProfile.dentistry_focus_areas])
+  );
+  const candidateFocusAreas = Array.from(
+    new Set([candidate.interest_area, ...candidate.dentistry_focus_areas])
+  );
+  const sharedFocusAreas = getSharedItems(currentFocusAreas, candidateFocusAreas);
+
+  if (sharedFocusAreas.length > 0) {
+    score += Math.min(sharedFocusAreas.length * 13, 39);
+    reasons.push(`Ortak klinik alan: ${sharedFocusAreas.slice(0, 2).join(", ")}`);
+  }
+
+  if (
+    currentFocusAreas.includes(candidate.interest_area) ||
+    candidateFocusAreas.includes(currentProfile.interest_area)
+  ) {
+    score += 7;
   }
 
   if (candidate.goal === currentProfile.goal) {
-    score += 16;
+    score += 10;
     reasons.push(`${candidate.goal} kariyer yonu uyumlu`);
   }
 
   const sharedTopics = getSharedItems(currentProfile.topics, candidate.topics);
   if (sharedTopics.length > 0) {
-    score += Math.min(sharedTopics.length * 8, 24);
+    score += Math.min(sharedTopics.length * 7, 21);
     reasons.push(`Ortak ilgi: ${sharedTopics.slice(0, 2).join(", ")}`);
   }
 
@@ -407,18 +526,18 @@ function scoreProfileMatch(currentProfile: NetworkingPublicProfile, candidate: N
     candidate.collaboration_goals
   );
   if (sharedCollaborationGoals.length > 0) {
-    score += Math.min(sharedCollaborationGoals.length * 10, 20);
+    score += Math.min(sharedCollaborationGoals.length * 9, 18);
     reasons.push(`Benzer hedef: ${sharedCollaborationGoals.slice(0, 2).join(", ")}`);
   }
 
   const sharedLanguages = getSharedItems(currentProfile.languages, candidate.languages);
   if (sharedLanguages.length > 0) {
-    score += Math.min(sharedLanguages.length * 4, 8);
+    score += Math.min(sharedLanguages.length * 5, 10);
     reasons.push(`Ortak dil: ${sharedLanguages.slice(0, 2).join(", ")}`);
   }
 
   if (currentProfile.city && candidate.city && currentProfile.city === candidate.city) {
-    score += 8;
+    score += 7;
     reasons.push(`${candidate.city} lokasyonu ortak`);
   }
 
@@ -439,22 +558,61 @@ function scoreProfileMatch(currentProfile: NetworkingPublicProfile, candidate: N
     candidate.availability &&
     currentProfile.availability === candidate.availability
   ) {
-    score += 4;
+    score += 3;
+  }
+
+  const currentSignal = attendeeSignalsByProfileId.get(currentProfile.id);
+  const candidateSignal = attendeeSignalsByProfileId.get(candidate.id);
+  if (currentSignal && candidateSignal) {
+    if (currentSignal.role === candidateSignal.role && currentSignal.role) {
+      score += 5;
+      reasons.push(`${currentSignal.role} rolu ortak`);
+    }
+
+    const currentClassRank = normalizeClassLevelRank(currentSignal.class_level);
+    const candidateClassRank = normalizeClassLevelRank(candidateSignal.class_level);
+    if (
+      currentSignal.role === "Student" &&
+      candidateSignal.role === "Student" &&
+      currentClassRank !== null &&
+      candidateClassRank !== null
+    ) {
+      const classGap = Math.abs(currentClassRank - candidateClassRank);
+      if (classGap <= 1) {
+        score += 8;
+      } else if (classGap <= 2) {
+        score += 4;
+      }
+    }
+
+    const oneIsStudent =
+      currentSignal.role === "Student" || candidateSignal.role === "Student";
+    const oneIsMentorRole =
+      ["Academic", "Clinician", "Entrepreneur", "Industry"].includes(currentSignal.role ?? "") ||
+      ["Academic", "Clinician", "Entrepreneur", "Industry"].includes(candidateSignal.role ?? "");
+    const mentorshipAlignment =
+      currentProfile.collaboration_goals.includes("Mentorluk") ||
+      candidate.collaboration_goals.includes("Mentorluk");
+
+    if (oneIsStudent && oneIsMentorRole && mentorshipAlignment) {
+      score += 10;
+      reasons.push("Mentorluk baglantisi yuksek");
+    }
   }
 
   if (candidate.contact_info) {
-    score += 4;
+    score += 3;
   }
 
   if (candidate.profile_completion_score >= 70) {
-    score += 6;
+    score += 5;
   } else if (candidate.profile_completion_score >= 40) {
     score += 3;
   }
 
   const hoursSinceLastActive = getHoursSince(candidate.last_active_at);
   if (hoursSinceLastActive <= 1) {
-    score += 6;
+    score += 5;
     reasons.push("Yakinda aktifti");
   } else if (hoursSinceLastActive <= 8) {
     score += 3;
@@ -485,14 +643,14 @@ function buildDiscoveryMessage(recommendedCount: number, otherCount: number) {
 
 function buildFeedMessage(candidateCount: number, matchCount: number) {
   if (candidateCount === 0 && matchCount === 0) {
-    return "Kart havuzu simdilik bos. Yeni profiller geldikce burada goreceksin.";
+    return "Su an gorunur katilimci yok. Yeni profiller geldikce burasi otomatik yenilenir.";
   }
 
   if (candidateCount === 0 && matchCount > 0) {
-    return `${matchCount} karsilikli eslesmen var. Yeni profiller geldiginde besleme tekrar dolar.`;
+    return `${matchCount} karsilikli baglantin var. Yeni katilimci geldiginde oneriler otomatik yenilenir.`;
   }
 
-  return `${candidateCount} yeni profil hazir. Karsilikli ilgi olursa eslesmeler sekmesine duser.`;
+  return `${candidateCount} networking onerisi hazir. Tumu sekmesinden herkes aranabilir.`;
 }
 
 function buildMatchRecord(profile: NetworkingPublicProfile, matchedAt: string): NetworkingMatchRecord {
@@ -500,6 +658,37 @@ function buildMatchRecord(profile: NetworkingPublicProfile, matchedAt: string): 
     profile,
     matchedAt
   };
+}
+
+async function listVisibleProfilesExcluding(profileId: string) {
+  const supabase = createSupabaseAdminClient();
+  const pageSize = 500;
+  const maxRows = 5000;
+  const rows: NetworkingProfileRow[] = [];
+
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from("networking_profiles")
+      .select(NETWORKING_PUBLIC_PROFILE_COLUMNS)
+      .neq("id", profileId)
+      .eq("is_visible", true)
+      .order("last_active_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Katilimci dizini okunamadi: ${error.message}`);
+    }
+
+    const chunk = (data ?? []) as NetworkingProfileRow[];
+    rows.push(...chunk);
+
+    if (chunk.length < pageSize) {
+      break;
+    }
+  }
+
+  return rows.map(mapNetworkingProfileRow);
 }
 
 async function getNetworkingActionsForActor(actorProfileId: string) {
@@ -562,8 +751,15 @@ async function getMutualMatchRecords(profileId: string, currentProfile: Networki
   }
 
   const counterpartProfiles = ((profileData ?? []) as NetworkingProfileRow[]).map(mapNetworkingProfileRow);
+  const attendeeSignalsByProfileId = await getAttendeeSignalsByProfileId([
+    currentProfile,
+    ...counterpartProfiles
+  ]);
   const counterpartById = new Map(
-    counterpartProfiles.map((profile) => [profile.id, scoreProfileMatch(currentProfile, profile)])
+    counterpartProfiles.map((profile) => [
+      profile.id,
+      scoreProfileMatch(currentProfile, profile, attendeeSignalsByProfileId)
+    ])
   );
 
   return matchedCounterparts
@@ -596,16 +792,13 @@ export async function getNetworkingDiscovery(profileId: string) {
   }
 
   const profiles = ((data ?? []) as NetworkingProfileRow[]).map(mapNetworkingProfileRow);
+  const attendeeSignalsByProfileId = await getAttendeeSignalsByProfileId([
+    currentProfile,
+    ...profiles
+  ]);
   const scoredProfiles = profiles
-    .map((candidate) => scoreProfileMatch(currentProfile, candidate))
-    .sort((first, second) => {
-      const scoreGap = (second.match_score ?? 0) - (first.match_score ?? 0);
-      if (scoreGap !== 0) {
-        return scoreGap;
-      }
-
-      return new Date(second.last_active_at).getTime() - new Date(first.last_active_at).getTime();
-    });
+    .map((candidate) => scoreProfileMatch(currentProfile, candidate, attendeeSignalsByProfileId))
+    .sort(sortScoredProfiles);
 
   const recommendedProfiles = scoredProfiles.filter((profile) => (profile.match_score ?? 0) >= 35);
   const otherProfiles = scoredProfiles.filter((profile) => (profile.match_score ?? 0) < 35);
@@ -634,53 +827,44 @@ export async function getNetworkingFeed(profileId: string): Promise<NetworkingFe
   }
 
   const actorActions = await getNetworkingActionsForActor(profileId);
-  const actedTargetIds = actorActions.map((row) => row.target_profile_id);
+  const actorActionByTargetId = new Map(
+    actorActions.map((row) => [row.target_profile_id, row.action])
+  );
   const likesSentCount = actorActions.filter((row) => row.action === "like").length;
   const matches = await getMutualMatchRecords(profileId, currentProfile);
+  const profiles = await listVisibleProfilesExcluding(profileId);
 
-  const supabase = createSupabaseAdminClient();
-  let query = supabase
-    .from("networking_profiles")
-    .select(NETWORKING_PUBLIC_PROFILE_COLUMNS)
-    .neq("id", profileId)
-    .eq("is_visible", true)
-    .order("last_active_at", { ascending: false })
-    .limit(60);
+  const attendeeSignalsByProfileId = await getAttendeeSignalsByProfileId([
+    currentProfile,
+    ...profiles
+  ]);
 
-  if (actedTargetIds.length > 0) {
-    query = query.not(
-      "id",
-      "in",
-      `(${actedTargetIds.map((id) => `"${id}"`).join(",")})`
-    );
-  }
+  const directory = profiles
+    .map((candidate) => scoreProfileMatch(currentProfile, candidate, attendeeSignalsByProfileId))
+    .sort(sortScoredProfiles);
 
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(`Kart havuzu okunamadi: ${error.message}`);
-  }
-
-  const queue = ((data ?? []) as NetworkingProfileRow[])
-    .map(mapNetworkingProfileRow)
-    .map((candidate) => scoreProfileMatch(currentProfile, candidate))
-    .sort((first, second) => {
-      const scoreGap = (second.match_score ?? 0) - (first.match_score ?? 0);
-      if (scoreGap !== 0) {
-        return scoreGap;
-      }
-
-      return new Date(second.last_active_at).getTime() - new Date(first.last_active_at).getTime();
-    })
-    .slice(0, 24);
+  const strongRecommended = directory.filter(
+    (profile) =>
+      (profile.match_score ?? 0) >= 42 &&
+      actorActionByTargetId.get(profile.id) !== "pass"
+  );
+  const fallbackRecommended = directory.filter(
+    (profile) =>
+      (profile.match_score ?? 0) < 42 &&
+      actorActionByTargetId.get(profile.id) !== "pass"
+  );
+  const recommended = [...strongRecommended, ...fallbackRecommended].slice(0, 48);
+  const queue = recommended;
 
   return {
-    status: queue.length > 0 ? "ready" : "empty",
+    status: directory.length > 0 ? "ready" : "empty",
     currentProfile,
+    recommended,
+    directory,
     queue,
     likesSentCount,
     mutualMatchesCount: matches.length,
-    message: buildFeedMessage(queue.length, matches.length),
+    message: buildFeedMessage(recommended.length, matches.length),
     refreshedAt: new Date().toISOString()
   };
 }
@@ -737,8 +921,12 @@ export async function createNetworkingInteraction(input: {
     }
 
     if (reverseLike?.id) {
+      const attendeeSignalsByProfileId = await getAttendeeSignalsByProfileId([
+        currentProfile,
+        targetProfile
+      ]);
       match = buildMatchRecord(
-        scoreProfileMatch(currentProfile, targetProfile),
+        scoreProfileMatch(currentProfile, targetProfile, attendeeSignalsByProfileId),
         reverseLike.updated_at
       );
 

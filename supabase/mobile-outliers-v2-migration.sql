@@ -25,6 +25,33 @@ begin
   end if;
 end $$;
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'networking_profiles'
+  ) then
+    alter table public.networking_profiles
+      add column if not exists dentistry_focus_areas jsonb not null default '[]'::jsonb;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'networking_profiles_dentistry_focus_areas_check'
+        and conrelid = 'public.networking_profiles'::regclass
+    ) then
+      alter table public.networking_profiles
+        add constraint networking_profiles_dentistry_focus_areas_check
+        check (jsonb_typeof(dentistry_focus_areas) = 'array');
+    end if;
+
+    create index if not exists networking_profiles_dentistry_focus_gin_idx
+      on public.networking_profiles using gin (dentistry_focus_areas);
+  end if;
+end $$;
+
 create table if not exists public.event_gallery_items (
   id uuid primary key default gen_random_uuid(),
   uploader_name text not null check (char_length(uploader_name) between 2 and 120),

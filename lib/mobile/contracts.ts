@@ -47,6 +47,7 @@ export type MobileNetworkingProfile = {
   fullName: string;
   headline: string | null;
   interestArea: string;
+  dentistryFocusAreas: string[];
   goal: string;
   city: string | null;
   bio: string | null;
@@ -61,6 +62,8 @@ export type MobileNetworkingProfile = {
 export type MobileNetworkingFeed = {
   ok: true;
   current: MobileNetworkingProfile | null;
+  recommended: MobileNetworkingProfile[];
+  directory: MobileNetworkingProfile[];
   queue: MobileNetworkingProfile[];
   likesSentCount: number;
   mutualMatchesCount: number;

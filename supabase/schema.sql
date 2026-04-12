@@ -329,6 +329,7 @@ create table public.networking_profiles (
   full_name text not null check (char_length(full_name) <= 120),
   headline text,
   interest_area text not null check (char_length(interest_area) <= 120),
+  dentistry_focus_areas jsonb not null default '[]'::jsonb check (jsonb_typeof(dentistry_focus_areas) = 'array'),
   goal text not null check (char_length(goal) <= 120),
   profession text,
   city text,
@@ -363,6 +364,9 @@ create index networking_profiles_city_idx
 
 create index networking_profiles_topics_gin_idx
   on public.networking_profiles using gin (topics);
+
+create index networking_profiles_dentistry_focus_gin_idx
+  on public.networking_profiles using gin (dentistry_focus_areas);
 
 create index networking_profiles_collaboration_goals_gin_idx
   on public.networking_profiles using gin (collaboration_goals);
