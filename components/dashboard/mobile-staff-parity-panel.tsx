@@ -668,6 +668,9 @@ export function MobileStaffParityPanel() {
               `outliers_katilimci.csv` dosyasını `mobile_allowed_participants` tablosuna aktarır.
             </p>
             <p className="text-[11px] text-cyan-100/65">
+              Güvenlik için sadece e-posta + telefon baz alınır. Ad soyad kolonunun dolu olması zorunlu değildir.
+            </p>
+            <p className="text-[11px] text-cyan-100/65">
               Telefon için önerilen format: <span className="font-semibold text-cyan-100">5XXXXXXXXX</span>.
               <span> </span>
               `+90XXXXXXXXXX`, `90XXXXXXXXXX` ve `0XXXXXXXXXX` değerleri otomatik olarak `5XXXXXXXXX`

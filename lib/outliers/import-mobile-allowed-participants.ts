@@ -14,7 +14,7 @@ type ParsedLine = {
 type ParsedParticipant = {
   line: number;
   raw: string;
-  fullName: string;
+  fullName: string | null;
   email: string;
   phone: string;
   role: string | null;
@@ -287,7 +287,7 @@ function normalizeIsActive(value: string) {
 function buildParticipantNotes(participant: ParsedParticipant) {
   const notes = [
     `source:outliers_katilimci.csv`,
-    `name:${participant.fullName}`,
+    participant.fullName ? `name:${participant.fullName}` : "",
     participant.role ? `role:${participant.role}` : "",
     participant.classLevel ? `class:${participant.classLevel}` : "",
     participant.instagram ? `instagram:${participant.instagram}` : "",
@@ -319,7 +319,7 @@ function parseLineWithHeaders(row: ParsedLine, headerMapping: HeaderMapping): Pa
   return {
     line: row.line,
     raw: row.raw,
-    fullName,
+    fullName: fullName || null,
     email,
     phone,
     role: normalizeRole(getCell(row.cells, headerMapping.role)),
@@ -381,7 +381,7 @@ function parseLineWithHeuristics(row: ParsedLine): ParsedParticipant {
   return {
     line: row.line,
     raw: row.raw,
-    fullName,
+    fullName: fullName || null,
     email,
     phone,
     role: roleCell,
@@ -394,10 +394,6 @@ function parseLineWithHeuristics(row: ParsedLine): ParsedParticipant {
 }
 
 function validateParticipant(participant: ParsedParticipant) {
-  if (!participant.fullName || participant.fullName.length < 2 || participant.fullName.length > 120) {
-    return "Ad soyad 2-120 karakter aralığında olmalı.";
-  }
-
   if (!EMAIL_REGEX.test(participant.email)) {
     return "Geçerli e-posta bulunamadı.";
   }
@@ -535,7 +531,7 @@ export async function importMobileAllowedParticipantsFromCsv(rawCsv: string) {
         notes
       });
       sampleRows.push({
-        full_name: participant.fullName,
+        full_name: participant.fullName ?? participant.email,
         email: participant.email,
         phone: participant.phone,
         status: "inserted"
@@ -551,7 +547,7 @@ export async function importMobileAllowedParticipantsFromCsv(rawCsv: string) {
       notes
     });
     sampleRows.push({
-      full_name: participant.fullName,
+      full_name: participant.fullName ?? participant.email,
       email: participant.email,
       phone: participant.phone,
       status: "updated"
