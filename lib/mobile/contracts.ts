@@ -87,12 +87,20 @@ export type MobileNetworkingGalleryComment = {
   createdAt: string;
 };
 
+export type MobileNetworkingGalleryMediaItem = {
+  id: string;
+  mediaType: "photo" | "video";
+  publicUrl: string;
+};
+
 export type MobileNetworkingGalleryPost = {
   id: string;
   uploaderName: string;
   caption: string | null;
   mediaType: "photo" | "video";
   publicUrl: string;
+  mediaItems: MobileNetworkingGalleryMediaItem[];
+  mediaCount: number;
   createdAt: string;
   likesCount: number;
   commentsCount: number;

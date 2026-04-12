@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronDown, LogOut, MapPin, Save, UserRound } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { submitOnboarding } from "../../src/lib/mobile-api";
+import { fetchNetworkingFeed, submitOnboarding } from "../../src/lib/mobile-api";
 import type { AttendeeClassLevel, AttendeeRole } from "../../src/lib/mobile-contracts";
 import {
   calculateOutlierScore,
   getOutlierTitle,
   QUIZ_QUESTIONS
 } from "../../src/lib/outlier-quiz";
+import { NETWORKING_INTEREST_OPTIONS } from "../../src/lib/contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { useAuthSessionStore } from "../../src/store/auth-session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
@@ -42,6 +43,17 @@ function normalizeClassLevel(value: string | null | undefined): AttendeeClassLev
     : null;
 }
 
+function normalizeDentistryInterestArea(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return NETWORKING_INTEREST_OPTIONS.includes(normalized as (typeof NETWORKING_INTEREST_OPTIONS)[number])
+    ? normalized
+    : null;
+}
+
 export default function ParticipantMoreScreen() {
   const queryClient = useQueryClient();
   const clear = useAuthSessionStore((state) => state.clear);
@@ -54,12 +66,23 @@ export default function ParticipantMoreScreen() {
   const [role, setRole] = useState<ProfileRole | null>(null);
   const [classLevel, setClassLevel] = useState<AttendeeClassLevel | null>(null);
   const [isClassLevelOpen, setIsClassLevelOpen] = useState(false);
+  const [dentistryInterestArea, setDentistryInterestArea] = useState<string>(
+    NETWORKING_INTEREST_OPTIONS[0]
+  );
+  const [isDentistryInterestAreaOpen, setIsDentistryInterestAreaOpen] = useState(false);
+  const [hasEditedDentistryInterestArea, setHasEditedDentistryInterestArea] = useState(false);
   const [university, setUniversity] = useState("");
   const [instagram, setInstagram] = useState("");
   const [linkedin, setLinkedin] = useState("");
 
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswerMap>({});
   const [quizUnlocked, setQuizUnlocked] = useState(hasAttendee);
+
+  const feedQuery = useQuery({
+    queryKey: ["mobile-networking-feed"],
+    queryFn: fetchNetworkingFeed,
+    enabled: Boolean(attendee?.id)
+  });
 
   useEffect(() => {
     if (!attendee) {
@@ -74,6 +97,25 @@ export default function ParticipantMoreScreen() {
     setLinkedin(attendee.linkedin ?? "");
     setQuizUnlocked(true);
   }, [attendee]);
+
+  useEffect(() => {
+    setDentistryInterestArea(NETWORKING_INTEREST_OPTIONS[0]);
+    setIsDentistryInterestAreaOpen(false);
+    setHasEditedDentistryInterestArea(false);
+  }, [attendee?.id]);
+
+  useEffect(() => {
+    if (hasEditedDentistryInterestArea) {
+      return;
+    }
+
+    const suggestedArea = normalizeDentistryInterestArea(feedQuery.data?.current?.interestArea);
+    if (!suggestedArea) {
+      return;
+    }
+
+    setDentistryInterestArea(suggestedArea);
+  }, [feedQuery.data?.current?.interestArea, hasEditedDentistryInterestArea]);
 
   useEffect(() => {
     if (role !== "Student") {
@@ -127,6 +169,8 @@ export default function ParticipantMoreScreen() {
         name,
         role,
         class_level: role === "Student" ? classLevel : null,
+        dentistry_interest_area:
+          !hasAttendee || hasEditedDentistryInterestArea ? dentistryInterestArea : undefined,
         university: university.trim(),
         instagram: instagram.trim() || undefined,
         linkedin: linkedin.trim() || undefined,
@@ -329,6 +373,7 @@ export default function ParticipantMoreScreen() {
                 pressed ? styles.pressed : null
               ]}
               onPress={() => {
+                setIsDentistryInterestAreaOpen(false);
                 setIsClassLevelOpen((current) => !current);
               }}
             >
@@ -369,6 +414,53 @@ export default function ParticipantMoreScreen() {
         ) : role === "Academic" ? (
           <Text style={styles.helpText}>Akademisyen için sınıf seçimi zorunlu değildir.</Text>
         ) : null}
+
+        <View style={styles.dropdownBlock}>
+          <Text style={styles.fieldLabel}>Diş Hekimliği Alanı</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.dropdownButton,
+              isDentistryInterestAreaOpen ? styles.dropdownButtonOpen : null,
+              pressed ? styles.pressed : null
+            ]}
+            onPress={() => {
+              setIsClassLevelOpen(false);
+              setIsDentistryInterestAreaOpen((current) => !current);
+            }}
+          >
+            <Text style={[styles.dropdownText, styles.dropdownTextSelected]}>{dentistryInterestArea}</Text>
+            <ChevronDown color={colors.inkMuted} size={16} />
+          </Pressable>
+
+          {isDentistryInterestAreaOpen ? (
+            <View style={styles.dropdownMenu}>
+              {NETWORKING_INTEREST_OPTIONS.map((value) => (
+                <Pressable
+                  key={value}
+                  style={({ pressed }) => [
+                    styles.dropdownOption,
+                    dentistryInterestArea === value ? styles.dropdownOptionSelected : null,
+                    pressed ? styles.pressed : null
+                  ]}
+                  onPress={() => {
+                    setDentistryInterestArea(value);
+                    setHasEditedDentistryInterestArea(true);
+                    setIsDentistryInterestAreaOpen(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      dentistryInterestArea === value ? styles.dropdownOptionTextSelected : null
+                    ]}
+                  >
+                    {value}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
 
         <TextInput
           style={styles.input}
@@ -700,8 +792,10 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     color: colors.inkMuted,
+    flex: 1,
     fontFamily: typography.body,
-    fontSize: 14
+    fontSize: 14,
+    paddingRight: spacing.xs
   },
   dropdownTextSelected: {
     color: colors.ink

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import type { Attendee, AttendeeClassLevel, AttendeeRole } from "@/lib/types";
 import { ensureNetworkingProfileForSession } from "@/lib/mobile/networking";
+import { buildContactInfo } from "@/lib/networking-contact";
+import { NETWORKING_INTEREST_OPTIONS } from "@/lib/networking/contracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +12,7 @@ type OnboardingBody = {
   name?: string;
   role?: AttendeeRole;
   class_level?: AttendeeClassLevel | null;
+  dentistry_interest_area?: string;
   university?: string;
   instagram?: string;
   linkedin?: string;
@@ -18,6 +21,7 @@ type OnboardingBody = {
 
 const ALLOWED_ROLES: AttendeeRole[] = ["Student", "Academic"];
 const ALLOWED_CLASS_LEVELS: AttendeeClassLevel[] = ["Hazırlık", "1", "2", "3", "4", "5", "Mezun"];
+const ALLOWED_DENTISTRY_INTEREST_AREAS = NETWORKING_INTEREST_OPTIONS as readonly string[];
 
 function normalizeSocial(value: unknown) {
   if (typeof value !== "string") return null;
@@ -57,6 +61,13 @@ export async function POST(request: NextRequest) {
   const classLevel = ALLOWED_CLASS_LEVELS.includes(rawClassLevel as AttendeeClassLevel)
     ? (rawClassLevel as AttendeeClassLevel)
     : null;
+  const rawDentistryInterestArea =
+    typeof body.dentistry_interest_area === "string"
+      ? body.dentistry_interest_area.replace(/\s+/g, " ").trim()
+      : "";
+  const dentistryInterestArea = ALLOWED_DENTISTRY_INTEREST_AREAS.includes(rawDentistryInterestArea)
+    ? rawDentistryInterestArea
+    : null;
   const university = normalizeOptionalField(body.university, 120);
   const instagram = normalizeSocial(body.instagram);
   const linkedin = normalizeSocial(body.linkedin);
@@ -77,6 +88,9 @@ export async function POST(request: NextRequest) {
   if (rawClassLevel.length > 0 && !classLevel) {
     return NextResponse.json({ error: "Geçersiz sınıf değeri gönderildi." }, { status: 400 });
   }
+  if (rawDentistryInterestArea.length > 0 && !dentistryInterestArea) {
+    return NextResponse.json({ error: "Geçersiz diş hekimliği alanı seçildi." }, { status: 400 });
+  }
   if (!university || university.length < 2) {
     return NextResponse.json({ error: "Üniversite bilgisi zorunludur." }, { status: 400 });
   }
@@ -96,6 +110,40 @@ export async function POST(request: NextRequest) {
     outlier_score: Math.round(outlierScore)
   };
 
+  const syncNetworkingProfile = async (attendee: Attendee) => {
+    const networkingProfile = await ensureNetworkingProfileForSession({
+      ...resolved.session,
+      attendee
+    });
+
+    if (!networkingProfile?.id) {
+      return networkingProfile;
+    }
+
+    const profilePayload: Record<string, unknown> = {
+      full_name: attendee.name,
+      headline: attendee.role,
+      institution_name: university,
+      contact_info: buildContactInfo(instagram ?? "", linkedin ?? ""),
+      last_active_at: new Date().toISOString()
+    };
+
+    if (dentistryInterestArea) {
+      profilePayload.interest_area = dentistryInterestArea;
+    }
+
+    const { error } = await supabase
+      .from("networking_profiles")
+      .update(profilePayload)
+      .eq("id", networkingProfile.id);
+
+    if (error) {
+      throw new Error(`Networking profili güncellenemedi: ${error.message}`);
+    }
+
+    return networkingProfile;
+  };
+
   if (resolved.session.attendee?.id) {
     const { data, error } = await supabase
       .from("attendees")
@@ -109,10 +157,14 @@ export async function POST(request: NextRequest) {
     }
 
     const attendee = data as Attendee;
-    const networkingProfile = await ensureNetworkingProfileForSession({
-      ...resolved.session,
-      attendee
-    });
+    let networkingProfile = null;
+    try {
+      networkingProfile = await syncNetworkingProfile(attendee);
+    } catch (networkingError) {
+      const message =
+        networkingError instanceof Error ? networkingError.message : "Networking profili güncellenemedi.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -147,10 +199,14 @@ export async function POST(request: NextRequest) {
     }
 
     const attendee = updateExistingResult.data as Attendee;
-    const networkingProfile = await ensureNetworkingProfileForSession({
-      ...resolved.session,
-      attendee
-    });
+    let networkingProfile = null;
+    try {
+      networkingProfile = await syncNetworkingProfile(attendee);
+    } catch (networkingError) {
+      const message =
+        networkingError instanceof Error ? networkingError.message : "Networking profili güncellenemedi.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -173,10 +229,14 @@ export async function POST(request: NextRequest) {
   }
 
   const attendee = data as Attendee;
-  const networkingProfile = await ensureNetworkingProfileForSession({
-    ...resolved.session,
-    attendee
-  });
+  let networkingProfile = null;
+  try {
+    networkingProfile = await syncNetworkingProfile(attendee);
+  } catch (networkingError) {
+    const message =
+      networkingError instanceof Error ? networkingError.message : "Networking profili güncellenemedi.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,

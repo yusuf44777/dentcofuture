@@ -20,6 +20,7 @@ type OnboardingPayload = {
   name: string;
   role: "Student" | "Academic";
   class_level?: AttendeeClassLevel | null;
+  dentistry_interest_area?: string;
   university?: string;
   instagram?: string;
   linkedin?: string;
@@ -360,6 +361,7 @@ export async function createNetworkingGalleryPost(input: {
   asset: ImagePickerAsset;
   caption?: string;
   uploaderName: string;
+  batchId?: string;
 }) {
   const fileName = inferFileNameFromAsset(input.asset);
   const mimeType = inferMimeType(fileName, input.asset.mimeType ?? null, input.asset.type);
@@ -392,7 +394,8 @@ export async function createNetworkingGalleryPost(input: {
         mimeType,
         fileSize,
         uploaderName: input.uploaderName,
-        caption: input.caption ?? ""
+        caption: input.caption ?? "",
+        batchId: input.batchId ?? ""
       })
     },
     { auth: true }

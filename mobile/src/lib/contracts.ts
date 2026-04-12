@@ -1,15 +1,12 @@
 export const NETWORKING_INTEREST_OPTIONS = [
-  "Ortodonti",
-  "Periodontoloji",
-  "Endodonti",
-  "Pedodonti (Çocuk Diş Hekimliği)",
-  "Ağız, Diş ve Çene Cerrahisi",
-  "Protetik Diş Tedavisi",
-  "Restoratif Diş Tedavisi",
-  "Oral Diagnoz ve Radyoloji",
-  "Implantoloji",
-  "Estetik Diş Hekimliği",
-  "Dijital Diş Hekimliği"
+  "Ağız - Diş ve Çene Cerrahisi Anabilim Dalı",
+  "Ağız - Diş ve Çene Radyolojisi Anabilim Dalı",
+  "Endodonti Anabilim Dalı",
+  "Ortodonti Anabilim Dalı",
+  "Pedodonti Anabilim Dalı",
+  "Periodontoloji Anabilim Dalı",
+  "Protetik Diş Tedavisi Anabilim Dalı",
+  "Restoratif Diş Tedavisi Anabilim Dalı"
 ] as const;
 
 export const NETWORKING_DENTISTRY_FOCUS_OPTIONS = NETWORKING_INTEREST_OPTIONS;

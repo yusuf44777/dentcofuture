@@ -15,6 +15,7 @@ type GalleryItemRow = {
   caption: string | null;
   media_type: "photo" | "video";
   public_url: string;
+  file_path: string;
   created_at: string;
 };
 
@@ -32,6 +33,7 @@ type GalleryCommentRow = {
 };
 
 const DEFAULT_LIMIT = 18;
+const FEED_FETCH_EXPANSION_FACTOR = 4;
 
 function clampLimit(value: string | null) {
   const parsed = Number(value);
@@ -40,6 +42,46 @@ function clampLimit(value: string | null) {
   }
 
   return Math.max(6, Math.min(36, Math.floor(parsed)));
+}
+
+function resolveBatchKeyFromPath(filePath: string, fallbackId: string) {
+  const fileName = filePath.split("/").pop() ?? "";
+  const fileStem = fileName.replace(/\.[^.]+$/, "");
+  const batchMatch = fileStem.match(/^([a-z0-9]{8,28})__/i);
+
+  if (!batchMatch?.[1]) {
+    return `single:${fallbackId}`;
+  }
+
+  return `batch:${batchMatch[1].toLowerCase()}`;
+}
+
+function groupGalleryItems(items: GalleryItemRow[], limit: number) {
+  const grouped = new Map<string, GalleryItemRow[]>();
+
+  for (const item of items) {
+    const key = resolveBatchKeyFromPath(item.file_path, item.id);
+    const existing = grouped.get(key) ?? [];
+    existing.push(item);
+    grouped.set(key, existing);
+  }
+
+  return Array.from(grouped.values())
+    .map((groupItems) => {
+      const newestCreatedAt = groupItems.reduce((latest, item) => {
+        if (!latest) {
+          return item.created_at;
+        }
+        return item.created_at > latest ? item.created_at : latest;
+      }, "");
+
+      return {
+        items: groupItems,
+        newestCreatedAt
+      };
+    })
+    .sort((left, right) => right.newestCreatedAt.localeCompare(left.newestCreatedAt))
+    .slice(0, limit);
 }
 
 export async function GET(request: NextRequest) {
@@ -55,11 +97,13 @@ export async function GET(request: NextRequest) {
 
   const limit = clampLimit(request.nextUrl.searchParams.get("limit"));
 
+  const fetchLimit = Math.max(12, Math.min(120, limit * FEED_FETCH_EXPANSION_FACTOR));
+
   const itemsResult = await resolved.session.supabase
     .from("event_gallery_items")
-    .select("id, uploader_name, caption, media_type, public_url, created_at")
+    .select("id, uploader_name, caption, media_type, public_url, file_path, created_at")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(fetchLimit);
 
   if (itemsResult.error) {
     return NextResponse.json(
@@ -69,7 +113,9 @@ export async function GET(request: NextRequest) {
   }
 
   const items = (itemsResult.data ?? []) as GalleryItemRow[];
-  if (items.length === 0) {
+  const groupedItems = groupGalleryItems(items, limit);
+
+  if (groupedItems.length === 0) {
     const payload: MobileNetworkingGalleryFeed = {
       ok: true,
       posts: [],
@@ -78,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(payload);
   }
 
-  const itemIds = items.map((item) => item.id);
+  const itemIds = groupedItems.flatMap((group) => group.items.map((item) => item.id));
 
   const [likesResult, commentsResult] = await Promise.all([
     resolved.session.supabase
@@ -152,35 +198,71 @@ export async function GET(request: NextRequest) {
     commentsByItemId.set(comment.gallery_item_id, current);
   }
 
-  const posts = items.map((item) => {
-    const likedBy = likeSetByItemId.get(item.id) ?? new Set<string>();
-    const itemComments = commentsByItemId.get(item.id) ?? [];
-    const recentComments: MobileNetworkingGalleryComment[] = itemComments.slice(0, 3).map((comment) => {
-      const attendee = attendeeById.get(comment.attendee_id);
-      return {
-        id: comment.id,
-        itemId: comment.gallery_item_id,
-        attendeeId: comment.attendee_id,
-        attendeeName: attendee?.name ?? "Katılımcı",
-        attendeeRole: attendee?.role ?? null,
-        text: comment.text,
-        createdAt: comment.created_at
-      };
-    });
-
-    return {
+  const posts = groupedItems.map((group) => {
+    const orderedMedia = [...group.items].sort((left, right) =>
+      left.created_at.localeCompare(right.created_at)
+    );
+    const coverItem = orderedMedia[0] ?? group.items[0];
+    const mediaItems = orderedMedia.map((item) => ({
       id: item.id,
-      uploaderName: item.uploader_name,
-      caption: item.caption,
       mediaType: item.media_type,
       publicUrl: normalizeGalleryPublicUrl({
         publicUrl: item.public_url,
         mediaType: item.media_type
+      })
+    }));
+
+    const likedAttendeeIds = new Set<string>();
+    const mergedComments: GalleryCommentRow[] = [];
+
+    for (const mediaItem of orderedMedia) {
+      const likedBy = likeSetByItemId.get(mediaItem.id);
+      if (likedBy) {
+        for (const likeAttendeeId of likedBy) {
+          likedAttendeeIds.add(likeAttendeeId);
+        }
+      }
+
+      const mediaComments = commentsByItemId.get(mediaItem.id) ?? [];
+      mergedComments.push(...mediaComments);
+    }
+
+    mergedComments.sort((left, right) => right.created_at.localeCompare(left.created_at));
+
+    const recentComments: MobileNetworkingGalleryComment[] = mergedComments
+      .slice(0, 3)
+      .map((comment) => {
+        const attendee = attendeeById.get(comment.attendee_id);
+        return {
+          id: comment.id,
+          itemId: comment.gallery_item_id,
+          attendeeId: comment.attendee_id,
+          attendeeName: attendee?.name ?? "Katılımcı",
+          attendeeRole: attendee?.role ?? null,
+          text: comment.text,
+          createdAt: comment.created_at
+        };
+      });
+
+    const caption =
+      orderedMedia.find((item) => typeof item.caption === "string" && item.caption.trim().length > 0)
+        ?.caption ?? null;
+
+    return {
+      id: coverItem.id,
+      uploaderName: coverItem.uploader_name,
+      caption,
+      mediaType: mediaItems[0]?.mediaType ?? coverItem.media_type,
+      publicUrl: mediaItems[0]?.publicUrl ?? normalizeGalleryPublicUrl({
+        publicUrl: coverItem.public_url,
+        mediaType: coverItem.media_type
       }),
-      createdAt: item.created_at,
-      likesCount: likedBy.size,
-      commentsCount: itemComments.length,
-      likedByMe: likedBy.has(attendeeId),
+      mediaItems,
+      mediaCount: mediaItems.length,
+      createdAt: group.newestCreatedAt,
+      likesCount: likedAttendeeIds.size,
+      commentsCount: mergedComments.length,
+      likedByMe: likedAttendeeIds.has(attendeeId),
       recentComments
     };
   });

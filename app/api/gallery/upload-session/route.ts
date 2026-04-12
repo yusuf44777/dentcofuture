@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   GALLERY_BUCKET_NAME,
   MAX_GALLERY_UPLOAD_BYTES,
-  buildGalleryStoragePath,
+  buildGalleryStoragePathWithBatch,
   getErrorMessage,
   resolveGalleryMediaType,
   sanitizeCaption,
@@ -20,6 +20,7 @@ type UploadSessionPayload = {
   fileSize?: number;
   uploaderName?: string;
   caption?: string;
+  batchId?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
   const fileSize = Number(payload.fileSize);
   const uploaderName = sanitizeUploaderName(payload.uploaderName);
   const caption = sanitizeCaption(payload.caption);
+  const batchId = typeof payload.batchId === "string" ? payload.batchId : "";
   const mediaType = resolveGalleryMediaType(mimeType);
 
   if (!fileName || fileName.length > 180) {
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const objectPath = buildGalleryStoragePath(fileName, mediaType);
+    const objectPath = buildGalleryStoragePathWithBatch(fileName, mediaType, batchId);
     const supabase = createSupabaseAdminClient();
     const data = await createSignedUploadSession(supabase, objectPath);
 

@@ -113,14 +113,41 @@ export function isValidGalleryObjectPath(value: unknown) {
 }
 
 export function buildGalleryStoragePath(fileName: string, mediaType: GalleryMediaType) {
+  return buildGalleryStoragePathWithBatch(fileName, mediaType);
+}
+
+export function buildGalleryStoragePathWithBatch(
+  fileName: string,
+  mediaType: GalleryMediaType,
+  batchId?: string
+) {
   const now = new Date();
   const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const extension = inferFileExtension(fileName);
   const safeExtension = extension || (mediaType === "video" ? "mp4" : "jpg");
   const randomPart = randomUUID().replace(/-/g, "").slice(0, 20);
+  const batchPrefix = sanitizeGalleryBatchId(batchId);
 
-  return `gallery/${mediaType}/${year}/${month}/${randomPart}.${safeExtension}`;
+  return `gallery/${mediaType}/${year}/${month}/${batchPrefix}${randomPart}.${safeExtension}`;
+}
+
+export function sanitizeGalleryBatchId(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 28);
+
+  if (normalized.length < 8) {
+    return "";
+  }
+
+  return `${normalized}__`;
 }
 
 const GOOGLE_DRIVE_FILE_ID_PATTERNS = [

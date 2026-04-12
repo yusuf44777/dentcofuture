@@ -79,6 +79,18 @@ function formatGalleryDate(value: string) {
 
 const DOUBLE_TAP_WINDOW_MS = 280;
 
+type UploadProgressState = {
+  total: number;
+  completed: number;
+  uploaded: number;
+  failed: number;
+  currentFile: string | null;
+};
+
+function createGalleryBatchId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`.slice(0, 24);
+}
+
 function patchGalleryPostInCache(
   feed: MobileNetworkingGalleryFeed | undefined,
   itemId: string,
@@ -135,7 +147,9 @@ export default function ParticipantNetworkingScreen() {
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
   const [activeProfileCard, setActiveProfileCard] = useState<DiscoveryProfileItem | null>(null);
   const [isProfileCardVisible, setIsProfileCardVisible] = useState(false);
+  const [postCarouselIndexById, setPostCarouselIndexById] = useState<Record<string, number>>({});
   const [uploadCarouselIndex, setUploadCarouselIndex] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const [lastPhotoTap, setLastPhotoTap] = useState<{ itemId: string; at: number } | null>(null);
 
   const feedQuery = useQuery({
@@ -343,6 +357,13 @@ export default function ParticipantNetworkingScreen() {
     onMutate: () => {
       setUploadError("");
       setUploadMessage("");
+      setUploadProgress({
+        total: selectedUploadAssets.length,
+        completed: 0,
+        uploaded: 0,
+        failed: 0,
+        currentFile: null
+      });
     },
     mutationFn: async () => {
       if (selectedUploadAssets.length === 0) {
@@ -354,23 +375,71 @@ export default function ParticipantNetworkingScreen() {
         throw new Error("Profil bilgisi eksik.");
       }
 
+      const assets = [...selectedUploadAssets];
+      const batchId = createGalleryBatchId();
       let uploadedCount = 0;
+      let completedCount = 0;
       const failedFiles: string[] = [];
 
-      for (const asset of selectedUploadAssets) {
-        try {
-          await createNetworkingGalleryPost({
-            asset,
-            caption: uploadCaption.trim(),
-            uploaderName
-          });
-          uploadedCount += 1;
-        } catch (error) {
-          const fileName = asset.fileName?.trim() || "isimsiz-dosya";
-          const detail = error instanceof Error ? error.message : "Bilinmeyen hata";
-          failedFiles.push(`${fileName}: ${detail}`);
+      setUploadProgress({
+        total: assets.length,
+        completed: 0,
+        uploaded: 0,
+        failed: 0,
+        currentFile: null
+      });
+
+      let nextAssetIndex = 0;
+      const concurrency = Math.min(3, assets.length);
+
+      const runUploadWorker = async () => {
+        while (nextAssetIndex < assets.length) {
+          const currentIndex = nextAssetIndex;
+          nextAssetIndex += 1;
+          const asset = assets[currentIndex];
+          const fileName = asset.fileName?.trim() || `medya-${currentIndex + 1}`;
+
+          setUploadProgress((current) =>
+            current
+              ? {
+                  ...current,
+                  currentFile: fileName
+                }
+              : current
+          );
+
+          try {
+            await createNetworkingGalleryPost({
+              asset,
+              caption: uploadCaption.trim(),
+              uploaderName,
+              batchId
+            });
+            uploadedCount += 1;
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : "Bilinmeyen hata";
+            failedFiles.push(`${fileName}: ${detail}`);
+          } finally {
+            completedCount += 1;
+            const failedCount = failedFiles.length;
+            const uploaded = uploadedCount;
+
+            setUploadProgress((current) =>
+              current
+                ? {
+                    ...current,
+                    completed: completedCount,
+                    uploaded,
+                    failed: failedCount,
+                    currentFile: completedCount >= assets.length ? null : current.currentFile
+                  }
+                : current
+            );
+          }
         }
-      }
+      };
+
+      await Promise.all(Array.from({ length: concurrency }, () => runUploadWorker()));
 
       if (uploadedCount === 0) {
         throw new Error(failedFiles[0] ?? "Medyalar paylaşılamadı.");
@@ -384,7 +453,9 @@ export default function ParticipantNetworkingScreen() {
     onSuccess: async (result) => {
       setSelectedUploadAssets([]);
       setUploadCarouselIndex(0);
+      setPostCarouselIndexById({});
       setUploadCaption("");
+      setUploadProgress(null);
       setIsUploadSheetVisible(false);
       if (result.failedFiles.length > 0) {
         setUploadError(
@@ -393,9 +464,16 @@ export default function ParticipantNetworkingScreen() {
         setUploadMessage("");
       } else {
         setUploadError("");
-        setUploadMessage(`${result.uploadedCount} medya başarıyla paylaşıldı.`);
+        setUploadMessage(
+          result.uploadedCount > 1
+            ? `${result.uploadedCount} medya tek karosel paylaşımı olarak eklendi.`
+            : "Medya başarıyla paylaşıldı."
+        );
       }
       await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
+    },
+    onError: () => {
+      setUploadProgress(null);
     }
   });
 
@@ -587,7 +665,11 @@ export default function ParticipantNetworkingScreen() {
     galleryLikeMutation.isPending ? (galleryLikeMutation.variables?.itemId ?? null) : null;
   const pendingGalleryCommentItemId =
     galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
+  const galleryCarouselWidth = Math.max(windowWidth - spacing.md * 6, 220);
   const uploadCarouselWidth = Math.max(windowWidth - spacing.md * 4, 220);
+  const uploadCompletionRate = uploadProgress
+    ? Math.round((uploadProgress.completed / Math.max(1, uploadProgress.total)) * 100)
+    : 0;
 
   const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
     const now = Date.now();
@@ -890,6 +972,23 @@ export default function ParticipantNetworkingScreen() {
               const draft = commentDrafts[post.id] ?? "";
               const avatarLetter = post.uploaderName.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";
               const hiddenCommentCount = Math.max(post.commentsCount - post.recentComments.length, 0);
+              const postMediaItems =
+                post.mediaItems && post.mediaItems.length > 0
+                  ? post.mediaItems
+                  : [
+                      {
+                        id: post.id,
+                        mediaType: post.mediaType,
+                        publicUrl: post.publicUrl
+                      }
+                    ];
+              const activeMediaIndex = Math.max(
+                0,
+                Math.min(
+                  postMediaItems.length - 1,
+                  postCarouselIndexById[post.id] ?? 0
+                )
+              );
 
               return (
                 <View key={post.id} style={styles.galleryPostCard}>
@@ -910,7 +1009,77 @@ export default function ParticipantNetworkingScreen() {
                     </View>
                   </View>
 
-                  {post.mediaType === "photo" ? (
+                  {postMediaItems.length > 1 ? (
+                    <View>
+                      <ScrollView
+                        horizontal
+                        pagingEnabled
+                        decelerationRate="fast"
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.galleryCarouselTrack}
+                        onMomentumScrollEnd={(event) => {
+                          const offsetX = event.nativeEvent.contentOffset.x;
+                          const nextIndex = Math.round(offsetX / galleryCarouselWidth);
+                          setPostCarouselIndexById((current) => ({
+                            ...current,
+                            [post.id]: Math.max(
+                              0,
+                              Math.min(postMediaItems.length - 1, nextIndex)
+                            )
+                          }));
+                        }}
+                      >
+                        {postMediaItems.map((mediaItem, index) =>
+                          mediaItem.mediaType === "photo" ? (
+                            <Pressable
+                              key={`${post.id}-media-${mediaItem.id}-${index}`}
+                              disabled={pendingGalleryLikeItemId === post.id}
+                              onPress={() => {
+                                handlePhotoDoubleTapLike(post.id, post.likedByMe);
+                              }}
+                            >
+                              <Image
+                                source={{ uri: mediaItem.publicUrl }}
+                                resizeMode="cover"
+                                style={[styles.galleryMedia, { width: galleryCarouselWidth }]}
+                              />
+                            </Pressable>
+                          ) : (
+                            <Pressable
+                              key={`${post.id}-media-${mediaItem.id}-${index}`}
+                              style={({ pressed }) => [
+                                styles.galleryVideoCard,
+                                { width: galleryCarouselWidth },
+                                pressed ? styles.pressed : null
+                              ]}
+                              onPress={() => {
+                                void openSocial(mediaItem.publicUrl);
+                              }}
+                            >
+                              <Play color={colors.copper} size={20} />
+                              <Text style={styles.galleryVideoText}>Videoyu aç</Text>
+                            </Pressable>
+                          )
+                        )}
+                      </ScrollView>
+
+                      <View style={styles.galleryCarouselDots}>
+                        {postMediaItems.map((mediaItem, index) => (
+                          <View
+                            key={`${post.id}-dot-${mediaItem.id}-${index}`}
+                            style={[
+                              styles.galleryCarouselDot,
+                              activeMediaIndex === index ? styles.galleryCarouselDotActive : null
+                            ]}
+                          />
+                        ))}
+                      </View>
+
+                      <Text style={styles.galleryCarouselCountText}>
+                        {activeMediaIndex + 1}/{postMediaItems.length}
+                      </Text>
+                    </View>
+                  ) : postMediaItems[0]?.mediaType === "photo" ? (
                     <Pressable
                       disabled={pendingGalleryLikeItemId === post.id}
                       onPress={() => {
@@ -918,7 +1087,7 @@ export default function ParticipantNetworkingScreen() {
                       }}
                     >
                       <Image
-                        source={{ uri: post.publicUrl }}
+                        source={{ uri: postMediaItems[0]?.publicUrl ?? post.publicUrl }}
                         resizeMode="cover"
                         style={styles.galleryMedia}
                       />
@@ -930,7 +1099,7 @@ export default function ParticipantNetworkingScreen() {
                         pressed ? styles.pressed : null
                       ]}
                       onPress={() => {
-                        void openSocial(post.publicUrl);
+                        void openSocial(postMediaItems[0]?.publicUrl ?? post.publicUrl);
                       }}
                     >
                       <Play color={colors.copper} size={20} />
@@ -1180,6 +1349,28 @@ export default function ParticipantNetworkingScreen() {
                   ? galleryUploadMutation.error.message
                   : "Medya paylaşılamadı."}
               </Text>
+            ) : null}
+
+            {uploadProgress && galleryUploadMutation.isPending ? (
+              <View style={styles.uploadProgressWrap}>
+                <View style={styles.uploadProgressTrack}>
+                  <View
+                    style={[
+                      styles.uploadProgressFill,
+                      { width: `${Math.max(0, Math.min(100, uploadCompletionRate))}%` }
+                    ]}
+                  />
+                </View>
+                <Text style={styles.uploadProgressText}>
+                  {uploadProgress.completed}/{uploadProgress.total} tamamlandı • {uploadProgress.uploaded} yüklendi
+                  {uploadProgress.failed > 0 ? ` • ${uploadProgress.failed} hata` : ""}
+                </Text>
+                {uploadProgress.currentFile ? (
+                  <Text style={styles.uploadProgressCurrentFile} numberOfLines={1}>
+                    İşleniyor: {uploadProgress.currentFile}
+                  </Text>
+                ) : null}
+              </View>
             ) : null}
 
             <Pressable
@@ -1598,6 +1789,32 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     marginBottom: spacing.xs
+  },
+  uploadProgressWrap: {
+    marginBottom: spacing.xs
+  },
+  uploadProgressTrack: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: radii.pill,
+    height: 8,
+    overflow: "hidden"
+  },
+  uploadProgressFill: {
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    height: "100%"
+  },
+  uploadProgressText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: 6
+  },
+  uploadProgressCurrentFile: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: 2
   },
   metricRow: {
     flexDirection: "row",
@@ -2041,6 +2258,33 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     height: 220,
     width: "100%"
+  },
+  galleryCarouselTrack: {
+    gap: 0
+  },
+  galleryCarouselDots: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    marginTop: spacing.xs
+  },
+  galleryCarouselDot: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 999,
+    height: 6,
+    width: 6
+  },
+  galleryCarouselDotActive: {
+    backgroundColor: colors.copper,
+    width: 18
+  },
+  galleryCarouselCountText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "center"
   },
   galleryVideoCard: {
     alignItems: "center",
