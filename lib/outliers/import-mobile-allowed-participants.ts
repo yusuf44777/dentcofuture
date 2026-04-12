@@ -403,7 +403,7 @@ function validateParticipant(participant: ParsedParticipant) {
   }
 
   if (participant.phone.length !== 10) {
-    return "Telefon formatı geçersiz. Tercih: 5XXXXXXXXX (örn: 5XXXXXXXXX). +90XXXXXXXXXX ve 0XXXXXXXXXX otomatik 5XXXXXXXXX'e çevrilir.";
+    return "Telefon formatı geçersiz. Tercih: 5XXXXXXXXX. +90XXXXXXXXXX, 90XXXXXXXXXX ve 0XXXXXXXXXX otomatik 5XXXXXXXXX'e çevrilir.";
   }
 
   return "";
