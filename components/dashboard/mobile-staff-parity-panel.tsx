@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Images,
@@ -30,6 +30,28 @@ type Participant = {
   participant_code: string | null;
   external_ref: string | null;
   is_active: boolean;
+};
+
+type OutliersImportDetail = {
+  ok?: boolean;
+  source?: string;
+  parsed_lines?: number;
+  migrated_total?: number;
+  inserted_count?: number;
+  updated_count?: number;
+  has_header?: boolean;
+  sample_rows?: Array<{
+    full_name: string;
+    email: string;
+    phone: string;
+    status: "inserted" | "updated";
+  }>;
+  invalid_lines?: Array<{
+    line: number;
+    value: string;
+    reason: string;
+  }>;
+  error?: string;
 };
 
 type GalleryItem = {
@@ -135,6 +157,13 @@ export function MobileStaffParityPanel() {
   const [newParticipantCode, setNewParticipantCode] = useState("");
   const [newParticipantExternalRef, setNewParticipantExternalRef] = useState("");
   const [creatingParticipant, setCreatingParticipant] = useState(false);
+  const [outliersCsvRows, setOutliersCsvRows] = useState("");
+  const [outliersCsvFileName, setOutliersCsvFileName] = useState("");
+  const [outliersImportState, setOutliersImportState] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [outliersImportMessage, setOutliersImportMessage] = useState("");
+  const [outliersImportDetail, setOutliersImportDetail] = useState<OutliersImportDetail | null>(null);
 
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [galleryMessage, setGalleryMessage] = useState("");
@@ -374,6 +403,107 @@ export function MobileStaffParityPanel() {
     }
   }, []);
 
+  const handleOutliersCsvFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      setOutliersCsvRows(content);
+      setOutliersCsvFileName(file.name);
+      setOutliersImportState("idle");
+      setOutliersImportMessage(`${file.name} yüklendi. "CSV'den migrate et" ile devam edebilirsin.`);
+      setOutliersImportDetail(null);
+    } catch (error) {
+      setOutliersImportState("error");
+      setOutliersImportMessage(getErrorMessage(error, "CSV dosyası okunamadı."));
+      setOutliersImportDetail(null);
+    } finally {
+      event.target.value = "";
+    }
+  }, []);
+
+  const migrateOutliersCsv = useCallback(async () => {
+    if (outliersImportState === "loading") {
+      return;
+    }
+
+    if (outliersCsvRows.trim().length === 0) {
+      setOutliersImportState("error");
+      setOutliersImportMessage("Önce CSV dosyası seçin.");
+      return;
+    }
+
+    setOutliersImportState("loading");
+    setOutliersImportMessage("");
+    setOutliersImportDetail(null);
+
+    try {
+      const response = await fetch("/api/admin/outliers/participants/import", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({ rows: outliersCsvRows })
+      });
+      const data = (await response.json().catch(() => null)) as OutliersImportDetail | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "CSV migrate işlemi başarısız.");
+      }
+
+      setOutliersImportState("success");
+      setOutliersImportDetail(data);
+      setOutliersImportMessage(
+        `${data.migrated_total ?? 0} satır işlendi. ${data.inserted_count ?? 0} yeni, ${
+          data.updated_count ?? 0
+        } güncelleme.`
+      );
+    } catch (error) {
+      setOutliersImportState("error");
+      setOutliersImportMessage(getErrorMessage(error, "CSV migrate işlemi başarısız."));
+      setOutliersImportDetail(null);
+    }
+  }, [outliersCsvRows, outliersImportState]);
+
+  const migrateProjectOutliersCsv = useCallback(async () => {
+    if (outliersImportState === "loading") {
+      return;
+    }
+
+    setOutliersImportState("loading");
+    setOutliersImportMessage("");
+    setOutliersImportDetail(null);
+
+    try {
+      const response = await fetch("/api/admin/outliers/participants/import-project-csv", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+      const data = (await response.json().catch(() => null)) as OutliersImportDetail | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Proje CSV migrate işlemi başarısız.");
+      }
+
+      setOutliersImportState("success");
+      setOutliersImportDetail(data);
+      setOutliersImportMessage(
+        `${data.source ?? "outliers_katilimci.csv"} işlendi. ${data.inserted_count ?? 0} yeni, ${
+          data.updated_count ?? 0
+        } güncelleme.`
+      );
+    } catch (error) {
+      setOutliersImportState("error");
+      setOutliersImportMessage(getErrorMessage(error, "Proje CSV migrate işlemi başarısız."));
+      setOutliersImportDetail(null);
+    }
+  }, [outliersImportState]);
+
   const deleteGalleryItem = useCallback(async (itemId: string) => {
     if (galleryActionId) {
       return;
@@ -527,6 +657,92 @@ export function MobileStaffParityPanel() {
                 "Katılımcı Ekle"
               )}
             </Button>
+          </div>
+
+          <div className="mt-4 space-y-2 rounded-xl border border-cyan-200/15 bg-slate-950/35 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-100">
+              Outliers Mobil Login CSV Migrate
+            </p>
+            <p className="text-[11px] text-cyan-100/75">
+              `outliers_katilimci.csv` dosyasını `mobile_allowed_participants` tablosuna aktarır.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                accept=".csv,.txt"
+                onChange={(event) => {
+                  void handleOutliersCsvFileChange(event);
+                }}
+                className="block w-full cursor-pointer rounded-lg border border-cyan-200/25 bg-slate-900/40 px-2 py-2 text-xs text-slate-200 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-cyan-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-cyan-50 hover:file:bg-cyan-500/30"
+              />
+              {outliersCsvFileName ? (
+                <p className="text-[11px] text-cyan-100/75">Seçilen dosya: {outliersCsvFileName}</p>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => void migrateOutliersCsv()}
+                  disabled={outliersImportState === "loading"}
+                >
+                  {outliersImportState === "loading" ? (
+                    <>
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      Migrate...
+                    </>
+                  ) : (
+                    "CSV'den migrate et"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 border-cyan-200/30 bg-cyan-200/10 px-3 text-xs text-cyan-50 hover:bg-cyan-200/20"
+                  onClick={() => void migrateProjectOutliersCsv()}
+                  disabled={outliersImportState === "loading"}
+                >
+                  Projedeki outliers_katilimci.csv
+                </Button>
+              </div>
+            </div>
+
+            {outliersImportMessage ? (
+              <p
+                className={`text-[11px] ${
+                  outliersImportState === "error" ? "text-rose-300" : "text-emerald-200"
+                }`}
+              >
+                {outliersImportMessage}
+              </p>
+            ) : null}
+
+            {outliersImportDetail?.sample_rows && outliersImportDetail.sample_rows.length > 0 ? (
+              <div className="rounded-lg border border-cyan-200/15 bg-slate-900/45 p-2">
+                <p className="text-[11px] font-medium text-cyan-100/85">Örnek Satırlar</p>
+                <div className="mt-1 space-y-1 text-[11px] text-slate-200/85">
+                  {outliersImportDetail.sample_rows.slice(0, 4).map((row) => (
+                    <p key={`${row.email}-${row.phone}`}>
+                      {row.full_name} • {row.email} • {row.phone} • {row.status}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {outliersImportDetail?.invalid_lines && outliersImportDetail.invalid_lines.length > 0 ? (
+              <div className="rounded-lg border border-rose-300/30 bg-rose-500/10 p-2">
+                <p className="text-[11px] font-medium text-rose-100">Geçersiz Satırlar</p>
+                <div className="mt-1 space-y-1 text-[11px] text-rose-200/90">
+                  {outliersImportDetail.invalid_lines.slice(0, 3).map((line) => (
+                    <p key={`invalid-${line.line}`}>
+                      Satır {line.line}: {line.reason}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 flex items-center gap-2">
