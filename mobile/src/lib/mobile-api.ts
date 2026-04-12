@@ -20,6 +20,7 @@ type OnboardingPayload = {
   name: string;
   role: "Student" | "Academic";
   class_level?: AttendeeClassLevel | null;
+  university?: string;
   instagram?: string;
   linkedin?: string;
   outlier_score?: number;
@@ -332,20 +333,26 @@ function inferFileNameFromAsset(asset: ImagePickerAsset) {
     return fromUri;
   }
 
-  return `outliers-${Date.now()}.jpg`;
+  return `outliers-${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`;
 }
 
-function inferImageMimeType(fileName: string, fallback?: string | null) {
-  if (fallback && fallback.startsWith("image/")) {
+function inferMimeType(fileName: string, fallback?: string | null, assetType?: ImagePickerAsset["type"]) {
+  if (fallback && (fallback.startsWith("image/") || fallback.startsWith("video/"))) {
     return fallback;
   }
 
   const lowered = fileName.toLowerCase();
+  if (lowered.endsWith(".mp4")) return "video/mp4";
+  if (lowered.endsWith(".mov")) return "video/quicktime";
+  if (lowered.endsWith(".webm")) return "video/webm";
+  if (lowered.endsWith(".mkv")) return "video/x-matroska";
+  if (lowered.endsWith(".3gp")) return "video/3gpp";
   if (lowered.endsWith(".png")) return "image/png";
   if (lowered.endsWith(".webp")) return "image/webp";
   if (lowered.endsWith(".heic")) return "image/heic";
   if (lowered.endsWith(".heif")) return "image/heif";
   if (lowered.endsWith(".gif")) return "image/gif";
+  if (assetType === "video") return "video/mp4";
   return "image/jpeg";
 }
 
@@ -355,23 +362,25 @@ export async function createNetworkingGalleryPost(input: {
   uploaderName: string;
 }) {
   const fileName = inferFileNameFromAsset(input.asset);
-  const mimeType = inferImageMimeType(fileName, input.asset.mimeType ?? null);
+  const mimeType = inferMimeType(fileName, input.asset.mimeType ?? null, input.asset.type);
   let fileSize = Number(input.asset.fileSize ?? 0);
 
   if (!Number.isFinite(fileSize) || fileSize <= 0) {
     const fileInfo = await FileSystem.getInfoAsync(input.asset.uri);
     if (!fileInfo.exists || typeof fileInfo.size !== "number") {
-      throw new Error("Seçilen fotoğraf dosyası okunamadı.");
+      throw new Error("Seçilen medya dosyası okunamadı.");
     }
     fileSize = Number(fileInfo.size);
   }
 
-  if (!mimeType.startsWith("image/")) {
-    throw new Error("Bu sürümde sadece fotoğraf yükleyebilirsin.");
+  const isImage = mimeType.startsWith("image/");
+  const isVideo = mimeType.startsWith("video/");
+  if (!isImage && !isVideo) {
+    throw new Error("Sadece fotoğraf veya video yükleyebilirsin.");
   }
 
   if (!Number.isFinite(fileSize) || fileSize <= 0) {
-    throw new Error("Geçerli bir fotoğraf seçmelisin.");
+    throw new Error("Geçerli bir medya dosyası seçmelisin.");
   }
 
   const session = await apiRequest<GalleryUploadSessionResponse>(
@@ -389,8 +398,8 @@ export async function createNetworkingGalleryPost(input: {
     { auth: true }
   );
 
-  if (session.normalized.mediaType !== "photo") {
-    throw new Error("Bu sürümde sadece fotoğraf yükleme açık.");
+  if (session.normalized.mediaType !== "photo" && session.normalized.mediaType !== "video") {
+    throw new Error("Bu medya tipi desteklenmiyor.");
   }
 
   const uploadResult = await FileSystem.uploadAsync(session.upload.signedUrl, input.asset.uri, {
@@ -403,7 +412,7 @@ export async function createNetworkingGalleryPost(input: {
 
   if (uploadResult.status < 200 || uploadResult.status >= 300) {
     const detail = uploadResult.body?.trim().slice(0, 220);
-    throw new Error(`Fotoğraf yüklenemedi: ${detail || `HTTP ${uploadResult.status}`}`);
+    throw new Error(`Medya yüklenemedi: ${detail || `HTTP ${uploadResult.status}`}`);
   }
 
   return apiRequest<GalleryFinalizeResponse>(

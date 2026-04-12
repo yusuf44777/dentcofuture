@@ -35,23 +35,63 @@ export async function GET(request: NextRequest) {
     ...feed.directory.map((item) => item.id)
   ]);
 
+  const attendeeIds = Array.from(
+    new Set(
+      Array.from(linkedProfiles.values())
+        .map((profile) => profile.attendee_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  let attendeeById = new Map<
+    string,
+    {
+      role: string | null;
+      classLevel: string | null;
+      university: string | null;
+      instagram: string | null;
+      linkedin: string | null;
+    }
+  >();
+
+  if (attendeeIds.length > 0) {
+    const attendeesResult = await resolved.session.supabase
+      .from("attendees")
+      .select("id, role, class_level, university, instagram, linkedin")
+      .in("id", attendeeIds);
+
+    if (attendeesResult.error) {
+      return NextResponse.json(
+        { error: `Katilimci detaylari alinamadi: ${attendeesResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
+    attendeeById = new Map(
+      (attendeesResult.data ?? []).map((item) => [
+        item.id,
+        {
+          role: item.role ?? null,
+          classLevel: item.class_level ?? null,
+          university: item.university ?? null,
+          instagram: item.instagram ?? null,
+          linkedin: item.linkedin ?? null
+        }
+      ])
+    );
+  }
+
+  const mapProfile = (profile: (typeof feed.recommended)[number]) => {
+    const attendeeId = linkedProfiles.get(profile.id)?.attendee_id ?? null;
+    return mapPublicNetworkingProfileToMobile(profile, attendeeId, attendeeId ? attendeeById.get(attendeeId) : null);
+  };
+
   const payload: MobileNetworkingFeed = {
     ok: true,
-    current: feed.currentProfile
-      ? mapPublicNetworkingProfileToMobile(
-          feed.currentProfile,
-          linkedProfiles.get(feed.currentProfile.id)?.attendee_id ?? null
-        )
-      : null,
-    recommended: feed.recommended.map((item) =>
-      mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
-    ),
-    directory: feed.directory.map((item) =>
-      mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
-    ),
-    queue: feed.queue.map((item) =>
-      mapPublicNetworkingProfileToMobile(item, linkedProfiles.get(item.id)?.attendee_id ?? null)
-    ),
+    current: feed.currentProfile ? mapProfile(feed.currentProfile) : null,
+    recommended: feed.recommended.map((item) => mapProfile(item)),
+    directory: feed.directory.map((item) => mapProfile(item)),
+    queue: feed.queue.map((item) => mapProfile(item)),
     likesSentCount: feed.likesSentCount,
     mutualMatchesCount: feed.mutualMatchesCount,
     message: feed.message,

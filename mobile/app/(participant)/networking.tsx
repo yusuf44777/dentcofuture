@@ -11,18 +11,21 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View
 } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Heart,
+  Instagram,
+  Linkedin,
   Plus,
   MessageCircle,
   Play,
   RefreshCw,
   Send,
-  UserRoundX
+  UserRound
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ScreenShell } from "../../src/components/screen-shell";
@@ -33,17 +36,21 @@ import {
   fetchNetworkingFeed,
   fetchNetworkingGalleryComments,
   fetchNetworkingGalleryFeed,
-  fetchNetworkingMatches,
-  sendNetworkingInteraction,
   toggleNetworkingGalleryLike
 } from "../../src/lib/mobile-api";
 import type {
   AttendeeRole,
+  MobileNetworkingFeed,
   MobileNetworkingGalleryComment,
   MobileNetworkingGalleryCommentsResponse,
   MobileNetworkingGalleryFeed
 } from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
+import {
+  getInstagramProfileUrl,
+  getLinkedinProfileUrl,
+  parseContactInfo
+} from "../../src/lib/networking-contact";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 type NetworkingSection = "discovery" | "gallery";
@@ -89,9 +96,31 @@ function patchGalleryPostInCache(
   };
 }
 
+type DiscoveryProfileItem = MobileNetworkingFeed["queue"][number];
+
+function resolveAssetMediaKind(asset: ImagePicker.ImagePickerAsset): "photo" | "video" | null {
+  if (asset.type === "video") {
+    return "video";
+  }
+  if (asset.type === "image") {
+    return "photo";
+  }
+
+  const mime = typeof asset.mimeType === "string" ? asset.mimeType.toLowerCase() : "";
+  if (mime.startsWith("video/")) {
+    return "video";
+  }
+  if (mime.startsWith("image/")) {
+    return "photo";
+  }
+
+  return null;
+}
+
 export default function ParticipantNetworkingScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { width: windowWidth } = useWindowDimensions();
   const { me } = useMobileMe();
   const attendeeId = me?.attendee?.id ?? null;
   const [activeSection, setActiveSection] = useState<NetworkingSection>("gallery");
@@ -104,6 +133,9 @@ export default function ParticipantNetworkingScreen() {
   const [isUploadSheetVisible, setIsUploadSheetVisible] = useState(false);
   const [activeCommentItemId, setActiveCommentItemId] = useState<string | null>(null);
   const [isCommentSheetVisible, setIsCommentSheetVisible] = useState(false);
+  const [activeProfileCard, setActiveProfileCard] = useState<DiscoveryProfileItem | null>(null);
+  const [isProfileCardVisible, setIsProfileCardVisible] = useState(false);
+  const [uploadCarouselIndex, setUploadCarouselIndex] = useState(0);
   const [lastPhotoTap, setLastPhotoTap] = useState<{ itemId: string; at: number } | null>(null);
 
   const feedQuery = useQuery({
@@ -127,37 +159,11 @@ export default function ParticipantNetworkingScreen() {
     staleTime: 4_000
   });
 
-  const matchesQuery = useQuery({
-    queryKey: ["mobile-networking-matches"],
-    queryFn: fetchNetworkingMatches,
-    enabled: Boolean(me && me.role === "participant" && me.attendee),
-    refetchInterval: 20_000
-  });
-
   const threadsQuery = useQuery({
     queryKey: ["mobile-networking-threads"],
     queryFn: fetchMessageThreads,
     enabled: Boolean(me && me.role === "participant" && me.attendee),
     refetchInterval: 10_000
-  });
-
-  const interactionMutation = useMutation({
-    mutationFn: ({
-      targetProfileId,
-      action
-    }: {
-      targetProfileId: string;
-      action: "like" | "pass";
-    }) => sendNetworkingInteraction(targetProfileId, action),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] });
-      if (result.matched) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["mobile-networking-matches"] }),
-          queryClient.invalidateQueries({ queryKey: ["mobile-networking-threads"] })
-        ]);
-      }
-    }
   });
 
   const galleryLikeMutation = useMutation({
@@ -340,7 +346,7 @@ export default function ParticipantNetworkingScreen() {
     },
     mutationFn: async () => {
       if (selectedUploadAssets.length === 0) {
-        throw new Error("Önce en az bir fotoğraf seç.");
+        throw new Error("Önce en az bir medya seç.");
       }
 
       const uploaderName = me?.attendee?.name;
@@ -367,7 +373,7 @@ export default function ParticipantNetworkingScreen() {
       }
 
       if (uploadedCount === 0) {
-        throw new Error(failedFiles[0] ?? "Fotoğraflar paylaşılamadı.");
+        throw new Error(failedFiles[0] ?? "Medyalar paylaşılamadı.");
       }
 
       return {
@@ -377,16 +383,17 @@ export default function ParticipantNetworkingScreen() {
     },
     onSuccess: async (result) => {
       setSelectedUploadAssets([]);
+      setUploadCarouselIndex(0);
       setUploadCaption("");
       setIsUploadSheetVisible(false);
       if (result.failedFiles.length > 0) {
         setUploadError(
-          `${result.uploadedCount} fotoğraf paylaşıldı, ${result.failedFiles.length} dosya yüklenemedi.`
+          `${result.uploadedCount} medya paylaşıldı, ${result.failedFiles.length} dosya yüklenemedi.`
         );
         setUploadMessage("");
       } else {
         setUploadError("");
-        setUploadMessage(`${result.uploadedCount} fotoğraf başarıyla paylaşıldı.`);
+        setUploadMessage(`${result.uploadedCount} medya başarıyla paylaşıldı.`);
       }
       await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
     }
@@ -408,6 +415,8 @@ export default function ParticipantNetworkingScreen() {
         profile.fullName,
         profile.interestArea,
         profile.goal,
+        profile.university ?? "",
+        profile.institutionName ?? "",
         profile.city ?? "",
         ...(profile.dentistryFocusAreas ?? [])
       ]
@@ -429,6 +438,8 @@ export default function ParticipantNetworkingScreen() {
         profile.fullName,
         profile.interestArea,
         profile.goal,
+        profile.university ?? "",
+        profile.institutionName ?? "",
         profile.city ?? "",
         ...(profile.dentistryFocusAreas ?? [])
       ]
@@ -468,6 +479,21 @@ export default function ParticipantNetworkingScreen() {
     return (galleryFeedQuery.data?.posts ?? []).find((post) => post.id === activeCommentItemId) ?? null;
   }, [activeCommentItemId, galleryFeedQuery.data?.posts]);
 
+  const activeProfileContact = useMemo(
+    () => parseContactInfo(activeProfileCard?.contactInfo ?? null),
+    [activeProfileCard?.contactInfo]
+  );
+
+  const activeProfileInstagramUrl = useMemo(
+    () => getInstagramProfileUrl(activeProfileCard?.instagram ?? activeProfileContact.instagram),
+    [activeProfileCard?.instagram, activeProfileContact.instagram]
+  );
+
+  const activeProfileLinkedinUrl = useMemo(
+    () => getLinkedinProfileUrl(activeProfileCard?.linkedin ?? activeProfileContact.linkedin),
+    [activeProfileCard?.linkedin, activeProfileContact.linkedin]
+  );
+
   const openSocial = async (url: string | null | undefined) => {
     if (!url) {
       return;
@@ -484,7 +510,12 @@ export default function ParticipantNetworkingScreen() {
     router.push(`/(participant)/uploader?name=${encodeURIComponent(normalized)}` as never);
   };
 
-  const pickPhotoForUpload = async () => {
+  const openProfileCard = (profile: DiscoveryProfileItem) => {
+    setActiveProfileCard(profile);
+    setIsProfileCardVisible(true);
+  };
+
+  const pickMediaForUpload = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setUploadError("Galeriye erişim izni gerekiyor.");
@@ -493,7 +524,7 @@ export default function ParticipantNetworkingScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
       selectionLimit: 10,
       allowsEditing: false,
@@ -504,16 +535,10 @@ export default function ParticipantNetworkingScreen() {
       return;
     }
 
-    const validAssets = result.assets.filter((asset) => {
-      if (typeof asset.mimeType !== "string" || asset.mimeType.length === 0) {
-        return true;
-      }
-
-      return asset.mimeType.startsWith("image/");
-    });
+    const validAssets = result.assets.filter((asset) => resolveAssetMediaKind(asset) !== null);
 
     if (validAssets.length === 0) {
-      setUploadError("Bu sürümde sadece fotoğraf paylaşılabilir.");
+      setUploadError("Sadece fotoğraf veya video seçebilirsin.");
       setUploadMessage("");
       return;
     }
@@ -537,11 +562,12 @@ export default function ParticipantNetworkingScreen() {
     const skippedCount = validAssets.length - (mergedAssets.length - selectedUploadAssets.length);
 
     setSelectedUploadAssets(mergedAssets);
+    setUploadCarouselIndex(0);
     setUploadError("");
     setUploadMessage(
       skippedCount > 0
-        ? `${mergedAssets.length} fotoğraf seçildi. En fazla 10 dosya yüklenebilir.`
-        : `${mergedAssets.length} fotoğraf seçildi.`
+        ? `${mergedAssets.length} medya seçildi. En fazla 10 dosya yüklenebilir.`
+        : `${mergedAssets.length} medya seçildi.`
     );
   };
 
@@ -561,8 +587,7 @@ export default function ParticipantNetworkingScreen() {
     galleryLikeMutation.isPending ? (galleryLikeMutation.variables?.itemId ?? null) : null;
   const pendingGalleryCommentItemId =
     galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
-  const pendingInteractionTargetId =
-    interactionMutation.isPending ? (interactionMutation.variables?.targetProfileId ?? null) : null;
+  const uploadCarouselWidth = Math.max(windowWidth - spacing.md * 4, 220);
 
   const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
     const now = Date.now();
@@ -591,7 +616,7 @@ export default function ParticipantNetworkingScreen() {
   return (
     <ScreenShell
       title="Outliers"
-      subtitle="Feed'de paylaş, networking yap, bağlantı kur ve anında sohbet et."
+      subtitle="Feed'de paylaş, katılımcıları keşfet ve doğrudan sohbet başlat."
     >
       <View style={styles.segmentWrap}>
         <Pressable
@@ -712,44 +737,18 @@ export default function ParticipantNetworkingScreen() {
                       ))}
                     </View>
                   </View>
-                  <View style={styles.discoveryActionColumn}>
-                    <Pressable
-                      disabled={interactionMutation.isPending}
-                      style={({ pressed }) => [
-                        styles.discoveryConnectButton,
-                        pressed ? styles.pressed : null,
-                        interactionMutation.isPending ? styles.disabled : null
-                      ]}
-                      onPress={() => {
-                        interactionMutation.mutate({
-                          targetProfileId: profile.profileId,
-                          action: "like"
-                        });
-                      }}
-                    >
-                      <Heart color="#FFFFFF" fill="#FFFFFF" size={14} />
-                      <Text style={styles.discoveryConnectButtonText}>
-                        {pendingInteractionTargetId === profile.profileId ? "İşleniyor" : "Bağlantı İste"}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={interactionMutation.isPending}
-                      style={({ pressed }) => [
-                        styles.discoveryHideButton,
-                        pressed ? styles.pressed : null,
-                        interactionMutation.isPending ? styles.disabled : null
-                      ]}
-                      onPress={() => {
-                        interactionMutation.mutate({
-                          targetProfileId: profile.profileId,
-                          action: "pass"
-                        });
-                      }}
-                    >
-                      <UserRoundX color={colors.danger} size={14} />
-                      <Text style={styles.discoveryHideButtonText}>Gizle</Text>
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.discoveryProfileOpenButton,
+                      pressed ? styles.pressed : null
+                    ]}
+                    onPress={() => {
+                      openProfileCard(profile);
+                    }}
+                  >
+                    <UserRound color={colors.accent} size={14} />
+                    <Text style={styles.discoveryProfileOpenButtonText}>Profil Aç</Text>
+                  </Pressable>
                 </View>
               ))
             )}
@@ -770,20 +769,16 @@ export default function ParticipantNetworkingScreen() {
                     </Text>
                   </View>
                   <Pressable
-                    disabled={interactionMutation.isPending}
                     style={({ pressed }) => [
                       styles.discoveryDirectoryButton,
-                      pressed ? styles.pressed : null,
-                      interactionMutation.isPending ? styles.disabled : null
+                      pressed ? styles.pressed : null
                     ]}
                     onPress={() => {
-                      interactionMutation.mutate({
-                        targetProfileId: profile.profileId,
-                        action: "like"
-                      });
+                      openProfileCard(profile);
                     }}
                   >
-                    <Text style={styles.discoveryDirectoryButtonText}>Bağlantı İste</Text>
+                    <UserRound color="#FFFFFF" size={14} />
+                    <Text style={styles.discoveryDirectoryButtonText}>Profil Aç</Text>
                   </Pressable>
                 </View>
               ))
@@ -791,26 +786,29 @@ export default function ParticipantNetworkingScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Bağlantılar</Text>
-            {(matchesQuery.data?.matches ?? []).length === 0 ? (
-              <Text style={styles.mutedText}>Henüz karşılıklı bağlantı yok.</Text>
+            <Text style={styles.cardTitle}>Sohbetler</Text>
+            {threadsQuery.isLoading ? (
+              <View style={styles.loaderCardAlt}>
+                <ActivityIndicator color={colors.accent} size="small" />
+              </View>
+            ) : null}
+            {!threadsQuery.isLoading && (threadsQuery.data?.threads ?? []).length === 0 ? (
+              <Text style={styles.mutedText}>Henüz sohbet yok. Katılımcı kartından sohbet başlatabilirsin.</Text>
             ) : (
-              (matchesQuery.data?.matches ?? []).map((match) => {
-                const matchAttendeeId = match.attendee?.id ?? match.profile.attendeeId;
-                const latestMessage = matchAttendeeId
-                  ? latestThreadByAttendee.get(matchAttendeeId) ?? null
-                  : null;
+              (threadsQuery.data?.threads ?? []).map((thread, index) => {
+                const chatAttendeeId = thread.attendee?.id ?? null;
+                const latestMessage = chatAttendeeId ? latestThreadByAttendee.get(chatAttendeeId) ?? null : null;
                 const previewText = latestMessage
                   ? `${latestMessage.senderId === attendeeId ? "Sen: " : ""}${latestMessage.text}`
-                  : "Henüz mesaj yok. Sohbeti başlat.";
+                  : "Henüz mesaj yok.";
 
                 return (
-                  <View key={match.profile.profileId} style={styles.matchRow}>
+                  <View key={`thread-${chatAttendeeId ?? index}`} style={styles.matchRow}>
                     <View style={styles.matchIdentity}>
-                      <Text style={styles.matchName}>{match.profile.fullName}</Text>
+                      <Text style={styles.matchName}>{thread.attendee?.name ?? "Katılımcı"}</Text>
                       <Text style={styles.matchRole}>
-                        {match.attendee?.role
-                          ? ROLE_LABELS[match.attendee.role as AttendeeRole] ?? "Katılımcı"
+                        {thread.attendee?.role
+                          ? ROLE_LABELS[thread.attendee.role as AttendeeRole] ?? "Katılımcı"
                           : "Katılımcı"}
                       </Text>
                       <Text style={styles.matchPreview} numberOfLines={1}>
@@ -818,18 +816,18 @@ export default function ParticipantNetworkingScreen() {
                       </Text>
                     </View>
                     <Pressable
-                      disabled={!matchAttendeeId}
+                      disabled={!chatAttendeeId}
                       style={({ pressed }) => [
                         styles.matchChatButton,
-                        !matchAttendeeId ? styles.disabled : null,
+                        !chatAttendeeId ? styles.disabled : null,
                         pressed ? styles.pressed : null
                       ]}
                       onPress={() => {
-                        if (!matchAttendeeId) {
+                        if (!chatAttendeeId) {
                           return;
                         }
                         router.push(
-                          `/(participant)/chat?attendeeId=${encodeURIComponent(matchAttendeeId)}` as never
+                          `/(participant)/chat?attendeeId=${encodeURIComponent(chatAttendeeId)}` as never
                         );
                       }}
                     >
@@ -1077,30 +1075,68 @@ export default function ParticipantNetworkingScreen() {
             </View>
 
             <Text style={styles.sheetMetaText}>
-              Bu sürümde yalnızca fotoğraf paylaşımı açık. Video paylaşımı yakında eklenecek.
+              Toplu paylaşımda fotoğraf ve videoları karosel olarak seçebilirsin.
             </Text>
 
             {selectedUploadAssets.length > 0 ? (
               <View>
                 <ScrollView
                   horizontal
+                  pagingEnabled
+                  decelerationRate="fast"
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.uploadPreviewStrip}
+                  contentContainerStyle={styles.uploadCarouselTrack}
+                  onMomentumScrollEnd={(event) => {
+                    const offsetX = event.nativeEvent.contentOffset.x;
+                    const nextIndex = Math.round(offsetX / uploadCarouselWidth);
+                    setUploadCarouselIndex(
+                      Math.max(0, Math.min(selectedUploadAssets.length - 1, nextIndex))
+                    );
+                  }}
                 >
                   {selectedUploadAssets.map((asset, index) => (
-                    <Image
-                      key={`${asset.uri}-${index}`}
-                      source={{ uri: asset.uri }}
-                      resizeMode="cover"
-                      style={styles.uploadPreviewThumb}
-                    />
+                    resolveAssetMediaKind(asset) === "video" ? (
+                      <View
+                        key={`${asset.uri}-${index}`}
+                        style={[styles.uploadPreviewVideoCard, { width: uploadCarouselWidth }]}
+                      >
+                        <Play color={colors.copper} size={24} />
+                        <Text style={styles.uploadPreviewVideoText}>Video</Text>
+                        <Text style={styles.uploadPreviewVideoName} numberOfLines={1}>
+                          {asset.fileName?.trim() || `video-${index + 1}`}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        key={`${asset.uri}-${index}`}
+                        source={{ uri: asset.uri }}
+                        resizeMode="cover"
+                        style={[styles.uploadPreviewThumb, { width: uploadCarouselWidth }]}
+                      />
+                    )
                   ))}
                 </ScrollView>
-                <Text style={styles.uploadCountText}>{selectedUploadAssets.length} fotoğraf seçildi</Text>
+                {selectedUploadAssets.length > 1 ? (
+                  <View style={styles.uploadCarouselDots}>
+                    {selectedUploadAssets.map((asset, index) => (
+                      <View
+                        key={`${asset.uri}-dot-${index}`}
+                        style={[
+                          styles.uploadCarouselDot,
+                          uploadCarouselIndex === index ? styles.uploadCarouselDotActive : null
+                        ]}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+                <Text style={styles.uploadCountText}>
+                  {selectedUploadAssets.length} medya seçildi • {uploadCarouselIndex + 1}/
+                  {selectedUploadAssets.length}
+                </Text>
               </View>
             ) : (
               <View style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>Henüz fotoğraf seçilmedi.</Text>
+                <Text style={styles.uploadPlaceholderText}>Henüz medya seçilmedi.</Text>
               </View>
             )}
 
@@ -1108,16 +1144,17 @@ export default function ParticipantNetworkingScreen() {
               <Pressable
                 style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
                 onPress={() => {
-                  void pickPhotoForUpload();
+                  void pickMediaForUpload();
                 }}
               >
-                <Text style={styles.uploadPickButtonText}>Fotoğrafları Seç</Text>
+                <Text style={styles.uploadPickButtonText}>Medya Seç</Text>
               </Pressable>
               {selectedUploadAssets.length > 0 ? (
                 <Pressable
                   style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
                   onPress={() => {
                     setSelectedUploadAssets([]);
+                    setUploadCarouselIndex(0);
                     setUploadMessage("Seçim temizlendi.");
                     setUploadError("");
                   }}
@@ -1141,7 +1178,7 @@ export default function ParticipantNetworkingScreen() {
               <Text style={styles.errorText}>
                 {galleryUploadMutation.error instanceof Error
                   ? galleryUploadMutation.error.message
-                  : "Fotoğraf paylaşılamadı."}
+                  : "Medya paylaşılamadı."}
               </Text>
             ) : null}
 
@@ -1166,6 +1203,123 @@ export default function ParticipantNetworkingScreen() {
             </Pressable>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isProfileCardVisible}
+        onRequestClose={() => {
+          setIsProfileCardVisible(false);
+        }}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable
+            style={styles.sheetDismissArea}
+            onPress={() => {
+              setIsProfileCardVisible(false);
+            }}
+          />
+          <View style={styles.sheetCard}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Profil Kartı</Text>
+              <Pressable
+                style={({ pressed }) => [styles.sheetCloseButton, pressed ? styles.pressed : null]}
+                onPress={() => {
+                  setIsProfileCardVisible(false);
+                }}
+              >
+                <Text style={styles.sheetCloseText}>Kapat</Text>
+              </Pressable>
+            </View>
+
+            {activeProfileCard ? (
+              <>
+                <Text style={styles.profileCardName}>{activeProfileCard.fullName}</Text>
+                <Text style={styles.profileCardMeta}>
+                  {activeProfileCard.interestArea} • {activeProfileCard.goal}
+                </Text>
+                {activeProfileCard.city ? (
+                  <Text style={styles.profileCardSubMeta}>{activeProfileCard.city}</Text>
+                ) : null}
+                {activeProfileCard.university || activeProfileCard.institutionName ? (
+                  <Text style={styles.profileCardSubMeta}>
+                    {activeProfileCard.university ?? activeProfileCard.institutionName}
+                  </Text>
+                ) : null}
+
+                <View style={styles.topicWrap}>
+                  {activeProfileCard.dentistryFocusAreas.slice(0, 4).map((item) => (
+                    <View key={`profile-card-${item}`} style={styles.tag}>
+                      <Text style={styles.tagText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {activeProfileCard.matchReasons && activeProfileCard.matchReasons.length > 0 ? (
+                  <Text style={styles.discoveryReasonText}>
+                    {activeProfileCard.matchReasons.slice(0, 3).join(" • ")}
+                  </Text>
+                ) : null}
+
+                <View style={styles.profileCardButtonRow}>
+                  <Pressable
+                    disabled={!activeProfileCard.attendeeId}
+                    style={({ pressed }) => [
+                      styles.profileCardChatButton,
+                      !activeProfileCard.attendeeId ? styles.disabled : null,
+                      pressed ? styles.pressed : null
+                    ]}
+                    onPress={() => {
+                      if (!activeProfileCard.attendeeId) {
+                        return;
+                      }
+                      setIsProfileCardVisible(false);
+                      router.push(
+                        `/(participant)/chat?attendeeId=${encodeURIComponent(activeProfileCard.attendeeId)}` as never
+                      );
+                    }}
+                  >
+                    <MessageCircle color="#FFFFFF" size={14} />
+                    <Text style={styles.profileCardChatButtonText}>Sohbet Et</Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={!activeProfileLinkedinUrl}
+                    style={({ pressed }) => [
+                      styles.profileCardSocialButton,
+                      !activeProfileLinkedinUrl ? styles.disabled : null,
+                      pressed ? styles.pressed : null
+                    ]}
+                    onPress={() => {
+                      void openSocial(activeProfileLinkedinUrl);
+                    }}
+                  >
+                    <Linkedin color={colors.accent} size={14} />
+                    <Text style={styles.profileCardSocialButtonText}>LinkedIn</Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={!activeProfileInstagramUrl}
+                    style={({ pressed }) => [
+                      styles.profileCardSocialButton,
+                      !activeProfileInstagramUrl ? styles.disabled : null,
+                      pressed ? styles.pressed : null
+                    ]}
+                    onPress={() => {
+                      void openSocial(activeProfileInstagramUrl);
+                    }}
+                  >
+                    <Instagram color={colors.copper} size={14} />
+                    <Text style={styles.profileCardSocialButtonText}>Instagram</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <Text style={styles.mutedText}>Profil bilgisi bulunamadı.</Text>
+            )}
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -1319,15 +1473,54 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: colors.accent
   },
-  uploadPreviewStrip: {
+  uploadCarouselTrack: {
     gap: spacing.xs,
     marginTop: spacing.sm
+  },
+  uploadCarouselDots: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    marginTop: spacing.xs
+  },
+  uploadCarouselDot: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 999,
+    height: 6,
+    width: 6
+  },
+  uploadCarouselDotActive: {
+    backgroundColor: colors.accent,
+    width: 18
   },
   uploadPreviewThumb: {
     backgroundColor: colors.backgroundDeep,
     borderRadius: radii.md,
-    height: 116,
-    width: 116
+    height: 176
+  },
+  uploadPreviewVideoCard: {
+    alignItems: "center",
+    backgroundColor: colors.backgroundDeep,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 176,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md
+  },
+  uploadPreviewVideoText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: spacing.xs
+  },
+  uploadPreviewVideoName: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: 2
   },
   uploadCountText: {
     color: colors.inkMuted,
@@ -1576,38 +1769,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800"
   },
-  discoveryActionColumn: {
-    justifyContent: "space-between",
-    width: 118
-  },
-  discoveryConnectButton: {
+  discoveryProfileOpenButton: {
     alignItems: "center",
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+    borderColor: "rgba(139,92,246,0.32)",
     borderRadius: radii.pill,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "center",
     minHeight: 34,
     paddingHorizontal: 10
   },
-  discoveryConnectButtonText: {
-    color: "#FFFFFF",
-    fontFamily: typography.body,
-    fontSize: 11,
-    fontWeight: "800",
-    marginLeft: 6
-  },
-  discoveryHideButton: {
-    alignItems: "center",
-    backgroundColor: colors.dangerSoft,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: spacing.xs,
-    minHeight: 32,
-    paddingHorizontal: 10
-  },
-  discoveryHideButtonText: {
-    color: colors.danger,
+  discoveryProfileOpenButtonText: {
+    color: colors.accent,
     fontFamily: typography.body,
     fontSize: 11,
     fontWeight: "800",
@@ -1617,6 +1791,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: 6,
     justifyContent: "center",
     minHeight: 34,
     paddingHorizontal: spacing.sm
@@ -1755,6 +1931,66 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 11,
     fontWeight: "800"
+  },
+  profileCardName: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 20,
+    fontWeight: "700",
+    marginTop: spacing.sm
+  },
+  profileCardMeta: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 4
+  },
+  profileCardSubMeta: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    marginTop: 2
+  },
+  profileCardButtonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.md
+  },
+  profileCardChatButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: spacing.md
+  },
+  profileCardChatButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "800",
+    marginLeft: 6
+  },
+  profileCardSocialButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: spacing.md
+  },
+  profileCardSocialButtonText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 6
   },
   galleryPostCard: {
     backgroundColor: colors.surfaceMuted,

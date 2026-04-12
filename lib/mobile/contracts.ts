@@ -44,11 +44,17 @@ export type MobileLiveState = {
 export type MobileNetworkingProfile = {
   profileId: string;
   attendeeId: string | null;
+  attendeeRole: string | null;
+  attendeeClassLevel: string | null;
+  university: string | null;
   fullName: string;
   headline: string | null;
   interestArea: string;
   dentistryFocusAreas: string[];
   goal: string;
+  institutionName: string | null;
+  instagram: string | null;
+  linkedin: string | null;
   city: string | null;
   bio: string | null;
   topics: string[];

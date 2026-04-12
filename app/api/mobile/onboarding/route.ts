@@ -10,6 +10,7 @@ type OnboardingBody = {
   name?: string;
   role?: AttendeeRole;
   class_level?: AttendeeClassLevel | null;
+  university?: string;
   instagram?: string;
   linkedin?: string;
   outlier_score?: number;
@@ -22,6 +23,19 @@ function normalizeSocial(value: unknown) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeOptionalField(value: unknown, maxLength: number) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  return normalized.slice(0, maxLength);
 }
 
 export async function POST(request: NextRequest) {
@@ -43,6 +57,7 @@ export async function POST(request: NextRequest) {
   const classLevel = ALLOWED_CLASS_LEVELS.includes(rawClassLevel as AttendeeClassLevel)
     ? (rawClassLevel as AttendeeClassLevel)
     : null;
+  const university = normalizeOptionalField(body.university, 120);
   const instagram = normalizeSocial(body.instagram);
   const linkedin = normalizeSocial(body.linkedin);
   const outlierScore = Number.isFinite(Number(body.outlier_score)) ? Number(body.outlier_score) : 0;
@@ -62,6 +77,9 @@ export async function POST(request: NextRequest) {
   if (rawClassLevel.length > 0 && !classLevel) {
     return NextResponse.json({ error: "Geçersiz sınıf değeri gönderildi." }, { status: 400 });
   }
+  if (!university || university.length < 2) {
+    return NextResponse.json({ error: "Üniversite bilgisi zorunludur." }, { status: 400 });
+  }
   if (outlierScore < 0 || outlierScore > 100) {
     return NextResponse.json({ error: "Outlier puanı 0-100 aralığında olmalı." }, { status: 400 });
   }
@@ -72,6 +90,7 @@ export async function POST(request: NextRequest) {
     name,
     role,
     class_level: role === "Student" ? classLevel : null,
+    university,
     instagram,
     linkedin,
     outlier_score: Math.round(outlierScore)

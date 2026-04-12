@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images, Music2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images } from "lucide-react";
 import Image from "next/image";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -12,8 +12,6 @@ const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
-const SPOTIFY_PLAYLIST_ID = "2iLymYqtGacjpfbJBSxOjA";
-const SPOTIFY_PLAYLIST_URL = `https://open.spotify.com/playlist/${SPOTIFY_PLAYLIST_ID}`;
 
 type SpeakerBadge = "Innovator" | "Artist" | "Entrepreneur" | "AI Pioneer";
 
@@ -323,55 +321,6 @@ export default function LandingPage() {
               {text}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ── Spotify Playlist ──────────────────────────────────────── */}
-      <section className="mx-auto max-w-2xl px-6 py-20">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-8"
-        >
-          <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(196,154,42,0.25)] bg-[rgba(196,154,42,0.08)] px-4 py-1.5 mb-4">
-            <Music2 className="h-3.5 w-3.5 text-[#C49A2A]" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C49A2A]">Etkinlik Soundtracki</span>
-          </div>
-          <h2 className="font-display italic text-2xl font-bold text-white sm:text-3xl">
-            DentCo Outliers <span className="text-gradient-gold not-italic font-heading font-extrabold">Playlist</span>
-          </h2>
-          <p className="mt-2 text-sm text-[rgba(200,195,255,0.4)]">Etkinlik öncesi, sırası ve sonrası için özenle seçildi.</p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="card-glass overflow-hidden rounded-2xl p-1"
-        >
-          <iframe
-            src={`https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLIST_ID}?utm_source=generator&theme=0`}
-            width="100%"
-            height="352"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-            className="rounded-xl"
-            title="DentCo Outliers Spotify Playlist"
-          />
-        </motion.div>
-        <div className="mt-4 flex justify-center">
-          <a
-            href={SPOTIFY_PLAYLIST_URL}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "border-[rgba(196,154,42,0.35)] bg-[rgba(196,154,42,0.08)] text-[#F4D99B] hover:bg-[rgba(196,154,42,0.16)]"
-            )}
-          >
-            Spotify&apos;da Aç
-          </a>
         </div>
       </section>
 

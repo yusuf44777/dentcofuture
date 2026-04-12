@@ -197,7 +197,7 @@ export default function ParticipantChatScreen() {
 
             <View style={styles.partnerRow}>
               <View style={styles.partnerBlock}>
-                <Text style={styles.partnerName}>{otherAttendee?.name ?? "Eslesme"}</Text>
+                <Text style={styles.partnerName}>{otherAttendee?.name ?? "Katılımcı"}</Text>
                 <Text style={styles.partnerRole}>
                   {otherAttendee?.role
                     ? ROLE_LABELS[otherAttendee.role as AttendeeRole] ?? "Katilimci"
@@ -235,7 +235,7 @@ export default function ParticipantChatScreen() {
 
           <View style={styles.threadCard}>
             {!attendeeId ? (
-              <Text style={styles.infoText}>Gecerli bir eslesme secip yeniden dene.</Text>
+              <Text style={styles.infoText}>Gecerli bir katılımcı seçip yeniden dene.</Text>
             ) : null}
 
             {attendeeId && threadQuery.isLoading ? (

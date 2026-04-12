@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { MobileMatchThread } from "@/lib/mobile/contracts";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import { isValidUuid, normalizeText, readJsonBody } from "@/lib/mobile/http";
-import { hasAcceptedMatch } from "@/lib/mobile/networking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,33 +25,14 @@ export async function GET(request: NextRequest) {
   const counterpartId = request.nextUrl.searchParams.get("attendeeId")?.trim() ?? "";
 
   if (!counterpartId) {
-    const matchesResult = await resolved.session.supabase
-      .from("matches")
-      .select("attendee_a, attendee_b, created_at")
-      .or(`attendee_a.eq.${attendeeId},attendee_b.eq.${attendeeId}`)
-      .eq("status", "accepted")
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (matchesResult.error) {
-      return NextResponse.json({ error: `Eşleşmeler alınamadı: ${matchesResult.error.message}` }, { status: 500 });
-    }
-
-    const counterpartIds = Array.from(
-      new Set(
-        (matchesResult.data ?? []).map((match) =>
-          match.attendee_a === attendeeId ? match.attendee_b : match.attendee_a
-        )
-      )
-    );
-
-    const [attendeesResult, messagesResult] = await Promise.all([
-      counterpartIds.length > 0
-        ? resolved.session.supabase
-            .from("attendees")
-            .select("id, name, role, instagram, linkedin")
-            .in("id", counterpartIds)
-        : Promise.resolve({ data: [], error: null }),
+    const [matchesResult, messagesResult] = await Promise.all([
+      resolved.session.supabase
+        .from("matches")
+        .select("attendee_a, attendee_b, created_at")
+        .or(`attendee_a.eq.${attendeeId},attendee_b.eq.${attendeeId}`)
+        .eq("status", "accepted")
+        .order("created_at", { ascending: false })
+        .limit(100),
       resolved.session.supabase
         .from("messages")
         .select("id, sender_id, receiver_id, text, created_at")
@@ -61,25 +41,16 @@ export async function GET(request: NextRequest) {
         .limit(300)
     ]);
 
-    if (attendeesResult.error) {
-      return NextResponse.json({ error: `Katılımcılar alınamadı: ${attendeesResult.error.message}` }, { status: 500 });
+    if (matchesResult.error) {
+      return NextResponse.json({ error: `Eşleşmeler alınamadı: ${matchesResult.error.message}` }, { status: 500 });
     }
 
     if (messagesResult.error) {
       return NextResponse.json({ error: `Mesajlar alınamadı: ${messagesResult.error.message}` }, { status: 500 });
     }
 
-    const attendeeById = new Map(
-      (attendeesResult.data ?? []).map((item) => [
-        item.id,
-        {
-          id: item.id,
-          name: item.name,
-          role: item.role,
-          instagram: item.instagram,
-          linkedin: item.linkedin
-        }
-      ])
+    const counterpartIdsFromMatches = (matchesResult.data ?? []).map((match) =>
+      match.attendee_a === attendeeId ? match.attendee_b : match.attendee_a
     );
 
     const latestByCounterpart = new Map<string, { id: string; text: string; createdAt: string; senderId: string }>();
@@ -97,6 +68,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const counterpartIds = Array.from(
+      new Set([...latestByCounterpart.keys(), ...counterpartIdsFromMatches])
+    ).slice(0, 120);
+
+    const attendeesResult =
+      counterpartIds.length > 0
+        ? await resolved.session.supabase
+            .from("attendees")
+            .select("id, name, role, instagram, linkedin")
+            .in("id", counterpartIds)
+        : { data: [], error: null };
+
+    if (attendeesResult.error) {
+      return NextResponse.json({ error: `Katılımcılar alınamadı: ${attendeesResult.error.message}` }, { status: 500 });
+    }
+
+    const attendeeById = new Map(
+      (attendeesResult.data ?? []).map((item) => [
+        item.id,
+        {
+          id: item.id,
+          name: item.name,
+          role: item.role,
+          instagram: item.instagram,
+          linkedin: item.linkedin
+        }
+      ])
+    );
+
     return NextResponse.json({
       ok: true,
       threads: counterpartIds.map((id) => ({
@@ -108,11 +108,6 @@ export async function GET(request: NextRequest) {
 
   if (!isValidUuid(counterpartId) || counterpartId === attendeeId) {
     return NextResponse.json({ error: "Geçersiz karşı taraf kimliği." }, { status: 400 });
-  }
-
-  const acceptedMatch = await hasAcceptedMatch(resolved.session, attendeeId, counterpartId);
-  if (!acceptedMatch) {
-    return NextResponse.json({ error: "Mesajlaşma için karşılıklı eşleşme gerekli." }, { status: 403 });
   }
 
   const [counterpartResult, messagesResult] = await Promise.all([
@@ -182,11 +177,6 @@ export async function POST(request: NextRequest) {
 
   if (!text || text.length > 500) {
     return NextResponse.json({ error: "Mesaj 1-500 karakter aralığında olmalı." }, { status: 400 });
-  }
-
-  const acceptedMatch = await hasAcceptedMatch(resolved.session, attendeeId, receiverAttendeeId);
-  if (!acceptedMatch) {
-    return NextResponse.json({ error: "Mesajlaşma için karşılıklı eşleşme gerekli." }, { status: 403 });
   }
 
   const insertResult = await resolved.session.supabase

@@ -54,6 +54,7 @@ export default function ParticipantMoreScreen() {
   const [role, setRole] = useState<ProfileRole | null>(null);
   const [classLevel, setClassLevel] = useState<AttendeeClassLevel | null>(null);
   const [isClassLevelOpen, setIsClassLevelOpen] = useState(false);
+  const [university, setUniversity] = useState("");
   const [instagram, setInstagram] = useState("");
   const [linkedin, setLinkedin] = useState("");
 
@@ -68,6 +69,7 @@ export default function ParticipantMoreScreen() {
     setName(attendee.name ?? "");
     setRole(isProfileRole(attendee.role) ? attendee.role : null);
     setClassLevel(normalizeClassLevel(attendee.class_level));
+    setUniversity(attendee.university ?? "");
     setInstagram(attendee.instagram ?? "");
     setLinkedin(attendee.linkedin ?? "");
     setQuizUnlocked(true);
@@ -99,6 +101,7 @@ export default function ParticipantMoreScreen() {
   const canSaveProfile =
     name.trim().length >= 2 &&
     role !== null &&
+    university.trim().length >= 2 &&
     (role === "Academic" || classLevel !== null) &&
     (!showQuizStep || isQuizComplete);
 
@@ -112,6 +115,10 @@ export default function ParticipantMoreScreen() {
         throw new Error("Öğrenci için sınıf seçimi zorunlu.");
       }
 
+      if (university.trim().length < 2) {
+        throw new Error("Üniversite bilgisi zorunlu.");
+      }
+
       if (!hasAttendee && !isQuizComplete) {
         throw new Error("Önce Outlier testini tamamlamalısın.");
       }
@@ -120,6 +127,7 @@ export default function ParticipantMoreScreen() {
         name,
         role,
         class_level: role === "Student" ? classLevel : null,
+        university: university.trim(),
         instagram: instagram.trim() || undefined,
         linkedin: linkedin.trim() || undefined,
         outlier_score: profileOutlierScore
@@ -361,6 +369,14 @@ export default function ParticipantMoreScreen() {
         ) : role === "Academic" ? (
           <Text style={styles.helpText}>Akademisyen için sınıf seçimi zorunlu değildir.</Text>
         ) : null}
+
+        <TextInput
+          style={styles.input}
+          value={university}
+          onChangeText={(value) => setUniversity(value.slice(0, 120))}
+          placeholder="Üniversite"
+          placeholderTextColor={colors.inkMuted}
+        />
 
         <TextInput
           style={styles.input}

@@ -52,6 +52,7 @@ function buildDefaultProfileInsert(session: MobileSession): NetworkingProfileIns
     interest_area: NETWORKING_INTEREST_OPTIONS[0],
     goal: NETWORKING_FUTURE_PATH_OPTIONS[2] ?? NETWORKING_FUTURE_PATH_OPTIONS[0],
     city: null,
+    institution_name: attendee.university ?? null,
     bio: null,
     topics: [],
     collaboration_goals: [],

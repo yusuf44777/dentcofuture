@@ -29,6 +29,7 @@ export interface Attendee {
   name: string;
   role: AttendeeRole;
   class_level: AttendeeClassLevel | null;
+  university: string | null;
   instagram: string | null;
   linkedin: string | null;
   avatar_url: string | null;
@@ -150,11 +151,12 @@ export interface Database {
     Tables: {
       attendees: {
         Row: Attendee;
-        Insert: Omit<Attendee, "id" | "created_at" | "auth_user_id" | "class_level"> & {
+        Insert: Omit<Attendee, "id" | "created_at" | "auth_user_id" | "class_level" | "university"> & {
           id?: string;
           created_at?: string;
           auth_user_id?: string | null;
           class_level?: AttendeeClassLevel | null;
+          university?: string | null;
         };
         Update: Partial<Omit<Attendee, "id" | "created_at">>;
       };
