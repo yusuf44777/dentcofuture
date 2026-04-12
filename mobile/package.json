@@ -2,6 +2,11 @@
   "name": "dentlinkco",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10 <11"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
