@@ -403,7 +403,7 @@ function validateParticipant(participant: ParsedParticipant) {
   }
 
   if (participant.phone.length !== 10) {
-    return "Telefon numarası 10 haneli olmalı (5XXXXXXXXX).";
+    return "Telefon formatı geçersiz. Tercih: 5XXXXXXXXX (örn: 5XXXXXXXXX). +90XXXXXXXXXX ve 0XXXXXXXXXX otomatik 5XXXXXXXXX'e çevrilir.";
   }
 
   return "";

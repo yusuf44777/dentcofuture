@@ -666,6 +666,11 @@ export function MobileStaffParityPanel() {
             <p className="text-[11px] text-cyan-100/75">
               `outliers_katilimci.csv` dosyasını `mobile_allowed_participants` tablosuna aktarır.
             </p>
+            <p className="text-[11px] text-cyan-100/65">
+              Telefon için önerilen format: <span className="font-semibold text-cyan-100">5XXXXXXXXX</span>.
+              <span> </span>
+              `+90XXXXXXXXXX` ve `0XXXXXXXXXX` değerleri otomatik olarak `5XXXXXXXXX` formatına normalize edilir.
+            </p>
 
             <div className="flex flex-col gap-2">
               <input
