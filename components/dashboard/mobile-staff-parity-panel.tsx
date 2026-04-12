@@ -35,6 +35,7 @@ type Participant = {
 type OutliersImportDetail = {
   ok?: boolean;
   source?: string;
+  detail?: string;
   parsed_lines?: number;
   migrated_total?: number;
   inserted_count?: number;
@@ -451,7 +452,8 @@ export function MobileStaffParityPanel() {
       const data = (await response.json().catch(() => null)) as OutliersImportDetail | null;
 
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.error ?? "CSV migrate işlemi başarısız.");
+        setOutliersImportDetail(data);
+        throw new Error(data?.detail ?? data?.error ?? "CSV migrate işlemi başarısız.");
       }
 
       setOutliersImportState("success");
@@ -464,7 +466,6 @@ export function MobileStaffParityPanel() {
     } catch (error) {
       setOutliersImportState("error");
       setOutliersImportMessage(getErrorMessage(error, "CSV migrate işlemi başarısız."));
-      setOutliersImportDetail(null);
     }
   }, [outliersCsvRows, outliersImportState]);
 
@@ -487,7 +488,8 @@ export function MobileStaffParityPanel() {
       const data = (await response.json().catch(() => null)) as OutliersImportDetail | null;
 
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.error ?? "Proje CSV migrate işlemi başarısız.");
+        setOutliersImportDetail(data);
+        throw new Error(data?.detail ?? data?.error ?? "Proje CSV migrate işlemi başarısız.");
       }
 
       setOutliersImportState("success");
@@ -500,7 +502,6 @@ export function MobileStaffParityPanel() {
     } catch (error) {
       setOutliersImportState("error");
       setOutliersImportMessage(getErrorMessage(error, "Proje CSV migrate işlemi başarısız."));
-      setOutliersImportDetail(null);
     }
   }, [outliersImportState]);
 

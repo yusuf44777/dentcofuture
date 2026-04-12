@@ -30,10 +30,6 @@ function getCsvPath() {
 }
 
 function getErrorMessage(error: unknown) {
-  if (process.env.NODE_ENV === "production") {
-    return "Proje CSV içe aktarımı sırasında hata oluştu.";
-  }
-
   return error instanceof Error ? error.message : "Proje CSV içe aktarımı sırasında hata oluştu.";
 }
 
@@ -57,7 +53,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: message,
+        error: "Proje CSV içe aktarımı sırasında hata oluştu.",
+        detail: message,
         invalid_lines: Array.isArray(invalidLines) ? invalidLines : undefined
       },
       { status: 400 }

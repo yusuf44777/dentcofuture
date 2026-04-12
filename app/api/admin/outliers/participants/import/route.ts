@@ -21,10 +21,6 @@ function isAuthorized(request: NextRequest) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (process.env.NODE_ENV === "production") {
-    return "CSV içe aktarımı sırasında bir hata oluştu.";
-  }
-
   return error instanceof Error ? error.message : "CSV içe aktarımı sırasında bir hata oluştu.";
 }
 
@@ -49,7 +45,8 @@ export async function POST(request: NextRequest) {
     const invalidLines = (error as Error & { invalid_lines?: unknown }).invalid_lines;
     return NextResponse.json(
       {
-        error: getErrorMessage(error),
+        error: "CSV içe aktarımı sırasında bir hata oluştu.",
+        detail: getErrorMessage(error),
         invalid_lines: Array.isArray(invalidLines) ? invalidLines : undefined
       },
       { status: 400 }
