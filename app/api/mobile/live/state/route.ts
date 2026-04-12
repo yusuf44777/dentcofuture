@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
 
   let activePoll = pollResult.data as MobileLiveState["activePoll"];
   const pollTotals: Record<string, number> = {};
+  let myPollVoteOptionIndex: number | null = null;
 
   if (!activePoll && livePollResult.data) {
     const liveOptionsRaw = Array.isArray(livePollResult.data.options) ? livePollResult.data.options : [];
@@ -143,6 +144,31 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  if (activePoll && resolved.session.attendee?.id) {
+    const myVoteResult = await supabase
+      .from("poll_votes")
+      .select("option_index")
+      .eq("poll_id", activePoll.id)
+      .eq("attendee_id", resolved.session.attendee.id)
+      .maybeSingle();
+
+    if (myVoteResult.error) {
+      return NextResponse.json(
+        { error: `Kullanıcı anket oyu alınamadı: ${myVoteResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
+    const optionIndex = Number(myVoteResult.data?.option_index);
+    if (
+      Number.isInteger(optionIndex) &&
+      optionIndex >= 0 &&
+      optionIndex < (Array.isArray(activePoll.options) ? activePoll.options.length : 0)
+    ) {
+      myPollVoteOptionIndex = optionIndex;
+    }
+  }
+
   const questions = (questionsResult.data ?? []).map((row) => ({
     id: row.id,
     text: row.text,
@@ -160,6 +186,7 @@ export async function GET(request: NextRequest) {
     questions,
     activePoll,
     pollTotals,
+    myPollVoteOptionIndex,
     reactionCounts,
     leaderboard: (leaderboardResult.data ?? []) as MobileLiveState["leaderboard"]
   };

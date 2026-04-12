@@ -40,6 +40,76 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = resolved.session.supabase;
+  const attendeeId = resolved.session.attendee.id;
+  const applyVoteAndRefreshResults = async (
+    targetPollId: string,
+    optionCount: number,
+    keepActive: boolean
+  ): Promise<{ results: Record<string, number> } | { error: string }> => {
+    const voteUpsert = await supabase.from("poll_votes").upsert(
+      {
+        poll_id: targetPollId,
+        attendee_id: attendeeId,
+        option_index: optionIndex
+      },
+      {
+        onConflict: "poll_id,attendee_id"
+      }
+    );
+
+    if (voteUpsert.error) {
+      return {
+        error: `Oy kaydedilemedi: ${voteUpsert.error.message}`
+      };
+    }
+
+    const countQueries = Array.from({ length: optionCount }, (_, idx) =>
+      supabase
+        .from("poll_votes")
+        .select("id", { count: "exact", head: true })
+        .eq("poll_id", targetPollId)
+        .eq("option_index", idx)
+    );
+    const countResults = await Promise.all(countQueries);
+    const failedCount = countResults.find((item) => item.error);
+
+    if (failedCount?.error) {
+      return {
+        error: `Anket oyları hesaplanamadı: ${failedCount.error.message}`
+      };
+    }
+
+    const results = Array.from({ length: optionCount }, (_, idx) => {
+      const key = String(idx);
+      const count = countResults[idx].count ?? 0;
+      return [key, count] as const;
+    }).reduce((acc, [key, count]) => {
+      acc[key] = count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const updatePayload: {
+      results: Record<string, number>;
+      active?: boolean;
+    } = { results };
+    if (keepActive) {
+      updatePayload.active = true;
+    }
+
+    const updatePoll = await supabase
+      .from("polls")
+      .update(updatePayload)
+      .eq("id", targetPollId);
+
+    if (updatePoll.error) {
+      return {
+        error: `Anket sonucu güncellenemedi: ${updatePoll.error.message}`
+      };
+    }
+
+    return { results };
+  };
+
   const { data: poll, error: pollError } = await supabase
     .from("polls")
     .select("id, options, results, active")
@@ -56,38 +126,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Seçenek anket aralığı dışında." }, { status: 400 });
     }
 
-    const voteInsert = await supabase.from("poll_votes").insert({
-      poll_id: pollId,
-      attendee_id: resolved.session.attendee.id,
-      option_index: optionIndex
+    const voteResult = await applyVoteAndRefreshResults(pollId, options.length, false);
+    if ("error" in voteResult) {
+      return NextResponse.json({ error: voteResult.error }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      alreadyVoted: false,
+      selectedOptionIndex: optionIndex,
+      results: voteResult.results
     });
-
-    if (voteInsert.error) {
-      if (voteInsert.error.code === "23505") {
-        return NextResponse.json({ ok: true, alreadyVoted: true });
-      }
-      return NextResponse.json({ error: `Oy kaydedilemedi: ${voteInsert.error.message}` }, { status: 500 });
-    }
-
-    const results = {
-      ...(poll.results && typeof poll.results === "object" ? poll.results : {})
-    } as Record<string, number>;
-    const key = String(optionIndex);
-    results[key] = (Number(results[key]) || 0) + 1;
-
-    const { error: updateError } = await supabase
-      .from("polls")
-      .update({ results })
-      .eq("id", pollId);
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: `Anket sonucu güncellenemedi: ${updateError.message}` },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ ok: true, alreadyVoted: false, results });
   }
 
   const livePollResult = await supabase
@@ -146,38 +195,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const voteInsert = await supabase.from("poll_votes").insert({
-    poll_id: pollId,
-    attendee_id: resolved.session.attendee.id,
-    option_index: optionIndex
+  const voteResult = await applyVoteAndRefreshResults(pollId, liveOptions.length, true);
+  if ("error" in voteResult) {
+    return NextResponse.json({ error: voteResult.error }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    alreadyVoted: false,
+    selectedOptionIndex: optionIndex,
+    results: voteResult.results
   });
-
-  if (voteInsert.error) {
-    if (voteInsert.error.code === "23505") {
-      return NextResponse.json({ ok: true, alreadyVoted: true });
-    }
-    return NextResponse.json({ error: `Oy kaydedilemedi: ${voteInsert.error.message}` }, { status: 500 });
-  }
-
-  const results = {
-    ...(ensureLegacyPoll.data?.results && typeof ensureLegacyPoll.data.results === "object"
-      ? ensureLegacyPoll.data.results
-      : initialResults)
-  } as Record<string, number>;
-  const key = String(optionIndex);
-  results[key] = (Number(results[key]) || 0) + 1;
-
-  const updateResult = await supabase
-    .from("polls")
-    .update({ results, active: true })
-    .eq("id", pollId);
-
-  if (updateResult.error) {
-    return NextResponse.json(
-      { error: `Anket sonucu güncellenemedi: ${updateResult.error.message}` },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({ ok: true, alreadyVoted: false, results });
 }

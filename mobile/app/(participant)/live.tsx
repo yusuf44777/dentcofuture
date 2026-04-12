@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -53,16 +53,29 @@ function patchPollVoteInCache(
     return state;
   }
 
-  const key = String(optionIndex);
   const nextPollTotals = { ...(state.pollTotals ?? {}) };
-  nextPollTotals[key] = (Number(nextPollTotals[key]) || 0) + 1;
-
   const nextResults = {
     ...(state.activePoll.results && typeof state.activePoll.results === "object"
       ? state.activePoll.results
       : {})
   } as Record<string, number>;
-  nextResults[key] = (Number(nextResults[key]) || 0) + 1;
+
+  const previousOptionIndex =
+    typeof state.myPollVoteOptionIndex === "number" ? state.myPollVoteOptionIndex : null;
+  const previousKey = previousOptionIndex !== null ? String(previousOptionIndex) : null;
+  const nextKey = String(optionIndex);
+
+  if (previousKey && previousOptionIndex !== optionIndex) {
+    nextPollTotals[previousKey] = Math.max(0, (Number(nextPollTotals[previousKey]) || 0) - 1);
+    nextResults[previousKey] = Math.max(0, (Number(nextResults[previousKey]) || 0) - 1);
+  }
+
+  if (previousOptionIndex !== optionIndex) {
+    nextPollTotals[nextKey] = (Number(nextPollTotals[nextKey]) || 0) + 1;
+    nextResults[nextKey] = (Number(nextResults[nextKey]) || 0) + 1;
+  }
+
+  const normalizedOptionIndex = Math.max(0, Math.min(9, optionIndex));
 
   return {
     ...state,
@@ -70,7 +83,8 @@ function patchPollVoteInCache(
       ...state.activePoll,
       results: nextResults
     },
-    pollTotals: nextPollTotals
+    pollTotals: nextPollTotals,
+    myPollVoteOptionIndex: normalizedOptionIndex
   };
 }
 
@@ -97,7 +111,10 @@ export default function ParticipantLiveScreen() {
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
   const [questionText, setQuestionText] = useState("");
-  const [votedPollId, setVotedPollId] = useState<string | null>(null);
+  const [selectedPollVote, setSelectedPollVote] = useState<{
+    pollId: string;
+    optionIndex: number;
+  } | null>(null);
 
   const liveQuery = useQuery({
     queryKey: ["mobile-live-state"],
@@ -105,6 +122,30 @@ export default function ParticipantLiveScreen() {
     enabled: Boolean(me && me.role === "participant"),
     refetchInterval: 5_000
   });
+
+  useEffect(() => {
+    const activePoll = liveQuery.data?.activePoll;
+    if (!activePoll) {
+      setSelectedPollVote(null);
+      return;
+    }
+
+    const serverOptionIndex = liveQuery.data?.myPollVoteOptionIndex;
+    if (
+      typeof serverOptionIndex === "number" &&
+      Number.isInteger(serverOptionIndex) &&
+      serverOptionIndex >= 0 &&
+      serverOptionIndex < activePoll.options.length
+    ) {
+      setSelectedPollVote({
+        pollId: activePoll.id,
+        optionIndex: serverOptionIndex
+      });
+      return;
+    }
+
+    setSelectedPollVote((current) => (current?.pollId === activePoll.id ? current : null));
+  }, [liveQuery.data?.activePoll, liveQuery.data?.myPollVoteOptionIndex]);
 
   const questionMutation = useMutation({
     mutationFn: submitLiveQuestion,
@@ -121,9 +162,9 @@ export default function ParticipantLiveScreen() {
       await queryClient.cancelQueries({ queryKey: ["mobile-live-state"] });
 
       const previousState = queryClient.getQueryData<MobileLiveState>(["mobile-live-state"]);
-      const previousVotedPollId = votedPollId;
+      const previousSelectedPollVote = selectedPollVote;
 
-      setVotedPollId(pollId);
+      setSelectedPollVote({ pollId, optionIndex });
       queryClient.setQueryData<MobileLiveState>(
         ["mobile-live-state"],
         (current) => patchPollVoteInCache(current, pollId, optionIndex)
@@ -131,18 +172,14 @@ export default function ParticipantLiveScreen() {
 
       return {
         previousState,
-        previousVotedPollId
+        previousSelectedPollVote
       };
     },
-    onSuccess: (result, variables, context) => {
-      if (result.alreadyVoted) {
-        if (context?.previousState) {
-          queryClient.setQueryData(["mobile-live-state"], context.previousState);
-        }
-        setVotedPollId(variables.pollId);
-        return;
-      }
-
+    onSuccess: (result, variables) => {
+      setSelectedPollVote({
+        pollId: variables.pollId,
+        optionIndex: variables.optionIndex
+      });
       const serverResults = result.results;
       if (serverResults) {
         queryClient.setQueryData<MobileLiveState>(["mobile-live-state"], (current) => {
@@ -161,7 +198,8 @@ export default function ParticipantLiveScreen() {
               ...current.activePoll,
               results: serverResults
             },
-            pollTotals: nextPollTotals
+            pollTotals: nextPollTotals,
+            myPollVoteOptionIndex: variables.optionIndex
           };
         });
       }
@@ -170,7 +208,7 @@ export default function ParticipantLiveScreen() {
       if (context?.previousState) {
         queryClient.setQueryData(["mobile-live-state"], context.previousState);
       }
-      setVotedPollId(context?.previousVotedPollId ?? null);
+      setSelectedPollVote(context?.previousSelectedPollVote ?? null);
     }
   });
 
@@ -282,16 +320,19 @@ export default function ParticipantLiveScreen() {
         {liveQuery.data?.activePoll ? (
           <>
             <Text style={styles.pollQuestion}>{liveQuery.data.activePoll.question}</Text>
+            <Text style={styles.pollHint}>Tek seçim geçerlidir. Fikrini değiştirirsen başka seçeneğe dokunman yeterli.</Text>
             {liveQuery.data.activePoll.options.map((option, index) => {
               const count = Number(liveQuery.data?.pollTotals?.[String(index)] ?? 0);
-              const isVoted = votedPollId === liveQuery.data?.activePoll?.id;
+              const isSelected =
+                selectedPollVote?.pollId === liveQuery.data?.activePoll?.id &&
+                selectedPollVote?.optionIndex === index;
               return (
                 <Pressable
                   key={`${option}-${index}`}
-                  disabled={voteMutation.isPending || isVoted}
+                  disabled={voteMutation.isPending}
                   style={({ pressed }) => [
                     styles.optionButton,
-                    isVoted ? styles.optionButtonVoted : null,
+                    isSelected ? styles.optionButtonSelected : null,
                     pressed ? styles.pressed : null
                   ]}
                   onPress={() => {
@@ -299,7 +340,7 @@ export default function ParticipantLiveScreen() {
                     voteMutation.mutate({ pollId: liveQuery.data.activePoll.id, optionIndex: index });
                   }}
                 >
-                  <Text style={[styles.optionText, isVoted ? styles.optionTextVoted : null]}>{option}</Text>
+                  <Text style={[styles.optionText, isSelected ? styles.optionTextSelected : null]}>{option}</Text>
                   <View style={styles.optionCountBadge}>
                     <Text style={styles.optionCount}>{count}</Text>
                   </View>
@@ -494,6 +535,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21,
+    marginBottom: spacing.xs
+  },
+  pollHint: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    lineHeight: 16,
     marginBottom: spacing.sm
   },
   optionButton: {
@@ -509,7 +557,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 11
   },
-  optionButtonVoted: {
+  optionButtonSelected: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
     borderLeftColor: colors.accent,
@@ -522,7 +570,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700"
   },
-  optionTextVoted: {
+  optionTextSelected: {
     color: colors.accent
   },
   optionCountBadge: {

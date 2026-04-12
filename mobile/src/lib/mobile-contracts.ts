@@ -153,6 +153,7 @@ export type MobileLiveState = {
     created_at: string;
   } | null;
   pollTotals: Record<string, number>;
+  myPollVoteOptionIndex: number | null;
   reactionCounts: Record<string, number>;
   leaderboard: Array<Pick<Attendee, "id" | "name" | "role" | "points">>;
 };

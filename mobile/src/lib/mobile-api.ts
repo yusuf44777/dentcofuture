@@ -168,7 +168,12 @@ export function submitLiveQuestion(text: string) {
 }
 
 export function voteLivePoll(pollId: string, optionIndex: number) {
-  return apiRequest<{ ok: true; alreadyVoted?: boolean; results?: Record<string, number> }>(
+  return apiRequest<{
+    ok: true;
+    alreadyVoted?: boolean;
+    selectedOptionIndex?: number;
+    results?: Record<string, number>;
+  }>(
     "/api/mobile/live/polls/vote",
     {
       method: "POST",

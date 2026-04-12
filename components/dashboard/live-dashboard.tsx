@@ -15,6 +15,7 @@ import {
   LoaderCircle,
   MessageSquareMore,
   RotateCcw,
+  Zap,
   Trash2,
   Sparkles
 } from "lucide-react";
@@ -35,7 +36,7 @@ import {
   LIVE_POLL_PROMPT,
   parsePollResponse
 } from "@/lib/engagement";
-import type { AnalyticsRow, FeedbackRow, Json } from "@/lib/types";
+import type { AnalyticsRow, FeedbackRow, Json, ReactionEmoji } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { MobileStaffParityPanel } from "@/components/dashboard/mobile-staff-parity-panel";
 
@@ -46,6 +47,7 @@ type Sentiment = {
 };
 
 type PollCounts = Record<string, number>;
+type ReactionCounts = Record<ReactionEmoji, number>;
 type AnalyzeUiState = "idle" | "loading" | "success" | "error";
 type HardResetUiState = "idle" | "loading" | "success" | "error";
 type PollControlUiState = "idle" | "loading" | "success" | "error";
@@ -85,6 +87,15 @@ const DEFAULT_TOPICS = [
   "Yapay zeka destekli diş hekimliği",
   "Hasta iletişimi"
 ];
+const REACTION_KEYS: ReactionEmoji[] = ["🔥", "💡", "🤯", "👏", "❓"];
+const REACTION_LABELS: Record<ReactionEmoji, string> = {
+  "🔥": "Ateş",
+  "💡": "Fikir",
+  "🤯": "Şaşkınlık",
+  "👏": "Alkış",
+  "❓": "Soru"
+};
+const REACTION_KEY_SET = new Set<string>(REACTION_KEYS);
 
 const DEFAULT_SENTIMENT: Sentiment = {
   positive: 34,
@@ -104,6 +115,13 @@ function createEmptyPollCounts(options: string[]): PollCounts {
     acc[option] = 0;
     return acc;
   }, {} as PollCounts);
+}
+
+function createEmptyReactionCounts(): ReactionCounts {
+  return REACTION_KEYS.reduce((acc, key) => {
+    acc[key] = 0;
+    return acc;
+  }, {} as ReactionCounts);
 }
 
 function getActivePollOptions(activePoll: LivePollConfig | null) {
@@ -270,7 +288,7 @@ function getFilteredComments(rows: FeedbackRow[]) {
   return rows.filter((row) => !parsePollResponse(row.message)).slice(0, 5);
 }
 
-function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>, activePoll: LivePollConfig | null) {
+function getPollCountsFromFeedback(rows: Array<Pick<FeedbackRow, "message">>, activePoll: LivePollConfig | null) {
   const options = getActivePollOptions(activePoll);
   const counts = createEmptyPollCounts(options);
   const allowedOptions = new Set(options);
@@ -297,6 +315,96 @@ function getPollCounts(rows: Array<Pick<FeedbackRow, "message">>, activePoll: Li
   });
 
   return counts;
+}
+
+function mergePollCounts(base: PollCounts, additional: PollCounts) {
+  const merged: PollCounts = { ...base };
+
+  Object.entries(additional).forEach(([option, count]) => {
+    merged[option] = (merged[option] ?? 0) + (Number(count) || 0);
+  });
+
+  return merged;
+}
+
+async function getPollCountsFromVotes(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  activePoll: LivePollConfig | null,
+  resetCursor: string | null
+) {
+  const options = getActivePollOptions(activePoll);
+  const counts = createEmptyPollCounts(options);
+
+  if (!activePoll?.id) {
+    return counts;
+  }
+
+  const optionCountQueries = options.map((_, optionIndex) => {
+    let query = supabase
+      .from("poll_votes")
+      .select("id", { count: "exact", head: true })
+      .eq("poll_id", activePoll.id)
+      .eq("option_index", optionIndex);
+
+    if (resetCursor) {
+      query = query.gte("created_at", resetCursor);
+    }
+
+    return query;
+  });
+
+  const optionCountResults = await Promise.all(optionCountQueries);
+  let hasError = false;
+
+  optionCountResults.forEach((result, optionIndex) => {
+    if (result.error) {
+      hasError = true;
+      return;
+    }
+
+    const option = options[optionIndex];
+    counts[option] = result.count ?? 0;
+  });
+
+  return hasError ? null : counts;
+}
+
+async function getReactionCounts(
+  supabase: ReturnType<typeof createSupabaseBrowserClient>,
+  resetCursor: string | null
+) {
+  const counts = createEmptyReactionCounts();
+  const countQueries = REACTION_KEYS.map((emoji) => {
+    let query = supabase
+      .from("reactions")
+      .select("id", { count: "exact", head: true })
+      .eq("emoji", emoji);
+
+    if (resetCursor) {
+      query = query.gte("created_at", resetCursor);
+    }
+
+    return query;
+  });
+
+  const results = await Promise.all(countQueries);
+  let hasError = false;
+
+  results.forEach((result, index) => {
+    if (result.error) {
+      hasError = true;
+      return;
+    }
+
+    const emoji = REACTION_KEYS[index];
+    counts[emoji] = result.count ?? 0;
+  });
+
+  return hasError ? null : counts;
+}
+
+function isReactionEmoji(value: string): value is ReactionEmoji {
+  return REACTION_KEY_SET.has(value);
 }
 
 function isAfterResetCursor(createdAt: string, resetCursor: string | null) {
@@ -343,6 +451,9 @@ export function LiveDashboard() {
   const [activePoll, setActivePoll] = useState<LivePollConfig | null>(null);
   const [pollCounts, setPollCounts] = useState<PollCounts>(() =>
     createEmptyPollCounts([...LIVE_POLL_OPTIONS])
+  );
+  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>(() =>
+    createEmptyReactionCounts()
   );
   const [moderatorBrief, setModeratorBrief] = useState<ModeratorBrief>(EMPTY_MODERATOR_BRIEF);
   const [analyzeUiState, setAnalyzeUiState] = useState<AnalyzeUiState>("idle");
@@ -394,6 +505,19 @@ export function LiveDashboard() {
   const pollTotal = useMemo(
     () => pollEntries.reduce((sum, item) => sum + item.count, 0),
     [pollEntries]
+  );
+  const reactionEntries = useMemo(
+    () =>
+      REACTION_KEYS.map((emoji) => ({
+        emoji,
+        label: REACTION_LABELS[emoji],
+        count: reactionCounts[emoji] ?? 0
+      })),
+    [reactionCounts]
+  );
+  const reactionTotal = useMemo(
+    () => reactionEntries.reduce((sum, item) => sum + item.count, 0),
+    [reactionEntries]
   );
 
   const shortUrl = useMemo(() => getShortUrl(submitUrl), [submitUrl]);
@@ -538,20 +662,38 @@ export function LiveDashboard() {
         analyticsQuery = analyticsQuery.gte("created_at", resetCursor);
       }
 
-      const [countResult, feedbackResult, analyticsResult] = await Promise.all([
+      const [countResult, feedbackResult, analyticsResult, votePollCounts, nextReactionCounts] = await Promise.all([
         countQuery,
         feedbackQuery,
-        analyticsQuery.maybeSingle()
+        analyticsQuery.maybeSingle(),
+        getPollCountsFromVotes(supabase, activePoll, resetCursor),
+        getReactionCounts(supabase, resetCursor)
       ]);
 
       if (!countResult.error) {
         setTotalResponses(countResult.count ?? 0);
       }
 
+      const fallbackPollCounts = createEmptyPollCounts(activePollOptions);
+
       if (!feedbackResult.error) {
         const rows = feedbackResult.data ?? [];
         setLatestComments(getFilteredComments(rows));
-        setPollCounts(getPollCounts(rows, activePoll));
+        const feedbackPollCounts = getPollCountsFromFeedback(rows, activePoll);
+        const mergedPollCounts = votePollCounts
+          ? mergePollCounts(feedbackPollCounts, votePollCounts)
+          : feedbackPollCounts;
+        setPollCounts(mergedPollCounts);
+      } else if (votePollCounts) {
+        setPollCounts(votePollCounts);
+      } else {
+        setPollCounts(fallbackPollCounts);
+      }
+
+      if (nextReactionCounts) {
+        setReactionCounts(nextReactionCounts);
+      } else {
+        setReactionCounts(createEmptyReactionCounts());
       }
 
       if (!analyticsResult.error && analyticsResult.data) {
@@ -603,6 +745,74 @@ export function LiveDashboard() {
       )
       .subscribe();
 
+    const pollVotesChannel = supabase
+      .channel("poll-votes-stream")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "poll_votes"
+        },
+        (payload) => {
+          const row = payload.new as {
+            poll_id?: string;
+            option_index?: number;
+            created_at?: string;
+          };
+          if (!row.created_at || !isAfterResetCursor(row.created_at, resetCursor)) {
+            return;
+          }
+
+          if (!activePoll?.id || row.poll_id !== activePoll.id) {
+            return;
+          }
+
+          const optionIndex = Number(row.option_index);
+          if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= activePollOptions.length) {
+            return;
+          }
+
+          const option = activePollOptions[optionIndex];
+          setPollCounts((prev) => ({
+            ...prev,
+            [option]: (prev[option] ?? 0) + 1
+          }));
+        }
+      )
+      .subscribe();
+
+    const reactionsChannel = supabase
+      .channel("reactions-stream")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "reactions"
+        },
+        (payload) => {
+          const row = payload.new as {
+            emoji?: string;
+            created_at?: string;
+          };
+          if (!row.created_at || !isAfterResetCursor(row.created_at, resetCursor)) {
+            return;
+          }
+
+          if (!row.emoji || !isReactionEmoji(row.emoji)) {
+            return;
+          }
+          const emoji = row.emoji;
+
+          setReactionCounts((prev) => ({
+            ...prev,
+            [emoji]: (prev[emoji] ?? 0) + 1
+          }));
+        }
+      )
+      .subscribe();
+
     const analyticsChannel = supabase
       .channel("analytics-stream")
       .on(
@@ -625,6 +835,8 @@ export function LiveDashboard() {
 
     return () => {
       void supabase.removeChannel(feedbackChannel);
+      void supabase.removeChannel(pollVotesChannel);
+      void supabase.removeChannel(reactionsChannel);
       void supabase.removeChannel(analyticsChannel);
     };
   }, [activePoll, activePollOptions, resetCursor, resetCursorLoaded]);
@@ -724,6 +936,7 @@ export function LiveDashboard() {
     setTotalResponses(0);
     setLatestComments([]);
     setPollCounts(createEmptyPollCounts(activePollOptions));
+    setReactionCounts(createEmptyReactionCounts());
     setSentiment(DEFAULT_SENTIMENT);
     setSummary(RESET_SUMMARY);
     setTopTopics(DEFAULT_TOPICS);
@@ -776,6 +989,7 @@ export function LiveDashboard() {
       setTotalResponses(0);
       setLatestComments([]);
       setPollCounts(createEmptyPollCounts(activePollOptions));
+      setReactionCounts(createEmptyReactionCounts());
       setSentiment(DEFAULT_SENTIMENT);
       setSummary(RESET_SUMMARY);
       setTopTopics(DEFAULT_TOPICS);
@@ -1557,6 +1771,43 @@ export function LiveDashboard() {
               </div>
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-cyan-200/80">
                 Toplam anket yanıtı: {pollTotal}
+              </p>
+            </article>
+
+            <article className="glass-panel rounded-3xl p-5 md:p-6">
+              <div className="mb-4 flex items-center gap-2 text-cyan-100">
+                <Zap className="h-5 w-5" />
+                <h3 className="text-lg font-semibold">Canlı Tepkiler</h3>
+              </div>
+
+              <div className="space-y-3">
+                {reactionEntries.map((entry) => {
+                  const percent = reactionTotal > 0 ? Math.round((entry.count / reactionTotal) * 100) : 0;
+
+                  return (
+                    <div key={entry.emoji} className="rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                        <p className="font-medium text-white">
+                          <span className="mr-1">{entry.emoji}</span>
+                          {entry.label}
+                        </p>
+                        <p className="font-semibold text-cyan-100">
+                          {entry.count} <span className="text-cyan-200/70">({percent}%)</span>
+                        </p>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-800/80">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-fuchsia-400 to-cyan-400 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-cyan-200/80">
+                Toplam tepki: {reactionTotal}
               </p>
             </article>
 

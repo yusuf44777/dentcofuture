@@ -36,6 +36,7 @@ export type MobileLiveState = {
   questions: MobileQuestionItem[];
   activePoll: Poll | null;
   pollTotals: Record<string, number>;
+  myPollVoteOptionIndex: number | null;
   reactionCounts: Record<ReactionEmoji, number>;
   leaderboard: Pick<Attendee, "id" | "name" | "role" | "points">[];
 };
