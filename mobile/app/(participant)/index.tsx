@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Crown, Music2, Star, Trophy, Zap } from "lucide-react-native";
@@ -9,8 +9,11 @@ import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 import { getOutlierTitle } from "../../src/lib/outlier-quiz";
 
+const SPOTIFY_PLAYLIST_ID = "2iLymYqtGacjpfbJBSxOjA";
 const SPOTIFY_EMBED_URI =
-  "https://open.spotify.com/embed/playlist/2iLymYqtGacjpfbJBSxOjA?utm_source=generator&theme=0";
+  `https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLIST_ID}?utm_source=generator&theme=0`;
+const SPOTIFY_WEB_URI = `https://open.spotify.com/playlist/${SPOTIFY_PLAYLIST_ID}`;
+const SPOTIFY_APP_URI = `spotify:playlist:${SPOTIFY_PLAYLIST_ID}`;
 
 const RANK_COLORS = ["#C9A96E", "#A8A9AD", "#B87333"];
 
@@ -53,6 +56,20 @@ export default function ParticipantHomeScreen() {
   const outlierTitle = outlierScore > 0 ? getOutlierTitle(outlierScore) : null;
   const liveQuestionCount = liveQuery.data?.questions.length ?? 0;
   const activePoll = liveQuery.data?.activePoll;
+
+  const openSpotifyPlaylist = async () => {
+    try {
+      const canOpenSpotifyApp = await Linking.canOpenURL(SPOTIFY_APP_URI);
+      if (canOpenSpotifyApp) {
+        await Linking.openURL(SPOTIFY_APP_URI);
+        return;
+      }
+
+      await Linking.openURL(SPOTIFY_WEB_URI);
+    } catch {
+      await Linking.openURL(SPOTIFY_WEB_URI);
+    }
+  };
 
   return (
     <ScreenShell
@@ -106,9 +123,39 @@ export default function ParticipantHomeScreen() {
             style={styles.spotifyWebView}
             scrollEnabled={false}
             javaScriptEnabled
+            domStorageEnabled
+            thirdPartyCookiesEnabled
+            sharedCookiesEnabled
+            allowsProtectedMedia
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}
+            setSupportMultipleWindows={false}
+            onShouldStartLoadWithRequest={(request) => {
+              const requestUrl = request.url ?? "";
+
+              if (requestUrl.startsWith("https://open.spotify.com/embed/")) {
+                return true;
+              }
+
+              if (requestUrl.startsWith("https://open.spotify.com/")) {
+                void Linking.openURL(requestUrl);
+                return false;
+              }
+
+              return true;
+            }}
           />
+        </View>
+        <View style={styles.spotifyFooter}>
+          <Text style={styles.spotifyHint}>Çalmazsa Spotify uygulamasında aç.</Text>
+          <Pressable
+            style={({ pressed }) => [styles.spotifyOpenButton, pressed ? styles.pressed : null]}
+            onPress={() => {
+              void openSpotifyPlaylist();
+            }}
+          >
+            <Text style={styles.spotifyOpenButtonText}>Spotify&apos;da Aç</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -285,6 +332,33 @@ const styles = StyleSheet.create({
   spotifyWebView: {
     flex: 1,
     backgroundColor: "transparent"
+  },
+  spotifyFooter: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm
+  },
+  spotifyHint: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11
+  },
+  spotifyOpenButton: {
+    backgroundColor: "rgba(29,185,84,0.2)",
+    borderColor: "rgba(29,185,84,0.45)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7
+  },
+  spotifyOpenButtonText: {
+    color: "#1DB954",
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800"
   },
   pollBanner: {
     alignItems: "center",

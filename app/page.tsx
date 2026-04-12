@@ -13,6 +13,7 @@ const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
 const SPOTIFY_PLAYLIST_ID = "2iLymYqtGacjpfbJBSxOjA";
+const SPOTIFY_PLAYLIST_URL = `https://open.spotify.com/playlist/${SPOTIFY_PLAYLIST_ID}`;
 
 type SpeakerBadge = "Innovator" | "Artist" | "Entrepreneur" | "AI Pioneer";
 
@@ -359,6 +360,19 @@ export default function LandingPage() {
             title="DentCo Outliers Spotify Playlist"
           />
         </motion.div>
+        <div className="mt-4 flex justify-center">
+          <a
+            href={SPOTIFY_PLAYLIST_URL}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "border-[rgba(196,154,42,0.35)] bg-[rgba(196,154,42,0.08)] text-[#F4D99B] hover:bg-[rgba(196,154,42,0.16)]"
+            )}
+          >
+            Spotify&apos;da Aç
+          </a>
+        </div>
       </section>
 
       {/* ── Speakers ─────────────────────────────────────────────── */}
