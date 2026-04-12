@@ -1,6 +1,6 @@
 import type { ExpoConfig } from "expo/config";
 
-const DEFAULT_API_BASE_URL = "";
+const DEFAULT_API_BASE_URL = "https://dentcooutliers.vercel.app";
 
 const config: ExpoConfig = {
   name: "DentCo Outlier",

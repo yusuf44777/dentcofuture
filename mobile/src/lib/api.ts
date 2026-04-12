@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { useAuthSessionStore } from "../store/auth-session";
 
-const DEFAULT_API_BASE_URL = "";
+const DEFAULT_API_BASE_URL = "https://dentcooutliers.vercel.app";
 
 type ApiRequestOptions = {
   auth?: boolean;
