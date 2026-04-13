@@ -251,6 +251,14 @@ export function createNetworkingGalleryComment(itemId: string, text: string) {
   );
 }
 
+export function deleteNetworkingGalleryPost(itemId: string) {
+  return apiRequest<{
+    ok: true;
+    deletedCount: number;
+    deletedItemIds: string[];
+  }>(`/api/mobile/networking/gallery/items/${encodeURIComponent(itemId)}`, { method: "DELETE" }, { auth: true });
+}
+
 export function fetchNetworkingGalleryComments(itemId: string, limit = 40) {
   const normalizedLimit = Number.isFinite(limit)
     ? Math.max(10, Math.min(120, Math.floor(limit)))

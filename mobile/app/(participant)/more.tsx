@@ -118,7 +118,7 @@ export default function ParticipantMoreScreen() {
   }, [feedQuery.data?.current?.interestArea, hasEditedDentistryInterestArea]);
 
   useEffect(() => {
-    if (role !== "Student") {
+    if (role === "Academic") {
       setClassLevel(null);
       setIsClassLevelOpen(false);
     }

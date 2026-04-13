@@ -25,6 +25,7 @@ import {
   Play,
   RefreshCw,
   Send,
+  Trash2,
   UserRound
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -32,6 +33,7 @@ import { ScreenShell } from "../../src/components/screen-shell";
 import {
   createNetworkingGalleryPost,
   createNetworkingGalleryComment,
+  deleteNetworkingGalleryPost,
   fetchMessageThreads,
   fetchNetworkingFeed,
   fetchNetworkingGalleryComments,
@@ -353,6 +355,46 @@ export default function ParticipantNetworkingScreen() {
     }
   });
 
+  const galleryDeleteMutation = useMutation({
+    mutationFn: ({ itemId }: { itemId: string }) => deleteNetworkingGalleryPost(itemId),
+    onMutate: async ({ itemId }) => {
+      await queryClient.cancelQueries({ queryKey: ["mobile-networking-gallery-feed"] });
+      const previousFeed = queryClient.getQueryData<MobileNetworkingGalleryFeed>([
+        "mobile-networking-gallery-feed"
+      ]);
+
+      queryClient.setQueryData<MobileNetworkingGalleryFeed>(
+        ["mobile-networking-gallery-feed"],
+        (current) => {
+          if (!current) {
+            return current;
+          }
+
+          return {
+            ...current,
+            posts: current.posts.filter((post) => post.id !== itemId)
+          };
+        }
+      );
+
+      return { previousFeed };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousFeed) {
+        queryClient.setQueryData(["mobile-networking-gallery-feed"], context.previousFeed);
+      }
+    },
+    onSuccess: async (result) => {
+      setUploadError("");
+      setUploadMessage(
+        result.deletedCount > 1
+          ? `${result.deletedCount} öğelik karosel paylaşımı silindi.`
+          : "Paylaşım silindi."
+      );
+      await queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] });
+    }
+  });
+
   const galleryUploadMutation = useMutation({
     onMutate: () => {
       setUploadError("");
@@ -665,11 +707,17 @@ export default function ParticipantNetworkingScreen() {
     galleryLikeMutation.isPending ? (galleryLikeMutation.variables?.itemId ?? null) : null;
   const pendingGalleryCommentItemId =
     galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
+  const pendingGalleryDeleteItemId =
+    galleryDeleteMutation.isPending ? (galleryDeleteMutation.variables?.itemId ?? null) : null;
   const galleryCarouselWidth = Math.max(windowWidth - spacing.md * 6, 220);
   const uploadCarouselWidth = Math.max(windowWidth - spacing.md * 4, 220);
   const uploadCompletionRate = uploadProgress
     ? Math.round((uploadProgress.completed / Math.max(1, uploadProgress.total)) * 100)
     : 0;
+  const myNormalizedName = useMemo(
+    () => (me?.attendee?.name ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR"),
+    [me?.attendee?.name]
+  );
 
   const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
     const now = Date.now();
@@ -972,6 +1020,8 @@ export default function ParticipantNetworkingScreen() {
               const draft = commentDrafts[post.id] ?? "";
               const avatarLetter = post.uploaderName.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";
               const hiddenCommentCount = Math.max(post.commentsCount - post.recentComments.length, 0);
+              const postOwnerName = post.uploaderName.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR");
+              const isOwnPost = myNormalizedName.length > 0 && myNormalizedName === postOwnerName;
               const postMediaItems =
                 post.mediaItems && post.mediaItems.length > 0
                   ? post.mediaItems
@@ -1007,6 +1057,25 @@ export default function ParticipantNetworkingScreen() {
                       </Pressable>
                       <Text style={styles.galleryDate}>{formatGalleryDate(post.createdAt)}</Text>
                     </View>
+                    {isOwnPost ? (
+                      <Pressable
+                        disabled={pendingGalleryDeleteItemId === post.id}
+                        style={({ pressed }) => [
+                          styles.galleryDeleteButton,
+                          pendingGalleryDeleteItemId === post.id ? styles.disabled : null,
+                          pressed ? styles.pressed : null
+                        ]}
+                        onPress={() => {
+                          if (pendingGalleryDeleteItemId === post.id) {
+                            return;
+                          }
+                          galleryDeleteMutation.mutate({ itemId: post.id });
+                        }}
+                      >
+                        <Trash2 color={colors.danger} size={14} />
+                        <Text style={styles.galleryDeleteButtonText}>Sil</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
 
                   {postMediaItems.length > 1 ? (
@@ -2240,6 +2309,23 @@ const styles = StyleSheet.create({
   },
   galleryMetaBlock: {
     flex: 1
+  },
+  galleryDeleteButton: {
+    alignItems: "center",
+    backgroundColor: colors.dangerSoft,
+    borderColor: "rgba(248,113,113,0.4)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    paddingHorizontal: 10,
+    paddingVertical: 5
+  },
+  galleryDeleteButtonText: {
+    color: colors.danger,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700",
+    marginLeft: 5
   },
   galleryAuthor: {
     color: colors.ink,
