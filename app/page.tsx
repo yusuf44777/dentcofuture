@@ -27,10 +27,13 @@ type SpeakerItem = {
 
 const SPEAKERS: SpeakerItem[] = [
   {
-    name: "Slot #1",
-    title: "Sürpriz İsim",
-    badge: "AI Pioneer",
-    bio: "Sahneye çıkacak ilk sürpriz isim etkinlik günü açıklanacak."
+    name: "Dt. Kerem İnan",
+    title: "Dt. Kerem İnan",
+    badge: "Innovator",
+    bio: "Alışılmış kariyer yollarını bir kenara bırakıp Kenya'nın en ücra köşelerinde şifa dağıtan, gönüllülük bilinciyle \"Sınır Ötesi Hekimlik\" yapan bir diş hekimi.",
+    imageSrc: "/kerem_inan.jpeg",
+    posterHref: "/kerem_inan_afis.png",
+    posterButtonLabel: "Afişi Aç"
   },
   {
     name: "Doç. Dr. Gaye Keser",
@@ -40,6 +43,12 @@ const SPEAKERS: SpeakerItem[] = [
     imageSrc: "/gaye_keser.png",
     posterHref: "/gaye_keser_afis.png",
     posterButtonLabel: "Afişi Aç"
+  },
+  {
+    name: "Slot #1",
+    title: "Sürpriz İsim",
+    badge: "AI Pioneer",
+    bio: "Sahneye çıkacak ilk sürpriz isim etkinlik günü açıklanacak."
   },
   {
     name: "Slot #3",
@@ -52,12 +61,6 @@ const SPEAKERS: SpeakerItem[] = [
     title: "Sürpriz İsim",
     badge: "Entrepreneur",
     bio: "Dördüncü konuşmacı slotu sürpriz isim için ayrıldı."
-  },
-  {
-    name: "Dt. Kerem İnan",
-    title: "Dt. Kerem İnan",
-    badge: "Innovator",
-    bio: "Alışılmış kariyer yollarını bir kenara bırakıp Kenya'nın en ücra köşelerinde şifa dağıtan, gönüllülük bilinciyle \"Sınır Ötesi Hekimlik\" yapan bir diş hekimi."
   }
 ];
 
