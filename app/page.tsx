@@ -54,10 +54,10 @@ const SPEAKERS: SpeakerItem[] = [
     bio: "Dördüncü konuşmacı slotu sürpriz isim için ayrıldı."
   },
   {
-    name: "Slot #5",
-    title: "Sürpriz İsim",
+    name: "Dt. Kerem İnan",
+    title: "Dt. Kerem İnan",
     badge: "Innovator",
-    bio: "Final konuşmacısı etkinlik günü sahnede açıklanacak."
+    bio: "Alışılmış kariyer yollarını bir kenara bırakıp Kenya'nın en ücra köşelerinde şifa dağıtan, gönüllülük bilinciyle \"Sınır Ötesi Hekimlik\" yapan bir diş hekimi."
   }
 ];
 
@@ -77,7 +77,7 @@ const SCHEDULE: ScheduleItem[] = [
   { time: "13:00-13:30", title: "Sürpriz Konuşmacı #3 (Yakında Açıklanacak)", type: "talk" },
   { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
   { time: "14:20-14:50", title: "Sürpriz Konuşmacı #4 (Yakında Açıklanacak)", type: "talk" },
-  { time: "14:50-15:20", title: "Sürpriz Konuşmacı #5 (Yakında Açıklanacak)", type: "talk" },
+  { time: "14:50-15:20", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk", speaker: "Dt. Kerem İnan" },
   { time: "15:20-15:40", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];
 
