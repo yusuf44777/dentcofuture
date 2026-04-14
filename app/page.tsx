@@ -45,10 +45,13 @@ const SPEAKERS: SpeakerItem[] = [
     posterButtonLabel: "Afişi Aç"
   },
   {
-    name: "Slot #1",
-    title: "Sürpriz İsim",
-    badge: "AI Pioneer",
-    bio: "Sahneye çıkacak ilk sürpriz isim etkinlik günü açıklanacak."
+    name: "Dr. Sina Saygılı",
+    title: "Dr. Sina Saygılı",
+    badge: "Innovator",
+    bio: "Dijital diş hekimliği ve 3D teknolojilerindeki uzmanlığını global liderlik tecrübesiyle birleştiren Dr. Sina Saygılı, akademik birikimiyle geleceğin diş hekimliği vizyonunu bizlere sunuyor.",
+    imageSrc: "/sina_saygin.jpeg",
+    posterHref: "/sina_saygin_afis.png",
+    posterButtonLabel: "Afişi Aç"
   },
   {
     name: "Slot #3",
@@ -74,7 +77,7 @@ type ScheduleItem = {
 const SCHEDULE: ScheduleItem[] = [
   { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
   { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
-  { time: "11:30-12:00", title: "Sürpriz Konuşmacı #1 (Yakında Açıklanacak)", type: "talk" },
+  { time: "11:30-12:00", title: "1. Konuşmacı: Dr. Sina Saygılı", type: "talk", speaker: "Dr. Sina Saygılı" },
   { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
   { time: "12:30-13:00", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk", speaker: "Doç. Dr. Gaye Keser" },
   { time: "13:00-13:30", title: "Sürpriz Konuşmacı #3 (Yakında Açıklanacak)", type: "talk" },
