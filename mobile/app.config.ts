@@ -9,12 +9,18 @@ const config: ExpoConfig = {
   version: "1.0.0",
   orientation: "portrait",
   userInterfaceStyle: "light",
+  icon: "./assets/icon.png",
   newArchEnabled: true,
   ios: {
+    icon: "./assets/ios-icon.png",
     supportsTablet: true,
     bundleIdentifier: "com.communitive.dentlinkco"
   },
   android: {
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#FFFFFF"
+    },
     package: "com.communitive.dentlinkco",
     softwareKeyboardLayoutMode: "resize"
   },
