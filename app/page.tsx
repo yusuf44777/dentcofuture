@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown, ChevronLeft, ChevronRight, Zap, Users, Gamepad2, Images } from "lucide-react";
 import Image from "next/image";
+import Script from "next/script";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,8 @@ const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
 const ANDROID_APP_URL = "https://play.google.com/store/apps";
 const IOS_APP_URL = "https://apps.apple.com";
+const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
+const LUMA_EVENT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
 
 type SpeakerBadge = "Innovator" | "Artist" | "Entrepreneur" | "AI Pioneer";
 
@@ -177,17 +180,19 @@ function ParticleField() {
 
 function ApplicationCheckoutButton() {
   return (
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
+    <a
+      href={LUMA_EVENT_URL}
       className={cn(
+        "luma-checkout--button",
         buttonVariants({ size: "xl", variant: "surface" }),
-        "h-14 w-full cursor-not-allowed px-10 text-base opacity-60 sm:w-auto sm:text-lg"
+        "h-14 w-full px-10 text-base sm:w-auto sm:text-lg"
       )}
+      data-luma-action="checkout"
+      data-luma-event-id={LUMA_EVENT_ID}
+      aria-label="Luma üzerinden etkinliğe kaydol"
     >
-      Yakında
-    </button>
+      Etkinliğe Kaydol
+    </a>
   );
 }
 
@@ -211,6 +216,11 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[#060918] text-white overflow-x-hidden">
+      <Script
+        id="luma-checkout"
+        src="https://embed.lu.ma/checkout-button.js"
+        strategy="afterInteractive"
+      />
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <section ref={heroRef} className="relative flex min-h-screen items-center justify-center overflow-hidden">
@@ -228,91 +238,90 @@ export default function LandingPage() {
         <div className="absolute inset-0 grid-bg opacity-30" />
         <ParticleField />
 
-        <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative z-10 px-6 text-center max-w-4xl mx-auto">
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6 text-[10px] font-semibold uppercase tracking-[0.4em] text-[rgba(180,170,255,0.55)]"
-          >
-            Communitive Dentistry &nbsp;·&nbsp; Üsküdar &nbsp;·&nbsp; 2026
-          </motion.p>
+          <motion.div style={{ opacity: heroOpacity, y: heroY }} className="relative z-10 px-6 text-center max-w-4xl mx-auto">
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-6 text-[10px] font-semibold uppercase tracking-[0.4em] text-[rgba(180,170,255,0.55)]"
+            >
+              Communitive Dentistry &nbsp;·&nbsp; Üsküdar &nbsp;·&nbsp; 2026
+            </motion.p>
 
-          {/* Display serif hero title */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="font-display italic text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl lg:text-[5.5rem]"
-          >
-            <span className="text-gradient-poster">DentCo</span>
-            <br />
-            <span className="not-italic font-heading font-extrabold text-white">Outliers</span>
-          </motion.h1>
+            {/* Display serif hero title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="font-display italic text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl lg:text-[5.5rem]"
+            >
+              <span className="text-gradient-poster">DentCo</span>
+              <br />
+              <span className="not-italic font-heading font-extrabold text-white">Outliers</span>
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="mt-5 text-base text-[rgba(210,205,255,0.55)] sm:text-lg tracking-wide"
-          >
-            Diş hekimliğinde sınırları zorluyoruz
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.45 }}
-            className="mt-1 text-xs text-[rgba(180,170,255,0.4)] tracking-widest uppercase"
-          >
-            16 Mayıs 2026 &nbsp;·&nbsp; İstanbul
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-3 text-xs leading-relaxed text-[rgba(180,170,255,0.35)]"
-          >
-            {EVENT_ORGANIZER} &nbsp;·&nbsp; {EVENT_ADDRESS}
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="mt-5 text-base text-[rgba(210,205,255,0.55)] sm:text-lg tracking-wide"
+            >
+              Diş hekimliğinde sınırları zorluyoruz
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.45 }}
+              className="mt-1 text-xs text-[rgba(180,170,255,0.4)] tracking-widest uppercase"
+            >
+              16 Mayıs 2026 &nbsp;·&nbsp; İstanbul
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-3 text-xs leading-relaxed text-[rgba(180,170,255,0.35)]"
+            >
+              {EVENT_ORGANIZER} &nbsp;·&nbsp; {EVENT_ADDRESS}
+            </motion.p>
 
-          {/* Countdown */}
-          {!past && (
+            {/* Countdown */}
+            {!past && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+                className="mt-12 flex justify-center gap-3 sm:gap-5"
+              >
+                {[{ l: "Gün", v: d }, { l: "Saat", v: h }, { l: "Dk", v: m }, { l: "Sn", v: s }].map(({ l, v }) => (
+                  <div key={l} className="flex flex-col items-center gap-1.5">
+                    <div className="card-glass flex h-16 w-14 items-center justify-center sm:h-[72px] sm:w-[68px]">
+                      <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2, "0")}</span>
+                    </div>
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[rgba(180,170,255,0.4)]">{l}</span>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-              className="mt-12 flex justify-center gap-3 sm:gap-5"
+              transition={{ delay: 0.7 }}
+              className="mt-10 flex justify-center"
             >
-              {[{ l: "Gün", v: d }, { l: "Saat", v: h }, { l: "Dk", v: m }, { l: "Sn", v: s }].map(({ l, v }) => (
-                <div key={l} className="flex flex-col items-center gap-1.5">
-                  <div className="card-glass flex h-16 w-14 items-center justify-center sm:h-[72px] sm:w-[68px]">
-                    <span className="font-heading text-2xl font-extrabold tabular-nums sm:text-3xl">{String(v).padStart(2, "0")}</span>
-                  </div>
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[rgba(180,170,255,0.4)]">{l}</span>
-                </div>
-              ))}
+              <ApplicationCheckoutButton />
             </motion.div>
-          )}
+          </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="mt-10 flex justify-center"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[rgba(180,170,255,0.25)]"
           >
-            <ApplicationCheckoutButton />
+            <ChevronDown className="h-6 w-6" />
           </motion.div>
-        </motion.div>
-
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[rgba(180,170,255,0.25)]"
-        >
-          <ChevronDown className="h-6 w-6" />
-        </motion.div>
-      </section>
-
+        </section>
       {/* ── Feature bar ──────────────────────────────────────────── */}
       <section className="border-y border-[rgba(123,110,255,0.1)] bg-[rgba(12,16,48,0.6)] backdrop-blur-sm py-5">
         <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-6 sm:gap-10 px-6">
@@ -490,7 +499,7 @@ export default function LandingPage() {
             <span className="not-italic font-heading font-extrabold text-gradient-poster">Outlier</span>{" "}
             mısın?
           </h2>
-          <p className="mt-4 text-base text-[rgba(200,195,255,0.4)]">Başvurular yakında açılacak.</p>
+          <p className="mt-4 text-base text-[rgba(200,195,255,0.4)]">Kayıtlar Luma üzerinden açık.</p>
           <div className="mt-8 flex justify-center">
             <ApplicationCheckoutButton />
           </div>
@@ -507,10 +516,9 @@ export default function LandingPage() {
           <a href={IOS_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
             iOS Uygulamasını İndir
           </a>
-          <span>Başvurular yakında açılacak</span>
+          <span>Luma ile hızlı kayıt</span>
         </div>
       </footer>
-
     </main>
   );
 }
