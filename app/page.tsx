@@ -61,8 +61,8 @@ const SPEAKERS: SpeakerItem[] = [
     title: "Dr. Esra Bozbay",
     badge: "Innovator",
     bio: "Periodontoloji ve Maksillofasiyal Cerrahi alanlarındaki çifte uzmanlığıyla kariyerini Türkiye'den İtalya'ya taşıyan Dr. Esra Bozbay, uluslararası vizyonunu ve ilham verici akademik serüvenini bizlere sunuyor.",
-    imageSrc: "/esra_bozbay.jpeg",
-    posterHref: "/esra_bozbay_afis.jpeg",
+    imageSrc: "/esra_bozbay_afis.jpeg",
+    posterHref: "/esra_bozbay.jpeg",
     posterButtonLabel: "Afişi Aç"
   },
   {
