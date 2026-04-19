@@ -314,8 +314,12 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="mt-10 flex justify-center"
+              className="mt-10 flex flex-col items-center gap-4"
             >
+              <div className="rounded-2xl border border-[rgba(0,229,160,0.35)] bg-[rgba(0,229,160,0.1)] px-6 py-3 text-center shadow-[0_0_30px_rgba(0,229,160,0.15)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[rgba(190,255,236,0.8)]">Etkinlik Ücreti</p>
+                <p className="mt-1 font-heading text-2xl font-extrabold text-[#7CFFD0]">300 TL</p>
+              </div>
               <ApplicationCheckoutButton />
             </motion.div>
           </motion.div>
@@ -505,7 +509,7 @@ export default function LandingPage() {
             <span className="not-italic font-heading font-extrabold text-gradient-poster">Outlier</span>{" "}
             mısın?
           </h2>
-          <p className="mt-4 text-base text-[rgba(200,195,255,0.4)]">Kayıtlar Luma üzerinden açık.</p>
+          <p className="mt-4 text-base text-[rgba(200,195,255,0.4)]">Etkinlik ücreti 300 TL. Kayıtlar Luma üzerinden açık.</p>
           <div className="mt-8 flex justify-center">
             <ApplicationCheckoutButton />
           </div>

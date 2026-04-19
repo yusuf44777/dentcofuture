@@ -35,7 +35,7 @@ export function FullscreenIframe({ src, title, thumbnailSrc }: FullscreenIframeP
           type="button"
           className="bb-thumb"
           onClick={() => setIsLoaded(true)}
-          aria-label="Start Block Blast"
+          aria-label={`Start ${title}`}
         >
           <img src={thumbnailSrc} alt={title} />
           <span className="bb-play-btn">Play</span>

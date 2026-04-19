@@ -1,39 +1,39 @@
 import { FullscreenIframe } from './components/FullscreenIframe';
 
 const rules = [
-  'Blokları 8×8 alana sürükleyip bırak.',
-  'Dolu satır veya sütunları temizleyerek puan topla.',
-  'Ne kadar çok hat temizlersen o kadar hızlı yükselirsin.',
-  'Hiçbir blok sığmıyorsa oyun biter.',
+  'Parçaları 8×8 tahtaya sürükleyip bırak.',
+  'Dolu satır veya sütunları temizleyerek puan kazan.',
+  'Zincir temizlemelerde skor çarpanı yükselir.',
+  'Hiçbir parça yerleşmezse tur biter.',
 ];
 
 const features = [
-  'Gerçek Block Blast Unity sürümü (local build)',
-  'Masaüstü ve mobil uyumlu',
-  'Tam ekran desteği',
-  'Hızlı yükleme için statik public asset',
+  'tokaa1/blockerino klonu direkt gömülü',
+  'Expo web export statik build',
+  'Masaüstü + mobil uyumlu',
+  'Tam ekran oynanış desteği',
 ];
 
-const screenshots = ['/img/s11080.jpg', '/img/s21080.jpg', '/img/s31080.jpg', '/img/s41080.jpg'];
+const screenshots = ['/img/blockerino-menu.png', '/img/blockerino-chaos.png'];
 
 export default function App() {
   return (
     <main className="bb-shell">
       <section className="bb-hero">
         <p className="bb-badge">Direct Integration</p>
-        <h1>Block Blast</h1>
+        <h1>Blockerino</h1>
         <p>
-          `gangbo/block-blast.best.site` yapısı baz alınarak Unity oyun dosyaları projeye gömüldü.
-          Aşağıdan direkt oynayabilirsin.
+          `tokaa1/blockerino` deposunun web çıktısı projeye doğrudan gömüldü.
+          Aşağıdan tek tıkla oynayabilirsin.
         </p>
       </section>
 
       <section className="bb-card">
         <h2>Play</h2>
         <FullscreenIframe
-          src="/game/block-blast/index.html"
-          title="Block Blast Gameplay"
-          thumbnailSrc="/img/s11080.jpg"
+          src="/blockerino/"
+          title="Blockerino Gameplay"
+          thumbnailSrc="/img/blockerino-menu.png"
         />
       </section>
 
@@ -61,7 +61,7 @@ export default function App() {
         <h2>Ekran Görüntüleri</h2>
         <div className="bb-shots">
           {screenshots.map((src, index) => (
-            <img key={src} src={src} alt={`Block Blast screenshot ${index + 1}`} />
+            <img key={src} src={src} alt={`Blockerino screenshot ${index + 1}`} />
           ))}
         </div>
       </section>
