@@ -30,12 +30,12 @@ type SpeakerItem = {
 
 const SPEAKERS: SpeakerItem[] = [
   {
-    name: "Dt. Kerem İnan",
-    title: "Dt. Kerem İnan",
+    name: "Dr. Sina Saygılı",
+    title: "Dr. Sina Saygılı",
     badge: "Innovator",
-    bio: "Alışılmış kariyer yollarını bir kenara bırakıp Kenya'nın en ücra köşelerinde şifa dağıtan, gönüllülük bilinciyle \"Sınır Ötesi Hekimlik\" yapan bir diş hekimi.",
-    imageSrc: "/kerem_inan.jpeg",
-    posterHref: "/kerem_inan_afis.png",
+    bio: "Dijital diş hekimliği ve 3D teknolojilerindeki uzmanlığını global liderlik tecrübesiyle birleştiren Dr. Sina Saygılı, akademik birikimiyle geleceğin diş hekimliği vizyonunu bizlere sunuyor.",
+    imageSrc: "/sina_saygin.jpeg",
+    posterHref: "/sina_saygin_afis.png",
     posterButtonLabel: "Afişi Aç"
   },
   {
@@ -48,25 +48,31 @@ const SPEAKERS: SpeakerItem[] = [
     posterButtonLabel: "Afişi Aç"
   },
   {
-    name: "Dr. Sina Saygılı",
-    title: "Dr. Sina Saygılı",
+    name: "Prof. Dr. Alper Alkan",
+    title: "Prof. Dr. Alper Alkan",
     badge: "Innovator",
-    bio: "Dijital diş hekimliği ve 3D teknolojilerindeki uzmanlığını global liderlik tecrübesiyle birleştiren Dr. Sina Saygılı, akademik birikimiyle geleceğin diş hekimliği vizyonunu bizlere sunuyor.",
-    imageSrc: "/sina_saygin.jpeg",
-    posterHref: "/sina_saygin_afis.png",
+    bio: "Ağız, Diş ve Çene Cerrahisi alanındaki engin tecrübesini dekanlık, rektör yardımcılığı ve Bilimplat Bilim Kurulu üyeliği gibi vizyoner görevlerle taçlandıran Prof. Dr. Alper Alkan, devasa akademik ve klinik birikimiyle DentCo Outliers sahnesinde bizlerle buluşuyor.",
+    imageSrc: "/alper_alkan.jpeg",
+    posterHref: "/alper_alkan_afis.jpeg",
     posterButtonLabel: "Afişi Aç"
   },
   {
-    name: "Slot #3",
-    title: "Sürpriz İsim",
-    badge: "Artist",
-    bio: "Üçüncü sürpriz konuşmacı için geri sayım başladı."
+    name: "Dr. Esra Bozbay",
+    title: "Dr. Esra Bozbay",
+    badge: "Innovator",
+    bio: "Periodontoloji ve Maksillofasiyal Cerrahi alanlarındaki çifte uzmanlığıyla kariyerini Türkiye'den İtalya'ya taşıyan Dr. Esra Bozbay, uluslararası vizyonunu ve ilham verici akademik serüvenini bizlere sunuyor.",
+    imageSrc: "/esra_bozbay.jpeg",
+    posterHref: "/esra_bozbay_afis.jpeg",
+    posterButtonLabel: "Afişi Aç"
   },
   {
-    name: "Slot #4",
-    title: "Sürpriz İsim",
-    badge: "Entrepreneur",
-    bio: "Dördüncü konuşmacı slotu sürpriz isim için ayrıldı."
+    name: "Dt. Kerem İnan",
+    title: "Dt. Kerem İnan",
+    badge: "Innovator",
+    bio: "Alışılmış kariyer yollarını bir kenara bırakıp Kenya'nın en ücra köşelerinde şifa dağıtan, gönüllülük bilinciyle \"Sınır Ötesi Hekimlik\" yapan bir diş hekimi.",
+    imageSrc: "/kerem_inan.jpeg",
+    posterHref: "/kerem_inan_afis.png",
+    posterButtonLabel: "Afişi Aç"
   }
 ];
 
@@ -83,9 +89,9 @@ const SCHEDULE: ScheduleItem[] = [
   { time: "11:30-12:00", title: "1. Konuşmacı: Dr. Sina Saygılı", type: "talk", speaker: "Dr. Sina Saygılı" },
   { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
   { time: "12:30-13:00", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk", speaker: "Doç. Dr. Gaye Keser" },
-  { time: "13:00-13:30", title: "Sürpriz Konuşmacı #3 (Yakında Açıklanacak)", type: "talk" },
+  { time: "13:00-13:30", title: "3. Konuşmacı: Prof. Dr. Alper Alkan", type: "talk", speaker: "Prof. Dr. Alper Alkan" },
   { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
-  { time: "14:20-14:50", title: "Sürpriz Konuşmacı #4 (Yakında Açıklanacak)", type: "talk" },
+  { time: "14:20-14:50", title: "4. Konuşmacı: Dr. Esra Bozbay", type: "talk", speaker: "Dr. Esra Bozbay" },
   { time: "14:50-15:20", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk", speaker: "Dt. Kerem İnan" },
   { time: "15:20-15:40", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];

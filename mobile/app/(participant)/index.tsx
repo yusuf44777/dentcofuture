@@ -1,7 +1,7 @@
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Music2, Star, Trophy, Zap } from "lucide-react-native";
+import { Crown, Gamepad2, Music2, Star, Trophy, Zap } from "lucide-react-native";
 import { WebView } from "react-native-webview";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchLeaderboard, fetchLiveState } from "../../src/lib/mobile-api";
@@ -110,6 +110,20 @@ export default function ParticipantHomeScreen() {
           accent="#C9A96E"
         />
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.plaqueBlastCard, pressed ? styles.pressed : null]}
+        onPress={() => router.push("/(participant)/game" as never)}
+      >
+        <View style={styles.plaqueBlastCopy}>
+          <View style={styles.plaqueBlastTitleRow}>
+            <Gamepad2 color={colors.accent} size={16} />
+            <Text style={styles.plaqueBlastLabel}>PLAQUE BLAST</Text>
+          </View>
+          <Text style={styles.plaqueBlastSubtitle}>Yerleşik oyunu aç, oynayıp skorunu liderliğe gönder.</Text>
+        </View>
+        <Text style={styles.plaqueBlastAction}>Oyunu Aç ›</Text>
+      </Pressable>
 
       {/* Spotify Playlist */}
       <View style={styles.spotifyCard}>
@@ -301,6 +315,46 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
     marginTop: 2
+  },
+  plaqueBlastCard: {
+    alignItems: "center",
+    backgroundColor: "rgba(139,92,246,0.11)",
+    borderColor: "rgba(139,92,246,0.35)",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+    padding: spacing.md
+  },
+  plaqueBlastCopy: {
+    flex: 1
+  },
+  plaqueBlastTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs
+  },
+  plaqueBlastLabel: {
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 16,
+    fontWeight: "800"
+  },
+  plaqueBlastSubtitle: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 17,
+    marginTop: 6
+  },
+  plaqueBlastAction: {
+    color: colors.accent,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "800",
+    marginLeft: spacing.sm
   },
   spotifyCard: {
     backgroundColor: "rgba(255,255,255,0.03)",
