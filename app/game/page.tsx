@@ -9,11 +9,67 @@ import { getStoredAttendeeId } from "@/hooks/useAttendee";
 import { addPoints, POINTS } from "@/lib/points";
 import type { GameScore } from "@/lib/types";
 
+type BlockerinoScore = {
+  score: number;
+  mode: string;
+  date: number;
+};
+
+const SCORE_SETTLE_DELAY_MS = 3500;
+
+function readBlockerinoScores(): BlockerinoScore[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const rawIds = window.localStorage.getItem("HIGH_SCORES");
+    const ids = rawIds ? JSON.parse(rawIds) : [];
+    if (!Array.isArray(ids)) return [];
+
+    return ids.flatMap((id) => {
+      const rawScore = window.localStorage.getItem(String(id));
+      if (!rawScore) return [];
+
+      try {
+        const parsed = JSON.parse(rawScore) as {
+          score?: unknown;
+          type?: unknown;
+          date?: unknown;
+        };
+        const score = Number(parsed.score);
+        if (!Number.isFinite(score) || score <= 0) return [];
+
+        return [{
+          score: Math.floor(score),
+          mode: typeof parsed.type === "string" ? parsed.type : "classic",
+          date: Number(parsed.date) || Date.now()
+        }];
+      } catch {
+        return [];
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+function modeToWave(mode: string) {
+  return mode === "chaos" ? 2 : 1;
+}
+
+function waveLabel(wave: number) {
+  if (wave === 2) return "Kaos";
+  if (wave === 1) return "Klasik";
+  return `Seviye ${wave}`;
+}
+
 export default function GamePage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [leaderboard, setLeaderboard] = useState<(GameScore & { attendee?: { name: string } })[]>([]);
   const [pointsAwarded, setPointsAwarded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const submittedBestRef = useRef<Record<string, number>>({});
+  const pendingScoreRef = useRef<BlockerinoScore | null>(null);
+  const submitTimerRef = useRef<number | null>(null);
   const attendeeId = typeof window !== "undefined" ? getStoredAttendeeId() : null;
 
   function handleFullscreen() {
@@ -33,22 +89,63 @@ export default function GamePage() {
   useEffect(() => {
     loadLeaderboard();
 
-    // Award play points once
     if (attendeeId && !pointsAwarded) {
       addPoints(attendeeId, POINTS.GAME_PLAY).then(() => setPointsAwarded(true));
     }
-
-    // Listen for score messages from the game iframe
-    function handleMessage(e: MessageEvent) {
-      if (e.data?.type === "TOOTH_DEFENDER_SCORE" && attendeeId) {
-        const { score, wave } = e.data as { score: number; wave: number };
-        submitScore(score, wave);
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!attendeeId) return;
+
+    const storageKey = `blockerino_submitted_best_${attendeeId}`;
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      submittedBestRef.current = stored ? JSON.parse(stored) : {};
+    } catch {
+      submittedBestRef.current = {};
+    }
+
+    const persistSubmittedBest = () => {
+      window.localStorage.setItem(storageKey, JSON.stringify(submittedBestRef.current));
+    };
+
+    const queueScoreSubmit = (score: BlockerinoScore) => {
+      const submittedBest = submittedBestRef.current[score.mode] ?? 0;
+      if (score.score <= submittedBest) return;
+
+      pendingScoreRef.current = score;
+      if (submitTimerRef.current) window.clearTimeout(submitTimerRef.current);
+
+      submitTimerRef.current = window.setTimeout(() => {
+        const pending = pendingScoreRef.current;
+        if (!pending) return;
+
+        const bestForMode = submittedBestRef.current[pending.mode] ?? 0;
+        if (pending.score <= bestForMode) return;
+
+        submittedBestRef.current[pending.mode] = pending.score;
+        persistSubmittedBest();
+        submitScore(pending.score, modeToWave(pending.mode));
+      }, SCORE_SETTLE_DELAY_MS);
+    };
+
+    const pollScores = () => {
+      const bestScore = readBlockerinoScores()
+        .sort((a, b) => b.score - a.score || b.date - a.date)[0];
+
+      if (bestScore) queueScoreSubmit(bestScore);
+    };
+
+    const interval = window.setInterval(pollScores, 2500);
+    pollScores();
+
+    return () => {
+      window.clearInterval(interval);
+      if (submitTimerRef.current) window.clearTimeout(submitTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attendeeId]);
 
   async function loadLeaderboard() {
     const sb = createSupabaseBrowserClient();
@@ -71,14 +168,13 @@ export default function GamePage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-[#0A0A0F] text-white">
-      {/* Header */}
       <div className="flex items-center gap-4 border-b border-[rgba(255,255,255,0.08)] px-4 py-4">
         <Link href="/">
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div className="flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
-          <h1 className="font-heading text-lg font-extrabold">Molar Muhafızı</h1>
+          <h1 className="font-heading text-lg font-extrabold">Blockerino</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {attendeeId && !pointsAwarded && (
@@ -98,7 +194,6 @@ export default function GamePage() {
       </div>
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        {/* Game iframe */}
         <div className="relative flex-1">
           <motion.div
             initial={{ opacity: 0 }}
@@ -107,16 +202,15 @@ export default function GamePage() {
           >
             <iframe
               ref={iframeRef}
-              src="/game-embed/index.html"
+              src="/blockerino/"
               className="h-full w-full border-0"
               style={{ minHeight: "calc(100vh - 64px)" }}
               allow="autoplay"
-              title="Molar Muhafızı Oyunu"
+              title="Blockerino Oyunu"
             />
           </motion.div>
         </div>
 
-        {/* Leaderboard sidebar */}
         <div className="w-full border-t border-[rgba(255,255,255,0.08)] bg-[#13131A] p-4 lg:w-72 lg:border-l lg:border-t-0">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-[#FFD700]" />
@@ -142,12 +236,12 @@ export default function GamePage() {
                     : i === 2 ? <i className="fa-solid fa-award text-[#CD7F32]" aria-hidden="true" />
                     : `${i + 1}`}
                 </span>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold text-white">
                     {(entry.attendee as { name?: string } | undefined)?.name ?? "Anonim"}
                     {entry.attendee_id === attendeeId && " (sen)"}
                   </p>
-                  <p className="text-[10px] text-[rgba(240,240,255,0.3)]">Dalga {entry.wave}</p>
+                  <p className="text-[10px] text-[rgba(240,240,255,0.3)]">{waveLabel(entry.wave)}</p>
                 </div>
                 <span className="text-sm font-extrabold text-[#6C63FF]">
                   {entry.score.toLocaleString()}
@@ -165,7 +259,7 @@ export default function GamePage() {
           <div className="mt-6 rounded-[8px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-3 text-xs text-[rgba(240,240,255,0.4)]">
             <p className="font-semibold text-white">Puanlar</p>
             <p className="mt-1">+10 oynama bonusu</p>
-            <p>+skor÷100 ek puan</p>
+            <p>Blockerino rekorun otomatik kaydedilir</p>
           </div>
         </div>
       </div>

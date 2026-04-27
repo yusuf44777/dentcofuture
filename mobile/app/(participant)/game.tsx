@@ -1,38 +1,56 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { Redirect } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Redirect, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, RefreshCw, Send, Swords, Trophy } from "lucide-react-native";
-import { ScreenShell } from "../../src/components/screen-shell";
-import { fetchGameScores, submitGameScore } from "../../src/lib/mobile-api";
-import { useMobileMe } from "../../src/hooks/use-mobile-me";
-import { ensureLocalStoragePolyfill } from "../../src/lib/local-storage-polyfill";
-import { colors, radii, spacing, typography } from "../../src/theme/tokens";
-import { BOARD_COLS, BOARD_ROWS, type Difficulty } from "../../../dentco_tetris/src/constants/config";
-import { COLOR_HEX } from "../../../dentco_tetris/src/constants/colors";
-import { PlaqueBlastEngine, type GameSnapshot } from "../../../dentco_tetris/src/game/engine";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ArrowLeft, Maximize2, Minimize2, RefreshCw, Trophy } from "lucide-react-native";
+import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import {
-  canPlaceBlock,
-  computeGhostAnchor,
-  type HandBlock
-} from "../../../dentco_tetris/src/game/board";
+  BLOCKERINO_SCORE_BRIDGE_SCRIPT,
+  BLOCKERINO_VIEWPORT_SCRIPT
+} from "../../src/game/blockerino-web-scripts";
+import { useBlockerinoHtml } from "../../src/game/use-blockerino-html";
+import { useMobileMe } from "../../src/hooks/use-mobile-me";
+import { fetchGameScores, submitGameScore } from "../../src/lib/mobile-api";
+import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 const RANK_COLORS = ["#C9A96E", "#A8A9AD", "#B87333"];
+const SCORE_SETTLE_DELAY_MS = 3500;
+
+type BlockerinoScoreMessage = {
+  type?: string;
+  score?: number;
+  mode?: string;
+};
+
+function modeToWave(mode: string) {
+  return mode === "chaos" ? 2 : 1;
+}
+
+function waveLabel(wave: number) {
+  if (wave === 2) return "Kaos";
+  if (wave === 1) return "Klasik";
+  return `Seviye ${wave}`;
+}
 
 export default function ParticipantGameScreen() {
   const queryClient = useQueryClient();
-  const { width } = useWindowDimensions();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { me } = useMobileMe();
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [showScores, setShowScores] = useState(false);
+  const [webViewLoading, setWebViewLoading] = useState(true);
+  const [webViewError, setWebViewError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { html, loading: htmlLoading, error: htmlError } = useBlockerinoHtml(reloadKey);
+  const submittedBestRef = useRef<Record<string, number>>({});
+  const pendingScoreRef = useRef<{ score: number; mode: string } | null>(null);
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const engineRef = useRef<PlaqueBlastEngine | null>(null);
-  if (!engineRef.current) {
-    ensureLocalStoragePolyfill();
-    engineRef.current = new PlaqueBlastEngine();
-  }
-
-  const engine = engineRef.current;
-  const [snapshot, setSnapshot] = useState<GameSnapshot>(() => engine.getSnapshot());
-  const [hasSubmittedCurrentRun, setHasSubmittedCurrentRun] = useState(false);
+  const loading = htmlLoading || webViewLoading;
+  const hasError = Boolean(htmlError) || webViewError;
 
   const scoresQuery = useQuery({
     queryKey: ["mobile-game-scores"],
@@ -44,7 +62,6 @@ export default function ParticipantGameScreen() {
   const submitMutation = useMutation({
     mutationFn: ({ score, wave }: { score: number; wave: number }) => submitGameScore(score, wave),
     onSuccess: async () => {
-      setHasSubmittedCurrentRun(true);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["mobile-game-scores"] }),
         queryClient.invalidateQueries({ queryKey: ["mobile-leaderboard"] })
@@ -53,593 +70,428 @@ export default function ParticipantGameScreen() {
   });
 
   useEffect(() => {
-    let last = Date.now();
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const delta = Math.max(0, Math.min(50, now - last));
-      last = now;
-      engine.update(delta);
-      setSnapshot(engine.getSnapshot());
-    }, 40);
-
     return () => {
-      clearInterval(interval);
+      if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
     };
-  }, [engine]);
+  }, []);
 
   if (me?.role === "participant" && !me.attendee) {
     return <Redirect href={"/(participant)/more" as never} />;
   }
 
-  const boardMaxWidth = Math.min(width - spacing.md * 2 - 24, 360);
-  const cellSize = Math.max(22, Math.floor(boardMaxWidth / BOARD_COLS));
-  const boardWidth = cellSize * BOARD_COLS;
-  const boardHeight = cellSize * BOARD_ROWS;
+  function reloadGame() {
+    setWebViewError(false);
+    setWebViewLoading(true);
+    setReloadKey((current) => current + 1);
+  }
 
-  const canSubmitCurrentRun =
-    snapshot.phase === "gameOver" &&
-    snapshot.score > 0 &&
-    !hasSubmittedCurrentRun &&
-    !submitMutation.isPending;
+  function queueScoreSubmit(score: number, mode: string) {
+    const normalizedMode = mode === "chaos" ? "chaos" : "classic";
+    const submittedBest = submittedBestRef.current[normalizedMode] ?? 0;
+    if (score <= submittedBest) return;
 
-  const selectedBlock = snapshot.selectedIndex !== null
-    ? snapshot.hand[snapshot.selectedIndex] ?? null
-    : null;
+    pendingScoreRef.current = { score, mode: normalizedMode };
+    if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
 
-  const canPlaceAtCell = (row: number, col: number) => {
-    if (snapshot.phase !== "playing" || !selectedBlock || selectedBlock.placed) {
-      return false;
+    submitTimerRef.current = setTimeout(() => {
+      const pending = pendingScoreRef.current;
+      if (!pending) return;
+
+      const bestForMode = submittedBestRef.current[pending.mode] ?? 0;
+      if (pending.score <= bestForMode) return;
+
+      submittedBestRef.current[pending.mode] = pending.score;
+      submitMutation.mutate({
+        score: pending.score,
+        wave: modeToWave(pending.mode)
+      });
+    }, SCORE_SETTLE_DELAY_MS);
+  }
+
+  function handleGameMessage(event: WebViewMessageEvent) {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data) as BlockerinoScoreMessage;
+      if (payload.type !== "BLOCKERINO_SCORE") return;
+
+      const score = Number(payload.score);
+      if (!Number.isFinite(score) || score <= 0) return;
+
+      queueScoreSubmit(Math.floor(score), payload.mode ?? "classic");
+    } catch {
+      return;
     }
-
-    const anchor = computeGhostAnchor(selectedBlock.shape, row, col);
-    return canPlaceBlock(snapshot.board, selectedBlock.shape, anchor.row, anchor.col);
-  };
+  }
 
   return (
-    <ScreenShell
-      title="PLAQUE BLAST"
-      subtitle="Yerleşik Block Blast modunda oyna, skoru gönder ve etkinlik puanını yükselt."
-    >
-      <View style={styles.gameCard}>
-        <View style={styles.gameHeader}>
-          <MetricPill label="Skor" value={snapshot.score} />
-          <MetricPill label="Seviye" value={snapshot.level} />
-          <MetricPill label="Tahta" value={`${BOARD_ROWS}x${BOARD_COLS}`} />
-        </View>
+    <View style={styles.root}>
+      <StatusBar hidden={isFullscreen} style="light" />
+      <View style={styles.stage}>
+        {loading && !hasError ? (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator color={colors.accent} size="large" />
+            <Text style={styles.loadingText}>Blockerino hazırlanıyor...</Text>
+          </View>
+        ) : null}
 
-        <View style={styles.statusBar}>
-          <Text style={styles.statusText}>{snapshot.statusText}</Text>
+        {hasError ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Oyun yüklenemedi</Text>
+            <Text style={styles.errorText}>Uygulama içindeki Blockerino dosyası açılamadı.</Text>
+            <Pressable onPress={reloadGame} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
+              <Text style={styles.retryText}>Tekrar Dene</Text>
+            </Pressable>
+          </View>
+        ) : (
+          html ? (
+            <WebView
+              key={reloadKey}
+              source={{ html, baseUrl: "https://blockerino.local/" }}
+              originWhitelist={["*"]}
+              style={styles.webView}
+              injectedJavaScriptBeforeContentLoaded={BLOCKERINO_VIEWPORT_SCRIPT}
+              injectedJavaScript={BLOCKERINO_SCORE_BRIDGE_SCRIPT}
+              onMessage={handleGameMessage}
+              allowsFullscreenVideo
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled
+              domStorageEnabled
+              scrollEnabled={false}
+              bounces={false}
+              onLoadStart={() => {
+                setWebViewLoading(true);
+                setWebViewError(false);
+              }}
+              onLoadEnd={() => setWebViewLoading(false)}
+              onError={() => {
+                setWebViewLoading(false);
+                setWebViewError(true);
+              }}
+              onHttpError={() => {
+                setWebViewLoading(false);
+                setWebViewError(true);
+              }}
+            />
+          ) : null
+        )}
+
+        <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, spacing.xs) }]}>
           <Pressable
-            disabled={snapshot.phase !== "playing" && snapshot.phase !== "paused"}
-            style={({ pressed }) => [
-              styles.pauseButton,
-              pressed ? styles.pressed : null,
-              snapshot.phase !== "playing" && snapshot.phase !== "paused" ? styles.disabled : null
-            ]}
-            onPress={() => {
-              engine.togglePause();
-              setSnapshot(engine.getSnapshot());
-            }}
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            hitSlop={8}
           >
-            {snapshot.phase === "paused" ? <Play color="#FFFFFF" size={14} /> : <Pause color="#FFFFFF" size={14} />}
+            <ArrowLeft color="#FFFFFF" size={20} />
+          </Pressable>
+
+          {!isFullscreen ? (
+            <View style={styles.titlePill}>
+              <Text style={styles.title}>Blockerino</Text>
+              <Text style={styles.subtitle}>Skor otomatik kaydedilir</Text>
+            </View>
+          ) : (
+            <View style={styles.overlaySpacer} />
+          )}
+
+          <Pressable
+            onPress={() => setShowScores((current) => !current)}
+            style={({ pressed }) => [
+              styles.iconButton,
+              showScores ? styles.iconButtonActive : null,
+              pressed && styles.pressed
+            ]}
+          >
+            <Trophy color="#FFFFFF" size={18} />
+          </Pressable>
+          <Pressable onPress={reloadGame} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+            <RefreshCw color="#FFFFFF" size={18} />
+          </Pressable>
+          <Pressable
+            onPress={() => setIsFullscreen((current) => !current)}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          >
+            {isFullscreen ? <Minimize2 color="#FFFFFF" size={18} /> : <Maximize2 color="#FFFFFF" size={18} />}
           </Pressable>
         </View>
 
-        <View style={styles.boardWrap}>
-          <View style={[styles.board, { width: boardWidth, height: boardHeight }]}>
-            {snapshot.board.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={styles.boardRow}>
-                {row.map((cell, colIndex) => (
-                  <Pressable
-                    key={`cell-${rowIndex}-${colIndex}`}
-                    disabled={snapshot.phase !== "playing"}
-                    onPress={() => {
-                      engine.placeBlock(rowIndex, colIndex);
-                      setSnapshot(engine.getSnapshot());
-                    }}
-                    style={[
-                      styles.boardCell,
-                      {
-                        width: cellSize,
-                        height: cellSize,
-                        backgroundColor: cell ? COLOR_HEX[cell.color] : "rgba(255,255,255,0.03)",
-                        borderColor: canPlaceAtCell(rowIndex, colIndex)
-                          ? "rgba(16,185,129,0.7)"
-                          : "rgba(255,255,255,0.08)"
-                      }
-                    ]}
-                  />
-                ))}
+        {showScores ? (
+          <View style={[styles.scorePanel, { bottom: Math.max(insets.bottom + spacing.sm, spacing.md) }]}>
+            <View style={styles.scoreHeader}>
+              <View style={styles.scoreTitleRow}>
+                <Trophy color={colors.accent} size={16} />
+                <Text style={styles.scoreTitle}>Liderlik</Text>
               </View>
-            ))}
+              {scoresQuery.isLoading ? <ActivityIndicator color={colors.accent} size="small" /> : null}
+            </View>
 
-            {snapshot.phase === "idle" ? (
-              <View style={styles.overlay}>
-                <Text style={styles.overlayTitle}>Hazırsan Başla</Text>
-                <Text style={styles.overlayText}>Kartlardan bir blok seç, tahtaya yerleştir ve hatları temizle.</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null]}
-                  onPress={() => {
-                    setHasSubmittedCurrentRun(false);
-                    engine.start("normal" as Difficulty);
-                    setSnapshot(engine.getSnapshot());
-                  }}
-                >
-                  <Play color="#FFFFFF" size={15} />
-                  <Text style={styles.primaryButtonText}>Oyunu Başlat</Text>
-                </Pressable>
+            {scoresQuery.data?.personalBest ? (
+              <View style={styles.personalBest}>
+                <Text style={styles.personalBestTitle}>Kişisel En İyi</Text>
+                <Text style={styles.personalBestText}>
+                  Skor {scoresQuery.data.personalBest.score} · {waveLabel(scoresQuery.data.personalBest.wave)}
+                </Text>
               </View>
-            ) : null}
+            ) : (
+              <Text style={styles.helpText}>Henüz skor gönderilmedi.</Text>
+            )}
 
-            {snapshot.phase === "paused" ? (
-              <View style={styles.overlay}>
-                <Text style={styles.overlayTitle}>Duraklatıldı</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null]}
-                  onPress={() => {
-                    engine.togglePause();
-                    setSnapshot(engine.getSnapshot());
-                  }}
-                >
-                  <Play color="#FFFFFF" size={15} />
-                  <Text style={styles.primaryButtonText}>Devam Et</Text>
-                </Pressable>
-              </View>
-            ) : null}
-
-            {snapshot.phase === "gameOver" ? (
-              <View style={styles.overlay}>
-                <Text style={styles.overlayTitle}>Oyun Bitti</Text>
-                <Text style={styles.overlayText}>Skorun: {snapshot.score}</Text>
-                <View style={styles.gameOverActions}>
-                  <Pressable
-                    style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null]}
-                    onPress={() => {
-                      setHasSubmittedCurrentRun(false);
-                      engine.restart();
-                      setSnapshot(engine.getSnapshot());
-                    }}
-                  >
-                    <RefreshCw color="#FFFFFF" size={15} />
-                    <Text style={styles.primaryButtonText}>Tekrar Oyna</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={!canSubmitCurrentRun}
-                    style={({ pressed }) => [
-                      styles.secondaryButton,
-                      pressed ? styles.pressed : null,
-                      !canSubmitCurrentRun ? styles.disabled : null
-                    ]}
-                    onPress={() => {
-                      submitMutation.mutate({
-                        score: snapshot.score,
-                        wave: snapshot.level
-                      });
-                    }}
-                  >
-                    {submitMutation.isPending
-                      ? <ActivityIndicator color="#FFFFFF" size="small" />
-                      : <Send color="#FFFFFF" size={15} />}
-                    <Text style={styles.primaryButtonText}>
-                      {hasSubmittedCurrentRun ? "Skor Gönderildi" : "Skoru Gönder"}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {(scoresQuery.data?.leaderboard ?? []).slice(0, 10).map((entry, index) => (
+                <View key={entry.id} style={styles.rankRow}>
+                  <View style={styles.rankLeft}>
+                    <Text
+                      style={[
+                        styles.rankNumber,
+                        index < 3 ? { color: RANK_COLORS[index] } : { color: colors.inkMuted }
+                      ]}
+                    >
+                      {index + 1}
                     </Text>
-                  </Pressable>
+                    <View style={styles.rankCopy}>
+                      <Text style={styles.rankName}>{entry.attendee?.name ?? "Katılımcı"}</Text>
+                      <Text style={styles.rankMode}>{waveLabel(entry.wave)}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.rankBadge, index === 0 ? styles.rankBadgeGold : null]}>
+                    <Text style={[styles.rankScore, index === 0 ? styles.rankScoreGold : null]}>{entry.score}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : null}
+              ))}
+            </ScrollView>
           </View>
-        </View>
-
-        <View style={styles.handHeader}>
-          <Swords color={colors.copper} size={15} />
-          <Text style={styles.handHeaderText}>Elindeki Bloklar</Text>
-        </View>
-
-        <View style={styles.handRow}>
-          {snapshot.hand.map((block, index) => (
-            <HandBlockCard
-              key={block.id}
-              block={block}
-              selected={snapshot.selectedIndex === index}
-              disabled={snapshot.phase !== "playing" || block.placed}
-              onPress={() => {
-                engine.selectBlock(index);
-                setSnapshot(engine.getSnapshot());
-              }}
-            />
-          ))}
-        </View>
+        ) : null}
       </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Trophy color={colors.accent} size={16} />
-          <Text style={styles.cardTitle}>Liderlik Tablosu</Text>
-        </View>
-        {scoresQuery.isLoading ? <ActivityIndicator color={colors.accent} size="small" /> : null}
-        {scoresQuery.data?.personalBest ? (
-          <View style={styles.personalBest}>
-            <Text style={styles.personalBestTitle}>Kişisel En İyi</Text>
-            <Text style={styles.personalBestText}>
-              Skor {scoresQuery.data.personalBest.score} · Dalga {scoresQuery.data.personalBest.wave}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.helpText}>Henüz skor gönderilmedi.</Text>
-        )}
-
-        {(scoresQuery.data?.leaderboard ?? []).slice(0, 10).map((entry, index) => (
-          <View key={entry.id} style={styles.rankRow}>
-            <View style={styles.rankLeft}>
-              <Text
-                style={[
-                  styles.rankNumber,
-                  index < 3 ? { color: RANK_COLORS[index] } : { color: colors.inkMuted }
-                ]}
-              >
-                {index + 1}
-              </Text>
-              <Text style={styles.rankName}>{entry.attendee?.name ?? "Katılımcı"}</Text>
-            </View>
-            <View style={[styles.rankBadge, index === 0 ? styles.rankBadgeGold : null]}>
-              <Text style={[styles.rankScore, index === 0 ? styles.rankScoreGold : null]}>{entry.score}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-    </ScreenShell>
-  );
-}
-
-function MetricPill({ label, value }: { label: string; value: string | number }) {
-  return (
-    <View style={styles.metricPill}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
 }
 
-function HandBlockCard({
-  block,
-  selected,
-  disabled,
-  onPress
-}: {
-  block: HandBlock;
-  selected: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const shapeRows = Math.max(...block.shape.map(([r]) => r), 0) + 1;
-  const shapeCols = Math.max(...block.shape.map(([, c]) => c), 0) + 1;
-  const shapeSet = new Set(block.shape.map(([r, c]) => `${r}:${c}`));
-
-  return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.handCard,
-        selected ? styles.handCardSelected : null,
-        block.placed ? styles.handCardPlaced : null,
-        disabled ? styles.disabled : null,
-        pressed ? styles.pressed : null
-      ]}
-    >
-      <View style={styles.handGridWrap}>
-        {Array.from({ length: shapeRows }).map((_, row) => (
-          <View key={`shape-row-${row}`} style={styles.handGridRow}>
-            {Array.from({ length: shapeCols }).map((__, col) => {
-              const active = shapeSet.has(`${row}:${col}`);
-              return (
-                <View
-                  key={`shape-cell-${row}-${col}`}
-                  style={[
-                    styles.handGridCell,
-                    active
-                      ? { backgroundColor: COLOR_HEX[block.color] }
-                      : styles.handGridCellEmpty
-                  ]}
-                />
-              );
-            })}
-          </View>
-        ))}
-      </View>
-      <Text style={styles.handCardLabel}>{block.color}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  gameCard: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderColor: "rgba(139,92,246,0.15)",
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    padding: spacing.md
+  root: {
+    backgroundColor: "#000000",
+    flex: 1
   },
-  gameHeader: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.sm
-  },
-  metricPill: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
+  stage: {
+    backgroundColor: "#000000",
     flex: 1,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 8
-  },
-  metricLabel: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8
-  },
-  metricValue: {
-    color: colors.ink,
-    fontFamily: typography.display,
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 2
-  },
-  statusBar: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderColor: "rgba(255,255,255,0.07)",
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8
-  },
-  statusText: {
-    color: colors.inkMuted,
-    flex: 1,
-    fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "700",
-    marginRight: spacing.xs
-  },
-  pauseButton: {
-    alignItems: "center",
-    backgroundColor: colors.accent,
-    borderRadius: radii.pill,
-    height: 28,
-    justifyContent: "center",
-    width: 28
-  },
-  boardWrap: {
-    alignItems: "center"
-  },
-  board: {
-    backgroundColor: colors.backgroundDeep,
-    borderColor: "rgba(139,92,246,0.28)",
-    borderRadius: radii.md,
-    borderWidth: 1,
-    overflow: "hidden",
     position: "relative"
   },
-  boardRow: {
-    flexDirection: "row"
+  webView: {
+    backgroundColor: "#000000",
+    flex: 1
   },
-  boardCell: {
-    borderWidth: 1
+  topOverlay: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    left: spacing.xs,
+    position: "absolute",
+    right: spacing.xs,
+    top: 0,
+    zIndex: 20
   },
-  overlay: {
+  iconButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(4,3,16,0.78)",
+    borderColor: "rgba(255,255,255,0.18)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: "center",
+    width: 42
+  },
+  iconButtonActive: {
+    backgroundColor: colors.accent,
+    borderColor: "rgba(255,255,255,0.32)"
+  },
+  titlePill: {
+    backgroundColor: "rgba(4,3,16,0.78)",
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingHorizontal: spacing.md
+  },
+  title: {
+    color: "#FFFFFF",
+    fontFamily: typography.display,
+    fontSize: 15,
+    fontWeight: "800"
+  },
+  subtitle: {
+    color: "rgba(255,255,255,0.68)",
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 1
+  },
+  overlaySpacer: {
+    flex: 1
+  },
+  loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "rgba(4,3,16,0.9)",
+    backgroundColor: colors.backgroundDeep,
     justifyContent: "center",
-    padding: spacing.md
+    zIndex: 10
   },
-  overlayTitle: {
-    color: colors.ink,
+  loadingText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: spacing.sm
+  },
+  errorContainer: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.xl
+  },
+  errorTitle: {
+    color: "#FFFFFF",
     fontFamily: typography.display,
     fontSize: 20,
     fontWeight: "800"
   },
-  overlayText: {
+  errorText: {
     color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: spacing.xs,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.sm,
     textAlign: "center"
   },
-  primaryButton: {
-    alignItems: "center",
+  retryButton: {
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12
   },
-  secondaryButton: {
-    alignItems: "center",
-    backgroundColor: colors.copper,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10
-  },
-  primaryButtonText: {
+  retryText: {
     color: "#FFFFFF",
     fontFamily: typography.body,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800"
   },
-  gameOverActions: {
+  scorePanel: {
+    backgroundColor: "rgba(4,3,16,0.88)",
+    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    left: spacing.sm,
+    maxHeight: "48%",
+    overflow: "hidden",
+    padding: spacing.md,
+    position: "absolute",
+    right: spacing.sm,
+    zIndex: 18
+  },
+  scoreHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm
+  },
+  scoreTitleRow: {
+    alignItems: "center",
     flexDirection: "row",
     gap: spacing.xs
   },
-  handHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.md
-  },
-  handHeaderText: {
-    color: colors.copper,
-    fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "800"
-  },
-  handRow: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginTop: spacing.xs
-  },
-  handCard: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderColor: "rgba(255,255,255,0.08)",
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 10
-  },
-  handCardSelected: {
-    borderColor: colors.accent,
-    borderWidth: 2
-  },
-  handCardPlaced: {
-    opacity: 0.5
-  },
-  handGridWrap: {
-    gap: 2
-  },
-  handGridRow: {
-    flexDirection: "row",
-    gap: 2
-  },
-  handGridCell: {
-    borderRadius: 3,
-    height: 12,
-    width: 12
-  },
-  handGridCellEmpty: {
-    backgroundColor: "rgba(255,255,255,0.08)"
-  },
-  handCardLabel: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 6,
-    textTransform: "uppercase"
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderColor: "rgba(139,92,246,0.15)",
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    padding: spacing.md
-  },
-  cardHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.sm
-  },
-  cardTitle: {
+  scoreTitle: {
     color: colors.ink,
     fontFamily: typography.display,
-    fontSize: 17,
-    fontWeight: "700"
-  },
-  helpText: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: 16,
+    fontWeight: "800"
   },
   personalBest: {
-    backgroundColor: "rgba(139,92,246,0.1)",
+    backgroundColor: colors.accentSoft,
     borderColor: "rgba(139,92,246,0.25)",
     borderRadius: radii.md,
     borderWidth: 1,
     marginBottom: spacing.sm,
-    marginTop: spacing.xs,
     padding: spacing.sm
   },
   personalBestTitle: {
     color: colors.accent,
     fontFamily: typography.body,
     fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5
+    fontWeight: "900"
   },
   personalBestText: {
     color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: 2
+  },
+  helpText: {
+    color: colors.inkMuted,
     fontFamily: typography.body,
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 3
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: spacing.sm
   },
   rankRow: {
     alignItems: "center",
-    borderBottomColor: colors.line,
+    borderBottomColor: "rgba(255,255,255,0.06)",
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
+    minHeight: 48,
     paddingVertical: 9
   },
   rankLeft: {
     alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm
+    flex: 1,
+    flexDirection: "row"
   },
   rankNumber: {
     fontFamily: typography.display,
-    fontSize: 13,
-    fontWeight: "800",
-    width: 20
+    fontSize: 15,
+    fontWeight: "900",
+    marginRight: spacing.sm,
+    width: 24
+  },
+  rankCopy: {
+    flex: 1
   },
   rankName: {
     color: colors.ink,
     fontFamily: typography.body,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "800"
+  },
+  rankMode: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2
   },
   rankBadge: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3
+    minWidth: 64,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6
   },
   rankBadgeGold: {
-    backgroundColor: "rgba(201,169,110,0.15)",
-    borderColor: "rgba(201,169,110,0.3)",
-    borderWidth: 1
+    backgroundColor: colors.copperSoft
   },
   rankScore: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "800"
+    color: colors.ink,
+    fontFamily: typography.display,
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "center"
   },
   rankScoreGold: {
     color: colors.copper
   },
-  disabled: {
-    opacity: 0.45
-  },
   pressed: {
-    opacity: 0.82
+    opacity: 0.72
   }
 });

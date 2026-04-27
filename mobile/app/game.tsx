@@ -1,133 +1,174 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
-import { WebView } from "react-native-webview";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowLeft } from "lucide-react-native";
 import { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
+import { ArrowLeft, Maximize2, Minimize2, RefreshCw } from "lucide-react-native";
+import { BLOCKERINO_VIEWPORT_SCRIPT } from "../src/game/blockerino-web-scripts";
+import { useBlockerinoHtml } from "../src/game/use-blockerino-html";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
-
-const GAME_URL = "https://itch.io/embed-upload/15862237?color=0A1C3D";
 
 export default function GameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [webViewLoading, setWebViewLoading] = useState(true);
+  const [webViewError, setWebViewError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { html, loading: htmlLoading, error: htmlError } = useBlockerinoHtml(reloadKey);
+  const loading = htmlLoading || webViewLoading;
+  const hasError = Boolean(htmlError) || webViewError;
+
+  function reloadGame() {
+    setWebViewError(false);
+    setWebViewLoading(true);
+    setReloadKey((current) => current + 1);
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <ArrowLeft color={colors.ink} size={20} />
-        </Pressable>
-        <View style={styles.headerTitle}>
-          <Text style={styles.title}>Diş Savunucuları</Text>
-          <Text style={styles.subtitle}>Mikro Macera</Text>
-        </View>
-      </View>
-
-      <View style={styles.gameContainer}>
-        {loading && !error ? (
+    <View style={styles.root}>
+      <StatusBar hidden={isFullscreen} style="light" />
+      <View style={styles.stage}>
+        {loading && !hasError ? (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator color={colors.accent} size="large" />
-            <Text style={styles.loadingText}>Oyun yükleniyor...</Text>
+            <Text style={styles.loadingText}>Blockerino hazırlanıyor...</Text>
           </View>
         ) : null}
 
-        {error ? (
+        {hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorTitle}>Oyun yüklenemedi</Text>
-            <Text style={styles.errorText}>
-              İnternet bağlantınızı kontrol edin ve tekrar deneyin.
-            </Text>
-            <Pressable
-              onPress={() => {
-                setError(false);
-                setLoading(true);
-              }}
-              style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
-            >
+            <Text style={styles.errorText}>Uygulama içindeki Blockerino dosyası açılamadı.</Text>
+            <Pressable onPress={reloadGame} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
               <Text style={styles.retryText}>Tekrar Dene</Text>
             </Pressable>
           </View>
         ) : (
-          <WebView
-            source={{ uri: GAME_URL }}
-            style={styles.webview}
-            allowsFullscreenVideo
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            domStorageEnabled
-            onLoadEnd={() => setLoading(false)}
-            onError={() => {
-              setLoading(false);
-              setError(true);
-            }}
-            onHttpError={() => {
-              setLoading(false);
-              setError(true);
-            }}
-          />
+          html ? (
+            <WebView
+              key={reloadKey}
+              source={{ html, baseUrl: "https://blockerino.local/" }}
+              originWhitelist={["*"]}
+              style={styles.webView}
+              injectedJavaScriptBeforeContentLoaded={BLOCKERINO_VIEWPORT_SCRIPT}
+              allowsFullscreenVideo
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled
+              domStorageEnabled
+              scrollEnabled={false}
+              bounces={false}
+              onLoadStart={() => {
+                setWebViewLoading(true);
+                setWebViewError(false);
+              }}
+              onLoadEnd={() => setWebViewLoading(false)}
+              onError={() => {
+                setWebViewLoading(false);
+                setWebViewError(true);
+              }}
+              onHttpError={() => {
+                setWebViewLoading(false);
+                setWebViewError(true);
+              }}
+            />
+          ) : null
         )}
+
+        <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, spacing.xs) }]}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            hitSlop={8}
+          >
+            <ArrowLeft color="#FFFFFF" size={20} />
+          </Pressable>
+
+          {!isFullscreen ? (
+            <View style={styles.titlePill}>
+              <Text style={styles.title}>Blockerino</Text>
+              <Text style={styles.subtitle}>8x8 Blok Bulmacası</Text>
+            </View>
+          ) : (
+            <View style={styles.overlaySpacer} />
+          )}
+
+          <Pressable onPress={reloadGame} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+            <RefreshCw color="#FFFFFF" size={18} />
+          </Pressable>
+          <Pressable
+            onPress={() => setIsFullscreen((current) => !current)}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          >
+            {isFullscreen ? <Minimize2 color="#FFFFFF" size={18} /> : <Maximize2 color="#FFFFFF" size={18} />}
+          </Pressable>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.background,
+  root: {
+    backgroundColor: "#000000",
     flex: 1
   },
-  header: {
+  stage: {
+    backgroundColor: "#000000",
+    flex: 1,
+    position: "relative"
+  },
+  webView: {
+    backgroundColor: "#000000",
+    flex: 1
+  },
+  topOverlay: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm
+    gap: spacing.xs,
+    left: spacing.xs,
+    position: "absolute",
+    right: spacing.xs,
+    top: 0,
+    zIndex: 20
   },
-  backButton: {
+  iconButton: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(4,3,16,0.78)",
+    borderColor: "rgba(255,255,255,0.18)",
     borderRadius: radii.pill,
-    height: 40,
+    borderWidth: 1,
+    height: 42,
     justifyContent: "center",
-    width: 40
+    width: 42
   },
-  pressed: {
-    opacity: 0.75
-  },
-  headerTitle: {
-    flex: 1
+  titlePill: {
+    backgroundColor: "rgba(4,3,16,0.78)",
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 42,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md
   },
   title: {
-    color: colors.ink,
+    color: "#FFFFFF",
     fontFamily: typography.display,
-    fontSize: 18,
-    fontWeight: "700"
+    fontSize: 15,
+    fontWeight: "800"
   },
   subtitle: {
-    color: colors.inkMuted,
+    color: "rgba(255,255,255,0.68)",
     fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
     marginTop: 1
   },
-  gameContainer: {
-    flex: 1,
-    overflow: "hidden",
-    borderTopLeftRadius: radii.lg,
-    borderTopRightRadius: radii.lg,
-    backgroundColor: colors.backgroundDeep
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: colors.backgroundDeep
+  overlaySpacer: {
+    flex: 1
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -140,7 +181,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: typography.body,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     marginTop: spacing.sm
   },
   errorContainer: {
@@ -153,7 +194,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: typography.display,
     fontSize: 20,
-    fontWeight: "700"
+    fontWeight: "800"
   },
   errorText: {
     color: colors.inkMuted,
@@ -175,5 +216,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 14,
     fontWeight: "800"
+  },
+  pressed: {
+    opacity: 0.72
   }
 });

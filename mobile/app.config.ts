@@ -10,6 +10,9 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "light",
   icon: "./assets/icon.png",
+  assetBundlePatterns: [
+    "assets/**/*"
+  ],
   newArchEnabled: true,
   ios: {
     icon: "./assets/ios-icon.png",

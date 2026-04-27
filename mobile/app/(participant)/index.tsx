@@ -118,9 +118,9 @@ export default function ParticipantHomeScreen() {
         <View style={styles.plaqueBlastCopy}>
           <View style={styles.plaqueBlastTitleRow}>
             <Gamepad2 color={colors.accent} size={16} />
-            <Text style={styles.plaqueBlastLabel}>PLAQUE BLAST</Text>
+            <Text style={styles.plaqueBlastLabel}>BLOCKERINO</Text>
           </View>
-          <Text style={styles.plaqueBlastSubtitle}>Yerleşik oyunu aç, oynayıp skorunu liderliğe gönder.</Text>
+          <Text style={styles.plaqueBlastSubtitle}>Gömülü Blockerino'yu aç, oynayıp skorunu liderliğe gönder.</Text>
         </View>
         <Text style={styles.plaqueBlastAction}>Oyunu Aç ›</Text>
       </Pressable>

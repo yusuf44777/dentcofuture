@@ -57,6 +57,9 @@ export default function ParticipantLayout() {
         options={{
           title: "Oyun",
           href: isProfileLocked ? null : undefined,
+          tabBarStyle: {
+            display: "none"
+          },
           tabBarIcon: ({ color, size }) => <Gamepad2 color={color} size={size - 2} />
         }}
       />
