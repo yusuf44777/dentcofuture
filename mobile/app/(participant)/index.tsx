@@ -1,26 +1,34 @@
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Gamepad2, Heart, Images, MessageCircle, Play, RefreshCw, Star, Zap } from "lucide-react-native";
+import { CalendarDays, Gamepad2, Star, Zap } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { fetchLiveState, fetchNetworkingGalleryFeed } from "../../src/lib/mobile-api";
+import { fetchLiveState } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 import { getOutlierTitle } from "../../src/lib/outlier-quiz";
 
-function formatGalleryDate(value: string) {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) {
-    return "";
-  }
+type ProgramItem = {
+  time: string;
+  title: string;
+  type: "talk" | "break";
+  speaker?: string;
+};
 
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-}
+const PROGRAM_FLOW: ProgramItem[] = [
+  { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
+  { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
+  { time: "11:30-12:00", title: "1. Konuşmacı: Dr. Sina Saygılı", type: "talk", speaker: "Dr. Sina Saygılı" },
+  { time: "12:00-12:20", title: "Kahve + Networking", type: "break" },
+  { time: "12:30-13:00", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk", speaker: "Doç. Dr. Gaye Keser" },
+  { time: "13:00-13:10", title: "Networking + Kahve Arası", type: "break" },
+  { time: "13:10-13:40", title: "3. Konuşmacı: Prof. Dr. Alper Alkan", type: "talk", speaker: "Prof. Dr. Alper Alkan" },
+  { time: "13:40-14:20", title: "Yemek Arası + Networking", type: "break" },
+  { time: "14:30-15:00", title: "4. Konuşmacı: Dr. Esra Bozbay", type: "talk", speaker: "Dr. Esra Bozbay" },
+  { time: "15:00-15:10", title: "Networking + Kahve Arası", type: "break" },
+  { time: "15:10-15:40", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk", speaker: "Dt. Kerem İnan" },
+  { time: "15:40-16:00", title: "Kapanış ve Ödül Takdimi", type: "break" }
+];
 
 export default function ParticipantHomeScreen() {
   const router = useRouter();
@@ -31,13 +39,6 @@ export default function ParticipantHomeScreen() {
     queryFn: fetchLiveState,
     enabled: Boolean(me && me.role === "participant"),
     refetchInterval: 12_000
-  });
-
-  const galleryFeedQuery = useQuery({
-    queryKey: ["mobile-home-gallery-feed"],
-    queryFn: () => fetchNetworkingGalleryFeed(6),
-    enabled: Boolean(me && me.role === "participant" && me.attendee),
-    refetchInterval: 18_000
   });
 
   if (query.isLoading || !me) {
@@ -60,7 +61,6 @@ export default function ParticipantHomeScreen() {
   const outlierTitle = outlierScore > 0 ? getOutlierTitle(outlierScore) : null;
   const liveQuestionCount = liveQuery.data?.questions.length ?? 0;
   const activePoll = liveQuery.data?.activePoll;
-  const activityPosts = galleryFeedQuery.data?.posts ?? [];
 
   return (
     <ScreenShell
@@ -95,9 +95,9 @@ export default function ParticipantHomeScreen() {
           accent={colors.accent}
         />
         <MetricCard
-          label="Paylaşım"
-          value={String(activityPosts.length)}
-          icon={<Images color="#C9A96E" size={14} />}
+          label="Program"
+          value={String(PROGRAM_FLOW.length)}
+          icon={<CalendarDays color="#C9A96E" size={14} />}
           accent="#C9A96E"
         />
       </View>
@@ -131,140 +131,37 @@ export default function ParticipantHomeScreen() {
         </Pressable>
       ) : null}
 
-      {/* Activity Feed */}
-      <View style={styles.activityCard}>
+      {/* Program Flow */}
+      <View style={styles.programCard}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderTitle}>
-            <Images color={colors.copper} size={16} />
-            <Text style={styles.cardTitle}>Etkinlik Akışı</Text>
+            <CalendarDays color={colors.copper} size={16} />
+            <Text style={styles.cardTitle}>Program Akışı</Text>
           </View>
-          <Pressable
-            style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
-            onPress={() => {
-              void galleryFeedQuery.refetch();
-            }}
-          >
-            <RefreshCw color={colors.inkMuted} size={15} />
-          </Pressable>
+          <Text style={styles.programKicker}>Günün akışı</Text>
         </View>
 
-        {galleryFeedQuery.isLoading ? (
-          <View style={styles.activityState}>
-            <ActivityIndicator color={colors.accent} size="small" />
-            <Text style={styles.loaderText}>Akış yükleniyor...</Text>
-          </View>
-        ) : null}
-
-        {galleryFeedQuery.isError ? (
-          <View style={styles.activityErrorCard}>
-            <Text style={styles.activityErrorText}>
-              {galleryFeedQuery.error instanceof Error
-                ? galleryFeedQuery.error.message
-                : "Etkinlik akışı alınamadı."}
-            </Text>
-          </View>
-        ) : null}
-
-        {!galleryFeedQuery.isLoading && activityPosts.length === 0 ? (
-          <Text style={styles.activityEmptyText}>Henüz etkinlik paylaşımı yok.</Text>
-        ) : null}
-
-        {activityPosts.slice(0, 4).map((post) => {
-          const firstMedia =
-            post.mediaItems && post.mediaItems.length > 0
-              ? post.mediaItems[0]
-              : {
-                  id: post.id,
-                  mediaType: post.mediaType,
-                  publicUrl: post.publicUrl
-                };
-          const avatarLetter = post.uploaderName.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";
-
+        {PROGRAM_FLOW.map((item) => {
+          const isTalk = item.type === "talk";
           return (
-            <View key={post.id} style={styles.activityPostCard}>
-              <View style={styles.activityPostHeader}>
-                <View style={styles.activityAvatar}>
-                  <Text style={styles.activityAvatarText}>{avatarLetter}</Text>
-                </View>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activityAuthorBlock,
-                    pressed ? styles.pressed : null
-                  ]}
-                  onPress={() => {
-                    router.push(`/(participant)/uploader?name=${encodeURIComponent(post.uploaderName)}` as never);
-                  }}
-                >
-                  <Text style={styles.activityAuthor}>{post.uploaderName}</Text>
-                  <Text style={styles.activityDate}>{formatGalleryDate(post.createdAt)}</Text>
-                </Pressable>
-                {post.mediaCount > 1 ? (
-                  <View style={styles.activityMediaBadge}>
-                    <Text style={styles.activityMediaBadgeText}>{post.mediaCount} medya</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {firstMedia.mediaType === "photo" ? (
-                <Pressable
-                  style={({ pressed }) => [pressed ? styles.pressed : null]}
-                  onPress={() => {
-                    router.push("/(participant)/networking" as never);
-                  }}
-                >
-                  <Image
-                    source={{ uri: firstMedia.publicUrl }}
-                    resizeMode="cover"
-                    style={styles.activityMedia}
-                  />
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activityVideoCard,
-                    pressed ? styles.pressed : null
-                  ]}
-                  onPress={() => {
-                    void Linking.openURL(firstMedia.publicUrl);
-                  }}
-                >
-                  <Play color={colors.copper} size={20} />
-                  <Text style={styles.activityVideoText}>Videoyu aç</Text>
-                </Pressable>
-              )}
-
-              {post.caption ? (
-                <Text style={styles.activityCaption} numberOfLines={2}>
-                  {post.caption}
+            <View
+              key={`${item.time}-${item.title}`}
+              style={[styles.programRow, isTalk ? styles.programRowTalk : null]}
+            >
+              <Text style={[styles.programTime, isTalk ? styles.programTimeTalk : null]}>
+                {item.time}
+              </Text>
+              <View style={styles.programContent}>
+                <Text style={[styles.programTitle, isTalk ? styles.programTitleTalk : null]}>
+                  {item.title}
                 </Text>
-              ) : null}
-
-              <View style={styles.activityStatsRow}>
-                <View style={styles.activityStat}>
-                  <Heart
-                    color={post.likedByMe ? colors.danger : colors.inkMuted}
-                    fill={post.likedByMe ? colors.danger : "transparent"}
-                    size={14}
-                  />
-                  <Text style={styles.activityStatText}>{post.likesCount}</Text>
-                </View>
-                <View style={styles.activityStat}>
-                  <MessageCircle color={colors.copper} size={14} />
-                  <Text style={styles.activityStatText}>{post.commentsCount}</Text>
-                </View>
+                {item.speaker ? (
+                  <Text style={styles.programSpeaker}>{item.speaker}</Text>
+                ) : null}
               </View>
             </View>
           );
         })}
-
-        <Pressable
-          style={({ pressed }) => [styles.activityOpenButton, pressed ? styles.pressed : null]}
-          onPress={() => {
-            router.push("/(participant)/networking" as never);
-          }}
-        >
-          <Text style={styles.activityOpenButtonText}>Tüm Akışı Aç</Text>
-        </Pressable>
       </View>
     </ScreenShell>
   );
@@ -408,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginLeft: spacing.sm
   },
-  activityCard: {
+  programCard: {
     backgroundColor: "rgba(255,255,255,0.03)",
     borderColor: "rgba(201,169,110,0.2)",
     borderRadius: radii.lg,
@@ -474,151 +371,58 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700"
   },
-  iconButton: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.pill,
-    height: 32,
-    justifyContent: "center",
-    width: 32
-  },
-  activityState: {
-    alignItems: "center",
-    paddingVertical: spacing.md
-  },
-  activityErrorCard: {
-    backgroundColor: colors.dangerSoft,
-    borderRadius: radii.md,
-    marginBottom: spacing.sm,
-    padding: spacing.sm
-  },
-  activityErrorText: {
-    color: colors.danger,
-    fontFamily: typography.body,
-    fontSize: 13,
-    lineHeight: 18
-  },
-  activityEmptyText: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 13,
-    paddingVertical: spacing.sm
-  },
-  activityPostCard: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    marginTop: spacing.sm,
-    overflow: "hidden",
-    padding: spacing.sm
-  },
-  activityPostHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    marginBottom: spacing.sm
-  },
-  activityAvatar: {
-    alignItems: "center",
-    backgroundColor: colors.copperSoft,
-    borderRadius: radii.pill,
-    height: 34,
-    justifyContent: "center",
-    marginRight: spacing.sm,
-    width: 34
-  },
-  activityAvatarText: {
-    color: colors.copper,
-    fontFamily: typography.body,
-    fontSize: 14,
-    fontWeight: "900"
-  },
-  activityAuthorBlock: {
-    flex: 1
-  },
-  activityAuthor: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800"
-  },
-  activityDate: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 11,
-    marginTop: 1
-  },
-  activityMediaBadge: {
-    backgroundColor: colors.copperSoft,
-    borderRadius: radii.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4
-  },
-  activityMediaBadgeText: {
+  programKicker: {
     color: colors.copper,
     fontFamily: typography.body,
     fontSize: 10,
-    fontWeight: "800"
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    textTransform: "uppercase"
   },
-  activityMedia: {
-    backgroundColor: colors.backgroundDeep,
-    borderRadius: radii.md,
-    height: 172,
-    width: "100%"
-  },
-  activityVideoCard: {
-    alignItems: "center",
-    backgroundColor: colors.backgroundDeep,
-    borderColor: colors.line,
+  programRow: {
+    backgroundColor: "rgba(255,255,255,0.025)",
+    borderColor: "rgba(139,92,246,0.16)",
     borderRadius: radii.md,
     borderWidth: 1,
-    height: 138,
-    justifyContent: "center"
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 12
   },
-  activityVideoText: {
-    color: colors.copper,
+  programRowTalk: {
+    borderColor: "rgba(139,92,246,0.3)"
+  },
+  programTime: {
+    color: "rgba(180,170,255,0.45)",
     fontFamily: typography.body,
     fontSize: 12,
-    fontWeight: "800",
-    marginTop: spacing.xs
-  },
-  activityCaption: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 13,
+    fontWeight: "900",
     lineHeight: 18,
-    marginTop: spacing.sm
+    width: 86
   },
-  activityStatsRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-    marginTop: spacing.sm
+  programTimeTalk: {
+    color: "rgba(180,170,255,0.68)"
   },
-  activityStat: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 5
+  programContent: {
+    flex: 1
   },
-  activityStatText: {
-    color: colors.inkMuted,
+  programTitle: {
+    color: "rgba(255,255,255,0.52)",
+    fontFamily: typography.body,
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 20
+  },
+  programTitleTalk: {
+    color: colors.ink
+  },
+  programSpeaker: {
+    color: "rgba(180,170,255,0.5)",
     fontFamily: typography.body,
     fontSize: 12,
-    fontWeight: "700"
-  },
-  activityOpenButton: {
-    alignItems: "center",
-    backgroundColor: colors.accent,
-    borderRadius: radii.pill,
-    justifyContent: "center",
-    marginTop: spacing.md,
-    paddingVertical: 10
-  },
-  activityOpenButtonText: {
-    color: "#FFFFFF",
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800"
+    lineHeight: 18,
+    marginTop: 2
   },
   pressed: {
     opacity: 0.82
