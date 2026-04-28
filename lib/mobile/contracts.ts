@@ -126,6 +126,8 @@ export type MobileNetworkingGalleryUploader = {
   name: string;
   role: string | null;
   classLevel: Attendee["class_level"] | null;
+  university: string | null;
+  interestArea: string | null;
   instagram: string | null;
   linkedin: string | null;
 };
@@ -145,17 +147,6 @@ export type MobileNetworkingGalleryUploaderProfile = {
   uploader: MobileNetworkingGalleryUploader;
   posts: MobileNetworkingGalleryUploaderPost[];
   refreshedAt: string;
-};
-
-export type MobileMatchThread = {
-  otherAttendee: Pick<Attendee, "id" | "name" | "role" | "instagram" | "linkedin">;
-  messages: Array<{
-    id: string;
-    senderId: string;
-    receiverId: string;
-    text: string;
-    createdAt: string;
-  }>;
 };
 
 export type StaffOverview = {

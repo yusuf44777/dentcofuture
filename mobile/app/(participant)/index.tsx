@@ -1,21 +1,26 @@
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, Gamepad2, Music2, Star, Trophy, Zap } from "lucide-react-native";
-import { WebView } from "react-native-webview";
+import { Gamepad2, Heart, Images, MessageCircle, Play, RefreshCw, Star, Zap } from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { fetchLeaderboard, fetchLiveState } from "../../src/lib/mobile-api";
+import { fetchLiveState, fetchNetworkingGalleryFeed } from "../../src/lib/mobile-api";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 import { getOutlierTitle } from "../../src/lib/outlier-quiz";
 
-const SPOTIFY_PLAYLIST_ID = "2iLymYqtGacjpfbJBSxOjA";
-const SPOTIFY_EMBED_URI =
-  `https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLIST_ID}?utm_source=generator&theme=0`;
-const SPOTIFY_WEB_URI = `https://open.spotify.com/playlist/${SPOTIFY_PLAYLIST_ID}`;
-const SPOTIFY_APP_URI = `spotify:playlist:${SPOTIFY_PLAYLIST_ID}`;
+function formatGalleryDate(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
 
-const RANK_COLORS = ["#C9A96E", "#A8A9AD", "#B87333"];
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
 
 export default function ParticipantHomeScreen() {
   const router = useRouter();
@@ -28,11 +33,11 @@ export default function ParticipantHomeScreen() {
     refetchInterval: 12_000
   });
 
-  const leaderboardQuery = useQuery({
-    queryKey: ["mobile-leaderboard"],
-    queryFn: fetchLeaderboard,
-    enabled: Boolean(me && me.role === "participant"),
-    refetchInterval: 20_000
+  const galleryFeedQuery = useQuery({
+    queryKey: ["mobile-home-gallery-feed"],
+    queryFn: () => fetchNetworkingGalleryFeed(6),
+    enabled: Boolean(me && me.role === "participant" && me.attendee),
+    refetchInterval: 18_000
   });
 
   if (query.isLoading || !me) {
@@ -50,26 +55,12 @@ export default function ParticipantHomeScreen() {
     return <Redirect href={"/(staff)" as never} />;
   }
 
-  const myRank = leaderboardQuery.data?.me?.rank;
   const myPoints = me.attendee?.points ?? 0;
   const outlierScore = me.attendee?.outlier_score ?? 0;
   const outlierTitle = outlierScore > 0 ? getOutlierTitle(outlierScore) : null;
   const liveQuestionCount = liveQuery.data?.questions.length ?? 0;
   const activePoll = liveQuery.data?.activePoll;
-
-  const openSpotifyPlaylist = async () => {
-    try {
-      const canOpenSpotifyApp = await Linking.canOpenURL(SPOTIFY_APP_URI);
-      if (canOpenSpotifyApp) {
-        await Linking.openURL(SPOTIFY_APP_URI);
-        return;
-      }
-
-      await Linking.openURL(SPOTIFY_WEB_URI);
-    } catch {
-      await Linking.openURL(SPOTIFY_WEB_URI);
-    }
-  };
+  const activityPosts = galleryFeedQuery.data?.posts ?? [];
 
   return (
     <ScreenShell
@@ -104,9 +95,9 @@ export default function ParticipantHomeScreen() {
           accent={colors.accent}
         />
         <MetricCard
-          label="Sıralama"
-          value={myRank ? `#${myRank}` : "—"}
-          icon={<Trophy color="#C9A96E" size={14} />}
+          label="Paylaşım"
+          value={String(activityPosts.length)}
+          icon={<Images color="#C9A96E" size={14} />}
           accent="#C9A96E"
         />
       </View>
@@ -120,58 +111,10 @@ export default function ParticipantHomeScreen() {
             <Gamepad2 color={colors.accent} size={16} />
             <Text style={styles.plaqueBlastLabel}>BLOCKERINO</Text>
           </View>
-          <Text style={styles.plaqueBlastSubtitle}>Gömülü Blockerino'yu aç, oynayıp skorunu liderliğe gönder.</Text>
+          <Text style={styles.plaqueBlastSubtitle}>Gömülü Blockerino'yu aç, oynayıp skorunu kaydet.</Text>
         </View>
         <Text style={styles.plaqueBlastAction}>Oyunu Aç ›</Text>
       </Pressable>
-
-      {/* Spotify Playlist */}
-      <View style={styles.spotifyCard}>
-        <View style={styles.spotifyHeader}>
-          <Music2 color={colors.copper} size={14} />
-          <Text style={styles.spotifyLabel}>ETKİNLİK PLAYLİSTİ</Text>
-        </View>
-        <View style={styles.spotifyWebViewWrap}>
-          <WebView
-            source={{ uri: SPOTIFY_EMBED_URI }}
-            style={styles.spotifyWebView}
-            scrollEnabled={false}
-            javaScriptEnabled
-            domStorageEnabled
-            thirdPartyCookiesEnabled
-            sharedCookiesEnabled
-            allowsProtectedMedia
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            setSupportMultipleWindows={false}
-            onShouldStartLoadWithRequest={(request) => {
-              const requestUrl = request.url ?? "";
-
-              if (requestUrl.startsWith("https://open.spotify.com/embed/")) {
-                return true;
-              }
-
-              if (requestUrl.startsWith("https://open.spotify.com/")) {
-                void Linking.openURL(requestUrl);
-                return false;
-              }
-
-              return true;
-            }}
-          />
-        </View>
-        <View style={styles.spotifyFooter}>
-          <Text style={styles.spotifyHint}>Çalmazsa Spotify uygulamasında aç.</Text>
-          <Pressable
-            style={({ pressed }) => [styles.spotifyOpenButton, pressed ? styles.pressed : null]}
-            onPress={() => {
-              void openSpotifyPlaylist();
-            }}
-          >
-            <Text style={styles.spotifyOpenButtonText}>Spotify&apos;da Aç</Text>
-          </Pressable>
-        </View>
-      </View>
 
       {/* Active Poll Banner */}
       {activePoll ? (
@@ -188,31 +131,140 @@ export default function ParticipantHomeScreen() {
         </Pressable>
       ) : null}
 
-      {/* Leaderboard */}
-      <View style={styles.card}>
+      {/* Activity Feed */}
+      <View style={styles.activityCard}>
         <View style={styles.cardHeader}>
-          <Crown color={colors.copper} size={16} />
-          <Text style={styles.cardTitle}>Liderlik Tablosu</Text>
+          <View style={styles.cardHeaderTitle}>
+            <Images color={colors.copper} size={16} />
+            <Text style={styles.cardTitle}>Etkinlik Akışı</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
+            onPress={() => {
+              void galleryFeedQuery.refetch();
+            }}
+          >
+            <RefreshCw color={colors.inkMuted} size={15} />
+          </Pressable>
         </View>
-        {leaderboardQuery.isLoading ? (
-          <ActivityIndicator color={colors.accent} size="small" />
-        ) : (
-          (leaderboardQuery.data?.leaderboard ?? []).slice(0, 5).map((item, index) => (
-            <View key={item.id} style={styles.rankRow}>
-              <View style={styles.rankLeft}>
-                <Text style={[styles.rankNumber, { color: RANK_COLORS[index] ?? colors.inkMuted }]}>
-                  {index + 1}
-                </Text>
-                <Text style={styles.rankName}>{item.name}</Text>
+
+        {galleryFeedQuery.isLoading ? (
+          <View style={styles.activityState}>
+            <ActivityIndicator color={colors.accent} size="small" />
+            <Text style={styles.loaderText}>Akış yükleniyor...</Text>
+          </View>
+        ) : null}
+
+        {galleryFeedQuery.isError ? (
+          <View style={styles.activityErrorCard}>
+            <Text style={styles.activityErrorText}>
+              {galleryFeedQuery.error instanceof Error
+                ? galleryFeedQuery.error.message
+                : "Etkinlik akışı alınamadı."}
+            </Text>
+          </View>
+        ) : null}
+
+        {!galleryFeedQuery.isLoading && activityPosts.length === 0 ? (
+          <Text style={styles.activityEmptyText}>Henüz etkinlik paylaşımı yok.</Text>
+        ) : null}
+
+        {activityPosts.slice(0, 4).map((post) => {
+          const firstMedia =
+            post.mediaItems && post.mediaItems.length > 0
+              ? post.mediaItems[0]
+              : {
+                  id: post.id,
+                  mediaType: post.mediaType,
+                  publicUrl: post.publicUrl
+                };
+          const avatarLetter = post.uploaderName.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";
+
+          return (
+            <View key={post.id} style={styles.activityPostCard}>
+              <View style={styles.activityPostHeader}>
+                <View style={styles.activityAvatar}>
+                  <Text style={styles.activityAvatarText}>{avatarLetter}</Text>
+                </View>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activityAuthorBlock,
+                    pressed ? styles.pressed : null
+                  ]}
+                  onPress={() => {
+                    router.push(`/(participant)/uploader?name=${encodeURIComponent(post.uploaderName)}` as never);
+                  }}
+                >
+                  <Text style={styles.activityAuthor}>{post.uploaderName}</Text>
+                  <Text style={styles.activityDate}>{formatGalleryDate(post.createdAt)}</Text>
+                </Pressable>
+                {post.mediaCount > 1 ? (
+                  <View style={styles.activityMediaBadge}>
+                    <Text style={styles.activityMediaBadgeText}>{post.mediaCount} medya</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={[styles.rankBadge, index === 0 ? styles.rankBadgeGold : null]}>
-                <Text style={[styles.rankPoints, index === 0 ? styles.rankPointsGold : null]}>
-                  {item.points}
+
+              {firstMedia.mediaType === "photo" ? (
+                <Pressable
+                  style={({ pressed }) => [pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    router.push("/(participant)/networking" as never);
+                  }}
+                >
+                  <Image
+                    source={{ uri: firstMedia.publicUrl }}
+                    resizeMode="cover"
+                    style={styles.activityMedia}
+                  />
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activityVideoCard,
+                    pressed ? styles.pressed : null
+                  ]}
+                  onPress={() => {
+                    void Linking.openURL(firstMedia.publicUrl);
+                  }}
+                >
+                  <Play color={colors.copper} size={20} />
+                  <Text style={styles.activityVideoText}>Videoyu aç</Text>
+                </Pressable>
+              )}
+
+              {post.caption ? (
+                <Text style={styles.activityCaption} numberOfLines={2}>
+                  {post.caption}
                 </Text>
+              ) : null}
+
+              <View style={styles.activityStatsRow}>
+                <View style={styles.activityStat}>
+                  <Heart
+                    color={post.likedByMe ? colors.danger : colors.inkMuted}
+                    fill={post.likedByMe ? colors.danger : "transparent"}
+                    size={14}
+                  />
+                  <Text style={styles.activityStatText}>{post.likesCount}</Text>
+                </View>
+                <View style={styles.activityStat}>
+                  <MessageCircle color={colors.copper} size={14} />
+                  <Text style={styles.activityStatText}>{post.commentsCount}</Text>
+                </View>
               </View>
             </View>
-          ))
-        )}
+          );
+        })}
+
+        <Pressable
+          style={({ pressed }) => [styles.activityOpenButton, pressed ? styles.pressed : null]}
+          onPress={() => {
+            router.push("/(participant)/networking" as never);
+          }}
+        >
+          <Text style={styles.activityOpenButtonText}>Tüm Akışı Aç</Text>
+        </Pressable>
       </View>
     </ScreenShell>
   );
@@ -356,63 +408,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginLeft: spacing.sm
   },
-  spotifyCard: {
+  activityCard: {
     backgroundColor: "rgba(255,255,255,0.03)",
     borderColor: "rgba(201,169,110,0.2)",
     borderRadius: radii.lg,
     borderWidth: 1,
     marginBottom: spacing.md,
-    overflow: "hidden"
-  },
-  spotifyHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs
-  },
-  spotifyLabel: {
-    color: colors.copper,
-    fontFamily: typography.body,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.5
-  },
-  spotifyWebViewWrap: {
-    height: 152,
-    overflow: "hidden"
-  },
-  spotifyWebView: {
-    flex: 1,
-    backgroundColor: "transparent"
-  },
-  spotifyFooter: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm
-  },
-  spotifyHint: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 11
-  },
-  spotifyOpenButton: {
-    backgroundColor: "rgba(29,185,84,0.2)",
-    borderColor: "rgba(29,185,84,0.45)",
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7
-  },
-  spotifyOpenButtonText: {
-    color: "#1DB954",
-    fontFamily: typography.body,
-    fontSize: 11,
-    fontWeight: "800"
+    padding: spacing.md
   },
   pollBanner: {
     alignItems: "center",
@@ -455,19 +457,16 @@ const styles = StyleSheet.create({
     fontWeight: "300",
     marginLeft: spacing.xs
   },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderColor: "rgba(139,92,246,0.15)",
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    marginBottom: spacing.md,
-    padding: spacing.md
-  },
   cardHeader: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.xs,
+    justifyContent: "space-between",
     marginBottom: spacing.sm
+  },
+  cardHeaderTitle: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs
   },
   cardTitle: {
     color: colors.ink,
@@ -475,50 +474,151 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700"
   },
-  rankRow: {
+  iconButton: {
     alignItems: "center",
-    borderBottomColor: colors.line,
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 9
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    height: 32,
+    justifyContent: "center",
+    width: 32
   },
-  rankLeft: {
+  activityState: {
     alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm
+    paddingVertical: spacing.md
   },
-  rankNumber: {
-    fontFamily: typography.display,
+  activityErrorCard: {
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radii.md,
+    marginBottom: spacing.sm,
+    padding: spacing.sm
+  },
+  activityErrorText: {
+    color: colors.danger,
+    fontFamily: typography.body,
     fontSize: 13,
-    fontWeight: "800",
-    width: 20
+    lineHeight: 18
   },
-  rankName: {
+  activityEmptyText: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 13,
+    paddingVertical: spacing.sm
+  },
+  activityPostCard: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    marginTop: spacing.sm,
+    overflow: "hidden",
+    padding: spacing.sm
+  },
+  activityPostHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    marginBottom: spacing.sm
+  },
+  activityAvatar: {
+    alignItems: "center",
+    backgroundColor: colors.copperSoft,
+    borderRadius: radii.pill,
+    height: 34,
+    justifyContent: "center",
+    marginRight: spacing.sm,
+    width: 34
+  },
+  activityAvatarText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  activityAuthorBlock: {
+    flex: 1
+  },
+  activityAuthor: {
     color: colors.ink,
     fontFamily: typography.body,
     fontSize: 13,
-    fontWeight: "700"
+    fontWeight: "800"
   },
-  rankBadge: {
-    backgroundColor: colors.surfaceMuted,
+  activityDate: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    marginTop: 1
+  },
+  activityMediaBadge: {
+    backgroundColor: colors.copperSoft,
     borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 3
+    paddingHorizontal: 8,
+    paddingVertical: 4
   },
-  rankBadgeGold: {
-    backgroundColor: "rgba(201,169,110,0.15)",
-    borderColor: "rgba(201,169,110,0.3)",
-    borderWidth: 1
+  activityMediaBadgeText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800"
   },
-  rankPoints: {
+  activityMedia: {
+    backgroundColor: colors.backgroundDeep,
+    borderRadius: radii.md,
+    height: 172,
+    width: "100%"
+  },
+  activityVideoCard: {
+    alignItems: "center",
+    backgroundColor: colors.backgroundDeep,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    height: 138,
+    justifyContent: "center"
+  },
+  activityVideoText: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: spacing.xs
+  },
+  activityCaption: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.sm
+  },
+  activityStatsRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm
+  },
+  activityStat: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 5
+  },
+  activityStatText: {
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 12,
-    fontWeight: "800"
+    fontWeight: "700"
   },
-  rankPointsGold: {
-    color: colors.copper
+  activityOpenButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radii.pill,
+    justifyContent: "center",
+    marginTop: spacing.md,
+    paddingVertical: 10
+  },
+  activityOpenButtonText: {
+    color: "#FFFFFF",
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "800"
   },
   pressed: {
     opacity: 0.82

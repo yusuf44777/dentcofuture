@@ -125,6 +125,8 @@ export type MobileNetworkingGalleryUploader = {
   name: string;
   role: string | null;
   classLevel: AttendeeClassLevel | null;
+  university: string | null;
+  interestArea: string | null;
   instagram: string | null;
   linkedin: string | null;
 };
@@ -174,19 +176,6 @@ export type MobileLiveState = {
   myPollVoteOptionIndex: number | null;
   reactionCounts: Record<string, number>;
   leaderboard: Array<Pick<Attendee, "id" | "name" | "role" | "points">>;
-};
-
-export type MobileThreadMessage = {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  text: string;
-  createdAt: string;
-};
-
-export type MobileMatchThread = {
-  otherAttendee: Pick<Attendee, "id" | "name" | "role" | "instagram" | "linkedin">;
-  messages: MobileThreadMessage[];
 };
 
 export type StaffOverview = {

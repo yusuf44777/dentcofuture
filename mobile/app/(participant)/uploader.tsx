@@ -29,6 +29,22 @@ function formatGalleryDate(value: string) {
   }).format(date);
 }
 
+function formatClassLevelLabel(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  if (value === "Mezun" || value === "Hazırlık") {
+    return value;
+  }
+  return `${value}. sınıf`;
+}
+
+function getRoleLabel(value: string | null | undefined) {
+  if (value === "Student") return "Öğrenci";
+  if (value === "Academic") return "Akademisyen";
+  return "Katılımcı";
+}
+
 export default function ParticipantUploaderProfileScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ name?: string }>();
@@ -90,17 +106,32 @@ export default function ParticipantUploaderProfileScreen() {
           <View style={styles.card}>
             <Text style={styles.profileName}>{profileQuery.data.uploader.name}</Text>
             <Text style={styles.profileMeta}>
-              {profileQuery.data.uploader.role
-                ? profileQuery.data.uploader.role === "Student"
-                  ? "Öğrenci"
-                  : profileQuery.data.uploader.role === "Academic"
-                    ? "Akademisyen"
-                    : "Katılımcı"
-                : "Katılımcı"}
-              {profileQuery.data.uploader.classLevel
-                ? ` • Sınıf ${profileQuery.data.uploader.classLevel}`
+              {getRoleLabel(profileQuery.data.uploader.role)}
+              {formatClassLevelLabel(profileQuery.data.uploader.classLevel)
+                ? ` • ${formatClassLevelLabel(profileQuery.data.uploader.classLevel)}`
                 : ""}
             </Text>
+
+            <View style={styles.profileDetails}>
+              <View style={styles.profileDetailItem}>
+                <Text style={styles.profileDetailLabel}>Uzmanlık tercihi</Text>
+                <Text style={styles.profileDetailValue}>
+                  {profileQuery.data.uploader.interestArea ?? "Belirtilmedi"}
+                </Text>
+              </View>
+              <View style={styles.profileDetailItem}>
+                <Text style={styles.profileDetailLabel}>Sınıf</Text>
+                <Text style={styles.profileDetailValue}>
+                  {formatClassLevelLabel(profileQuery.data.uploader.classLevel) ?? "Belirtilmedi"}
+                </Text>
+              </View>
+              <View style={styles.profileDetailItem}>
+                <Text style={styles.profileDetailLabel}>Üniversite</Text>
+                <Text style={styles.profileDetailValue}>
+                  {profileQuery.data.uploader.university ?? "Belirtilmedi"}
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.contactActions}>
               <Pressable
@@ -209,6 +240,34 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     marginTop: spacing.xs
+  },
+  profileDetails: {
+    gap: spacing.xs,
+    marginTop: spacing.md
+  },
+  profileDetailItem: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 9
+  },
+  profileDetailLabel: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase"
+  },
+  profileDetailValue: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 3
   },
   contactActions: {
     flexDirection: "row",

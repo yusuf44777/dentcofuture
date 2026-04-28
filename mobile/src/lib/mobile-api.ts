@@ -4,7 +4,6 @@ import { apiRequest } from "./api";
 import type {
   AttendeeClassLevel,
   MobileLiveState,
-  MobileMatchThread,
   MobileMe,
   MobileNetworkingFeed,
   MobileNetworkingGalleryCommentsResponse,
@@ -323,6 +322,8 @@ export async function fetchNetworkingGalleryUploaderProfile(name: string, limit 
         name: normalizedName,
         role: null,
         classLevel: null,
+        university: null,
+        interestArea: null,
         instagram: null,
         linkedin: null
       },
@@ -477,55 +478,6 @@ export function fetchNetworkingMatches() {
       } | null;
     }>;
   }>("/api/mobile/networking/matches", undefined, { auth: true });
-}
-
-export function fetchMessageThreads() {
-  return apiRequest<{
-    ok: true;
-    threads: Array<{
-      attendee: {
-        id: string;
-        name: string;
-        role: string;
-        instagram: string | null;
-        linkedin: string | null;
-      } | null;
-      lastMessage: {
-        id: string;
-        text: string;
-        createdAt: string;
-        senderId: string;
-      } | null;
-    }>;
-  }>("/api/mobile/networking/messages", undefined, { auth: true });
-}
-
-export function fetchMatchThread(attendeeId: string) {
-  return apiRequest<{ ok: true; thread: MobileMatchThread }>(
-    `/api/mobile/networking/messages?attendeeId=${encodeURIComponent(attendeeId)}`,
-    undefined,
-    { auth: true }
-  );
-}
-
-export function sendMatchMessage(receiverAttendeeId: string, text: string) {
-  return apiRequest<{
-    ok: true;
-    message: {
-      id: string;
-      senderId: string;
-      receiverId: string;
-      text: string;
-      createdAt: string;
-    };
-  }>(
-    "/api/mobile/networking/messages",
-    {
-      method: "POST",
-      body: JSON.stringify({ receiverAttendeeId, text })
-    },
-    { auth: true }
-  );
 }
 
 export function fetchGameScores() {

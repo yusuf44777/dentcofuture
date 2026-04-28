@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   const [attendeesResult, itemsResult] = await Promise.all([
     resolved.session.supabase
       .from("attendees")
-      .select("id, name, role, class_level, instagram, linkedin, created_at")
+      .select("id, name, role, class_level, university, instagram, linkedin, created_at")
       .eq("name", uploaderName)
       .order("created_at", { ascending: true })
       .limit(1),
@@ -75,6 +75,44 @@ export async function GET(request: NextRequest) {
   }
 
   const attendee = attendeesResult.data?.[0] ?? null;
+  let profileMeta: { interest_area: string | null; institution_name: string | null } | null = null;
+
+  if (attendee?.id) {
+    const profileResult = await resolved.session.supabase
+      .from("networking_profiles")
+      .select("interest_area, institution_name")
+      .eq("attendee_id", attendee.id)
+      .maybeSingle();
+
+    if (profileResult.error) {
+      return NextResponse.json(
+        { error: `Profil detayları alınamadı: ${profileResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
+    profileMeta = profileResult.data ?? null;
+  }
+
+  if (!profileMeta) {
+    const profileByNameResult = await resolved.session.supabase
+      .from("networking_profiles")
+      .select("interest_area, institution_name")
+      .eq("full_name", uploaderName)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (profileByNameResult.error) {
+      return NextResponse.json(
+        { error: `Profil detayları alınamadı: ${profileByNameResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
+    profileMeta = profileByNameResult.data ?? null;
+  }
+
   const items = (itemsResult.data ?? []) as GalleryItemRow[];
   const itemIds = items.map((item) => item.id);
 
@@ -117,6 +155,8 @@ export async function GET(request: NextRequest) {
       name: uploaderName,
       role: attendee?.role ?? null,
       classLevel: attendee?.class_level ?? null,
+      university: attendee?.university ?? profileMeta?.institution_name ?? null,
+      interestArea: profileMeta?.interest_area ?? null,
       instagram: attendee?.instagram ?? null,
       linkedin: attendee?.linkedin ?? null
     },

@@ -34,7 +34,6 @@ import {
   createNetworkingGalleryPost,
   createNetworkingGalleryComment,
   deleteNetworkingGalleryPost,
-  fetchMessageThreads,
   fetchNetworkingFeed,
   fetchNetworkingGalleryComments,
   fetchNetworkingGalleryFeed,
@@ -112,6 +111,33 @@ function patchGalleryPostInCache(
 
 type DiscoveryProfileItem = MobileNetworkingFeed["queue"][number];
 
+function formatClassLevelLabel(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+  if (value === "Mezun" || value === "Hazırlık") {
+    return value;
+  }
+  return `${value}. sınıf`;
+}
+
+function getProfileDetailRows(profile: DiscoveryProfileItem) {
+  return [
+    {
+      label: "Uzmanlık tercihi",
+      value: profile.interestArea || profile.dentistryFocusAreas[0] || "Belirtilmedi"
+    },
+    {
+      label: "Sınıf",
+      value: formatClassLevelLabel(profile.attendeeClassLevel) ?? "Belirtilmedi"
+    },
+    {
+      label: "Üniversite",
+      value: profile.university ?? profile.institutionName ?? "Belirtilmedi"
+    }
+  ];
+}
+
 function resolveAssetMediaKind(asset: ImagePicker.ImagePickerAsset): "photo" | "video" | null {
   if (asset.type === "video") {
     return "video";
@@ -173,13 +199,6 @@ export default function ParticipantNetworkingScreen() {
     queryFn: () => fetchNetworkingGalleryComments(activeCommentItemId as string, 120),
     enabled: Boolean(activeCommentItemId && isCommentSheetVisible && me?.attendee),
     staleTime: 4_000
-  });
-
-  const threadsQuery = useQuery({
-    queryKey: ["mobile-networking-threads"],
-    queryFn: fetchMessageThreads,
-    enabled: Boolean(me && me.role === "participant" && me.attendee),
-    refetchInterval: 10_000
   });
 
   const galleryLikeMutation = useMutation({
@@ -575,22 +594,6 @@ export default function ParticipantNetworkingScreen() {
     [feedQuery.data?.queue, feedQuery.data?.recommended]
   );
 
-  const latestThreadByAttendee = useMemo(() => {
-    const mapped = new Map<
-      string,
-      { id: string; text: string; createdAt: string; senderId: string } | null
-    >();
-
-    for (const thread of threadsQuery.data?.threads ?? []) {
-      if (!thread.attendee?.id) {
-        continue;
-      }
-      mapped.set(thread.attendee.id, thread.lastMessage);
-    }
-
-    return mapped;
-  }, [threadsQuery.data?.threads]);
-
   const selectedCommentPost = useMemo(() => {
     if (!activeCommentItemId) {
       return null;
@@ -746,7 +749,7 @@ export default function ParticipantNetworkingScreen() {
   return (
     <ScreenShell
       title="Outliers"
-      subtitle="Feed'de paylaş, katılımcıları keşfet ve doğrudan sohbet başlat."
+      subtitle="Feed'de paylaş, katılımcıları keşfet ve profillerini görüntüle."
     >
       <View style={styles.segmentWrap}>
         <Pressable
@@ -790,7 +793,6 @@ export default function ParticipantNetworkingScreen() {
           <View style={styles.metricRow}>
             <Metric label="Öneri" value={String((feedQuery.data?.recommended ?? feedQuery.data?.queue ?? []).length)} />
             <Metric label="Katılımcı" value={String((feedQuery.data?.directory ?? feedQuery.data?.queue ?? []).length)} />
-            <Metric label="Mesaj" value={String(threadsQuery.data?.threads.length ?? 0)} />
           </View>
 
           {feedQuery.isLoading ? (
@@ -835,7 +837,7 @@ export default function ParticipantNetworkingScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Eşleşme Tavsiyeleri</Text>
+            <Text style={styles.cardTitle}>Profil Önerileri</Text>
             {recommendedProfiles.length === 0 ? (
               <Text style={styles.mutedText}>Aramana uygun öneri bulunamadı.</Text>
             ) : (
@@ -851,8 +853,10 @@ export default function ParticipantNetworkingScreen() {
                       ) : null}
                     </View>
                     <Text style={styles.discoveryProfileInfo}>
-                      {profile.interestArea} • {profile.goal}
-                      {profile.city ? ` • ${profile.city}` : ""}
+                      {profile.interestArea} • {formatClassLevelLabel(profile.attendeeClassLevel) ?? "Sınıf belirtilmedi"}
+                      {profile.university || profile.institutionName
+                        ? ` • ${profile.university ?? profile.institutionName}`
+                        : ""}
                     </Text>
                     {profile.matchReasons && profile.matchReasons.length > 0 ? (
                       <Text style={styles.discoveryReasonText}>
@@ -894,8 +898,10 @@ export default function ParticipantNetworkingScreen() {
                   <View style={styles.discoveryProfileMeta}>
                     <Text style={styles.discoveryProfileName}>{profile.fullName}</Text>
                     <Text style={styles.discoveryProfileInfo}>
-                      {profile.interestArea} • {profile.goal}
-                      {profile.city ? ` • ${profile.city}` : ""}
+                      {profile.interestArea} • {formatClassLevelLabel(profile.attendeeClassLevel) ?? "Sınıf belirtilmedi"}
+                      {profile.university || profile.institutionName
+                        ? ` • ${profile.university ?? profile.institutionName}`
+                        : ""}
                     </Text>
                   </View>
                   <Pressable
@@ -915,60 +921,6 @@ export default function ParticipantNetworkingScreen() {
             )}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Sohbetler</Text>
-            {threadsQuery.isLoading ? (
-              <View style={styles.loaderCardAlt}>
-                <ActivityIndicator color={colors.accent} size="small" />
-              </View>
-            ) : null}
-            {!threadsQuery.isLoading && (threadsQuery.data?.threads ?? []).length === 0 ? (
-              <Text style={styles.mutedText}>Henüz sohbet yok. Katılımcı kartından sohbet başlatabilirsin.</Text>
-            ) : (
-              (threadsQuery.data?.threads ?? []).map((thread, index) => {
-                const chatAttendeeId = thread.attendee?.id ?? null;
-                const latestMessage = chatAttendeeId ? latestThreadByAttendee.get(chatAttendeeId) ?? null : null;
-                const previewText = latestMessage
-                  ? `${latestMessage.senderId === attendeeId ? "Sen: " : ""}${latestMessage.text}`
-                  : "Henüz mesaj yok.";
-
-                return (
-                  <View key={`thread-${chatAttendeeId ?? index}`} style={styles.matchRow}>
-                    <View style={styles.matchIdentity}>
-                      <Text style={styles.matchName}>{thread.attendee?.name ?? "Katılımcı"}</Text>
-                      <Text style={styles.matchRole}>
-                        {thread.attendee?.role
-                          ? ROLE_LABELS[thread.attendee.role as AttendeeRole] ?? "Katılımcı"
-                          : "Katılımcı"}
-                      </Text>
-                      <Text style={styles.matchPreview} numberOfLines={1}>
-                        {previewText}
-                      </Text>
-                    </View>
-                    <Pressable
-                      disabled={!chatAttendeeId}
-                      style={({ pressed }) => [
-                        styles.matchChatButton,
-                        !chatAttendeeId ? styles.disabled : null,
-                        pressed ? styles.pressed : null
-                      ]}
-                      onPress={() => {
-                        if (!chatAttendeeId) {
-                          return;
-                        }
-                        router.push(
-                          `/(participant)/chat?attendeeId=${encodeURIComponent(chatAttendeeId)}` as never
-                        );
-                      }}
-                    >
-                      <MessageCircle color="#FFFFFF" size={14} />
-                      <Text style={styles.matchChatButtonText}>Sohbet et</Text>
-                    </Pressable>
-                  </View>
-                );
-              })
-            )}
-          </View>
         </>
       ) : (
         <>
@@ -1508,6 +1460,15 @@ export default function ParticipantNetworkingScreen() {
                   </Text>
                 ) : null}
 
+                <View style={styles.profileDetailGrid}>
+                  {getProfileDetailRows(activeProfileCard).map((row) => (
+                    <View key={`profile-detail-${row.label}`} style={styles.profileDetailItem}>
+                      <Text style={styles.profileDetailLabel}>{row.label}</Text>
+                      <Text style={styles.profileDetailValue}>{row.value}</Text>
+                    </View>
+                  ))}
+                </View>
+
                 <View style={styles.topicWrap}>
                   {activeProfileCard.dentistryFocusAreas.slice(0, 4).map((item) => (
                     <View key={`profile-card-${item}`} style={styles.tag}>
@@ -1523,27 +1484,6 @@ export default function ParticipantNetworkingScreen() {
                 ) : null}
 
                 <View style={styles.profileCardButtonRow}>
-                  <Pressable
-                    disabled={!activeProfileCard.attendeeId}
-                    style={({ pressed }) => [
-                      styles.profileCardChatButton,
-                      !activeProfileCard.attendeeId ? styles.disabled : null,
-                      pressed ? styles.pressed : null
-                    ]}
-                    onPress={() => {
-                      if (!activeProfileCard.attendeeId) {
-                        return;
-                      }
-                      setIsProfileCardVisible(false);
-                      router.push(
-                        `/(participant)/chat?attendeeId=${encodeURIComponent(activeProfileCard.attendeeId)}` as never
-                      );
-                    }}
-                  >
-                    <MessageCircle color="#FFFFFF" size={14} />
-                    <Text style={styles.profileCardChatButtonText}>Sohbet Et</Text>
-                  </Pressable>
-
                   <Pressable
                     disabled={!activeProfileLinkedinUrl}
                     style={({ pressed }) => [
@@ -2170,54 +2110,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13
   },
-  matchRow: {
-    alignItems: "center",
-    borderColor: colors.line,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 10
-  },
-  matchIdentity: {
-    flex: 1
-  },
-  matchName: {
-    color: colors.ink,
-    fontFamily: typography.body,
-    fontSize: 13,
-    fontWeight: "800"
-  },
-  matchRole: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 12,
-    marginTop: 1
-  },
-  matchPreview: {
-    color: colors.inkMuted,
-    fontFamily: typography.body,
-    fontSize: 11,
-    marginTop: 4
-  },
-  matchChatButton: {
-    alignItems: "center",
-    backgroundColor: colors.accent,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    gap: 6,
-    justifyContent: "center",
-    minHeight: 34,
-    paddingHorizontal: spacing.sm
-  },
-  matchChatButtonText: {
-    color: "#FFFFFF",
-    fontFamily: typography.body,
-    fontSize: 11,
-    fontWeight: "800"
-  },
   profileCardName: {
     color: colors.ink,
     fontFamily: typography.display,
@@ -2238,27 +2130,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2
   },
+  profileDetailGrid: {
+    gap: spacing.xs,
+    marginTop: spacing.md
+  },
+  profileDetailItem: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 9
+  },
+  profileDetailLabel: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase"
+  },
+  profileDetailValue: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 3
+  },
   profileCardButtonRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.xs,
     marginTop: spacing.md
-  },
-  profileCardChatButton: {
-    alignItems: "center",
-    backgroundColor: colors.accent,
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    justifyContent: "center",
-    minHeight: 36,
-    paddingHorizontal: spacing.md
-  },
-  profileCardChatButtonText: {
-    color: "#FFFFFF",
-    fontFamily: typography.body,
-    fontSize: 12,
-    fontWeight: "800",
-    marginLeft: 6
   },
   profileCardSocialButton: {
     alignItems: "center",
