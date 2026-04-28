@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
   const university = normalizeOptionalField(body.university, 120);
   const instagram = normalizeSocial(body.instagram);
   const linkedin = normalizeSocial(body.linkedin);
-  const outlierScore = Number.isFinite(Number(body.outlier_score)) ? Number(body.outlier_score) : 0;
+  const hasOutlierScore = body.outlier_score !== undefined && body.outlier_score !== null;
+  const outlierScore = hasOutlierScore ? Number(body.outlier_score) : null;
 
   if (name.length < 2 || name.length > 120) {
     return NextResponse.json({ error: "Ad soyad 2-120 karakter aralığında olmalı." }, { status: 400 });
@@ -94,21 +95,27 @@ export async function POST(request: NextRequest) {
   if (!university || university.length < 2) {
     return NextResponse.json({ error: "Üniversite bilgisi zorunludur." }, { status: 400 });
   }
-  if (outlierScore < 0 || outlierScore > 100) {
+  if (
+    hasOutlierScore &&
+    (outlierScore === null || !Number.isFinite(outlierScore) || outlierScore < 0 || outlierScore > 100)
+  ) {
     return NextResponse.json({ error: "Outlier puanı 0-100 aralığında olmalı." }, { status: 400 });
   }
 
   const supabase = resolved.session.supabase;
-  const basePayload = {
+  const basePayload: Record<string, unknown> = {
     auth_user_id: resolved.session.authUserId,
     name,
     role,
     class_level: role === "Student" ? classLevel : null,
     university,
     instagram,
-    linkedin,
-    outlier_score: Math.round(outlierScore)
+    linkedin
   };
+
+  if (hasOutlierScore && outlierScore !== null) {
+    basePayload.outlier_score = Math.round(outlierScore);
+  }
 
   const syncNetworkingProfile = async (attendee: Attendee) => {
     const networkingProfile = await ensureNetworkingProfileForSession({
