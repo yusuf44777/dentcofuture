@@ -528,6 +528,9 @@ export default function LandingPage() {
           <a href={IOS_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
             iOS Uygulamasını İndir
           </a>
+          <a href="/privacy" className="hover:text-white transition-colors">
+            Gizlilik Politikası
+          </a>
           <span>Luma ile hızlı kayıt</span>
         </div>
       </footer>
