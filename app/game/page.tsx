@@ -37,10 +37,12 @@ function readBlockerinoScores(): BlockerinoScore[] {
         };
         const score = Number(parsed.score);
         if (!Number.isFinite(score) || score <= 0) return [];
+        const mode = typeof parsed.type === "string" ? parsed.type : "classic";
+        if (mode !== "classic") return [];
 
         return [{
           score: Math.floor(score),
-          mode: typeof parsed.type === "string" ? parsed.type : "classic",
+          mode: "classic",
           date: Number(parsed.date) || Date.now()
         }];
       } catch {
@@ -52,14 +54,12 @@ function readBlockerinoScores(): BlockerinoScore[] {
   }
 }
 
-function modeToWave(mode: string) {
-  return mode === "chaos" ? 2 : 1;
+function modeToWave(_mode: string) {
+  return 1;
 }
 
-function waveLabel(wave: number) {
-  if (wave === 2) return "Kaos";
-  if (wave === 1) return "Klasik";
-  return `Seviye ${wave}`;
+function waveLabel(_wave: number) {
+  return "Klasik";
 }
 
 export default function GamePage() {
@@ -152,6 +152,7 @@ export default function GamePage() {
     const { data } = await sb
       .from("game_scores")
       .select("*, attendee:attendees(name)")
+      .eq("wave", 1)
       .order("score", { ascending: false })
       .limit(10);
     if (data) setLeaderboard(data as (GameScore & { attendee?: { name: string } })[]);

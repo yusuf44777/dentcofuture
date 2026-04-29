@@ -51,10 +51,12 @@ ${BLOCKERINO_VIEWPORT_IIFE}
           var parsed = JSON.parse(rawScore);
           var score = Number(parsed.score);
           if (!isFinite(score) || score <= 0) return null;
+          var mode = typeof parsed.type === "string" ? parsed.type : "classic";
+          if (mode !== "classic") return null;
 
           return {
             score: Math.floor(score),
-            mode: typeof parsed.type === "string" ? parsed.type : "classic",
+            mode: "classic",
             date: Number(parsed.date) || Date.now()
           };
         } catch (error) {

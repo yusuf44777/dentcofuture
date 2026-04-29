@@ -24,14 +24,12 @@ type BlockerinoScoreMessage = {
   mode?: string;
 };
 
-function modeToWave(mode: string) {
-  return mode === "chaos" ? 2 : 1;
+function modeToWave(_mode: string) {
+  return 1;
 }
 
-function waveLabel(wave: number) {
-  if (wave === 2) return "Kaos";
-  if (wave === 1) return "Klasik";
-  return `Seviye ${wave}`;
+function waveLabel(_wave: number) {
+  return "Klasik";
 }
 
 export default function ParticipantGameScreen() {
@@ -85,8 +83,8 @@ export default function ParticipantGameScreen() {
     setReloadKey((current) => current + 1);
   }
 
-  function queueScoreSubmit(score: number, mode: string) {
-    const normalizedMode = mode === "chaos" ? "chaos" : "classic";
+  function queueScoreSubmit(score: number, _mode: string) {
+    const normalizedMode = "classic";
     const submittedBest = submittedBestRef.current[normalizedMode] ?? 0;
     if (score <= submittedBest) return;
 

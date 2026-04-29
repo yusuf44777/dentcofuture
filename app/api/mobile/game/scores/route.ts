@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   const leaderboardResult = await supabase
     .from("game_scores")
     .select("id, attendee_id, score, wave, created_at, attendee:attendees(name)")
+    .eq("wave", 1)
     .order("score", { ascending: false })
     .order("created_at", { ascending: true })
     .limit(30);
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       .from("game_scores")
       .select("score, wave, created_at")
       .eq("attendee_id", resolved.session.attendee.id)
+      .eq("wave", 1)
       .order("score", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(1)
@@ -75,14 +77,10 @@ export async function POST(request: NextRequest) {
 
   const body = await readJsonBody<Body>(request);
   const score = Number(body.score);
-  const wave = Number(body.wave ?? 1);
+  const wave = 1;
 
   if (!Number.isInteger(score) || score < 0 || score > 5_000_000) {
     return NextResponse.json({ error: "Skor geçersiz." }, { status: 400 });
-  }
-
-  if (!Number.isInteger(wave) || wave < 1 || wave > 10_000) {
-    return NextResponse.json({ error: "Wave değeri geçersiz." }, { status: 400 });
   }
 
   const supabase = resolved.session.supabase;
