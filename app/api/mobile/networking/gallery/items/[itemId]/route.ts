@@ -12,6 +12,7 @@ type RouteContext = {
 
 type GalleryItemRow = {
   id: string;
+  uploader_attendee_id: string | null;
   uploader_name: string;
   file_path: string;
   drive_file_id: string | null;
@@ -56,7 +57,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const supabase = resolved.session.supabase;
   const { data: targetItem, error: targetError } = await supabase
     .from("event_gallery_items")
-    .select("id, uploader_name, file_path, drive_file_id")
+    .select("id, uploader_attendee_id, uploader_name, file_path, drive_file_id")
     .eq("id", itemId)
     .maybeSingle();
 
@@ -70,7 +71,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   const meName = normalizeName(attendee.name);
   const uploaderName = normalizeName(targetItem.uploader_name);
-  if (!meName || meName !== uploaderName) {
+  const isOwnedByAttendeeId = targetItem.uploader_attendee_id === attendee.id;
+  if (!isOwnedByAttendeeId && (!meName || meName !== uploaderName)) {
     return NextResponse.json({ error: "Sadece kendi paylaşımını silebilirsin." }, { status: 403 });
   }
 
@@ -80,7 +82,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   if (batchId) {
     const { data: batchItems, error: batchError } = await supabase
       .from("event_gallery_items")
-      .select("id, uploader_name, file_path, drive_file_id")
+      .select("id, uploader_attendee_id, uploader_name, file_path, drive_file_id")
       .ilike("file_path", `%/${batchId}__%`);
 
     if (batchError) {
@@ -90,8 +92,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const filtered = ((batchItems ?? []) as GalleryItemRow[]).filter(
-      (item) => normalizeName(item.uploader_name) === meName
+    const filtered = ((batchItems ?? []) as GalleryItemRow[]).filter((item) =>
+      item.uploader_attendee_id === attendee.id || normalizeName(item.uploader_name) === meName
     );
 
     if (filtered.length > 0) {

@@ -9,7 +9,7 @@ import { getStoredAttendeeId } from "@/hooks/useAttendee";
 import { addPoints, POINTS } from "@/lib/points";
 import type { GameScore } from "@/lib/types";
 
-type BlockerinoScore = {
+type DentblastScore = {
   score: number;
   mode: string;
   date: number;
@@ -17,7 +17,7 @@ type BlockerinoScore = {
 
 const SCORE_SETTLE_DELAY_MS = 3500;
 
-function readBlockerinoScores(): BlockerinoScore[] {
+function readDentblastScores(): DentblastScore[] {
   if (typeof window === "undefined") return [];
 
   try {
@@ -54,11 +54,13 @@ function readBlockerinoScores(): BlockerinoScore[] {
   }
 }
 
-function modeToWave(_mode: string) {
+function modeToWave(mode: string) {
+  void mode;
   return 1;
 }
 
-function waveLabel(_wave: number) {
+function waveLabel(wave: number) {
+  void wave;
   return "Klasik";
 }
 
@@ -68,7 +70,7 @@ export default function GamePage() {
   const [pointsAwarded, setPointsAwarded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const submittedBestRef = useRef<Record<string, number>>({});
-  const pendingScoreRef = useRef<BlockerinoScore | null>(null);
+  const pendingScoreRef = useRef<DentblastScore | null>(null);
   const submitTimerRef = useRef<number | null>(null);
   const attendeeId = typeof window !== "undefined" ? getStoredAttendeeId() : null;
 
@@ -110,7 +112,7 @@ export default function GamePage() {
       window.localStorage.setItem(storageKey, JSON.stringify(submittedBestRef.current));
     };
 
-    const queueScoreSubmit = (score: BlockerinoScore) => {
+    const queueScoreSubmit = (score: DentblastScore) => {
       const submittedBest = submittedBestRef.current[score.mode] ?? 0;
       if (score.score <= submittedBest) return;
 
@@ -131,7 +133,7 @@ export default function GamePage() {
     };
 
     const pollScores = () => {
-      const bestScore = readBlockerinoScores()
+      const bestScore = readDentblastScores()
         .sort((a, b) => b.score - a.score || b.date - a.date)[0];
 
       if (bestScore) queueScoreSubmit(bestScore);
@@ -175,7 +177,7 @@ export default function GamePage() {
         </Link>
         <div className="flex items-center gap-2">
           <Gamepad2 className="h-5 w-5 text-[#6C63FF]" />
-          <h1 className="font-heading text-lg font-extrabold">Blockerino</h1>
+          <h1 className="font-heading text-lg font-extrabold">Dentblast</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {attendeeId && !pointsAwarded && (
@@ -207,7 +209,7 @@ export default function GamePage() {
               className="h-full w-full border-0"
               style={{ minHeight: "calc(100vh - 64px)" }}
               allow="autoplay"
-              title="Blockerino Oyunu"
+              title="Dentblast Oyunu"
             />
           </motion.div>
         </div>
@@ -260,7 +262,7 @@ export default function GamePage() {
           <div className="mt-6 rounded-[8px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-3 text-xs text-[rgba(240,240,255,0.4)]">
             <p className="font-semibold text-white">Puanlar</p>
             <p className="mt-1">+10 oynama bonusu</p>
-            <p>Blockerino rekorun otomatik kaydedilir</p>
+            <p>Dentblast rekorun otomatik kaydedilir</p>
           </div>
         </div>
       </div>

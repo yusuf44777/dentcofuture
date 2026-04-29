@@ -16,6 +16,8 @@ import {
   shouldRequireDriveSync,
   type GalleryBackupStatus
 } from "@/lib/gallery";
+import { resolveOptionalMobileSession } from "@/lib/mobile/auth";
+import { ObjectionableContentError, assertUserGeneratedTextAllowed } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,10 +59,20 @@ export async function POST(request: NextRequest) {
     payload = {};
   }
 
+  const resolved = await resolveOptionalMobileSession(request);
+  if ("errorResponse" in resolved) {
+    return resolved.errorResponse;
+  }
+
+  if (resolved.session && !resolved.session.attendee?.id) {
+    return NextResponse.json({ error: "Galeri paylaşımı için onboarding tamamlanmalı." }, { status: 400 });
+  }
+
   const path = typeof payload.path === "string" ? payload.path.trim() : "";
   const mimeType = typeof payload.mimeType === "string" ? payload.mimeType.trim().toLowerCase() : "";
   const fileSize = Number(payload.fileSize);
-  const uploaderName = sanitizeUploaderName(payload.uploaderName);
+  const uploaderName = sanitizeUploaderName(resolved.session?.attendee?.name ?? payload.uploaderName);
+  const uploaderAttendeeId = resolved.session?.attendee?.id ?? null;
   const caption = sanitizeCaption(payload.caption);
   const mediaType = resolveGalleryMediaType(mimeType);
 
@@ -84,6 +96,18 @@ export async function POST(request: NextRequest) {
 
   if (uploaderName.length < 2) {
     return NextResponse.json({ error: "Ad soyad en az 2 karakter olmalıdır." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(uploaderName, "Ad soyad");
+    if (caption) {
+      assertUserGeneratedTextAllowed(caption, "Açıklama");
+    }
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   try {
@@ -179,6 +203,7 @@ export async function POST(request: NextRequest) {
       .upsert(
         {
           uploader_name: uploaderName,
+          uploader_attendee_id: uploaderAttendeeId,
           caption: caption || null,
           media_type: mediaType,
           mime_type: mimeType,

@@ -31,7 +31,7 @@ const dataCategories = [
   },
   {
     title: "Etkinlik etkileşimleri",
-    text: "Program görüntüleme, canlı soru-cevap, anket yanıtları, geri bildirimler, puanlar, çekiliş katılımı, Blockerino skorları ve etkinlik içi aksiyonlar."
+    text: "Program görüntüleme, canlı soru-cevap, anket yanıtları, geri bildirimler, puanlar, çekiliş katılımı, Dentblast skorları ve etkinlik içi aksiyonlar."
   },
   {
     title: "Galeri ve kullanıcı içerikleri",

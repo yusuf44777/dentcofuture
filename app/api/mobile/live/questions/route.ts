@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveMobileSession } from "@/lib/mobile/auth";
+import {
+  ObjectionableContentError,
+  assertUserGeneratedTextAllowed,
+  getBlockedAttendeeIds
+} from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +19,8 @@ export async function GET(request: NextRequest) {
     return resolved.errorResponse;
   }
 
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+
   const { data, error } = await resolved.session.supabase
     .from("questions")
     .select("id, text, votes, answered, pinned, created_at, attendee_id, attendee:attendees(name, role)")
@@ -26,7 +33,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: `Sorular alınamadı: ${error.message}` }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, questions: data ?? [] });
+  const questions = (data ?? []).filter((item) => !blockedAttendeeIds.has(item.attendee_id));
+
+  return NextResponse.json({ ok: true, questions });
 }
 
 export async function POST(request: NextRequest) {
@@ -49,6 +58,15 @@ export async function POST(request: NextRequest) {
   const text = typeof body.text === "string" ? body.text.replace(/\s+/g, " ").trim() : "";
   if (text.length < 1 || text.length > 200) {
     return NextResponse.json({ error: "Soru metni 1-200 karakter aralığında olmalı." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(text, "Soru");
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   const { data, error } = await resolved.session.supabase

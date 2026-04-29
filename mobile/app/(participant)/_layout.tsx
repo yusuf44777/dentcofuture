@@ -55,7 +55,7 @@ export default function ParticipantLayout() {
       <Tabs.Screen
         name="game"
         options={{
-          title: "Oyun",
+          title: "Dentblast",
           href: isProfileLocked ? null : undefined,
           tabBarStyle: {
             display: "none"

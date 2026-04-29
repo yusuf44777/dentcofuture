@@ -258,6 +258,50 @@ export function deleteNetworkingGalleryPost(itemId: string) {
   }>(`/api/mobile/networking/gallery/items/${encodeURIComponent(itemId)}`, { method: "DELETE" }, { auth: true });
 }
 
+export function reportContent(input: {
+  targetType: "gallery_post" | "gallery_comment" | "networking_profile" | "live_question";
+  targetId: string;
+  targetAttendeeId?: string | null;
+  reason?: string;
+  details?: Record<string, unknown>;
+}) {
+  return apiRequest<{
+    ok: true;
+    reportId: string;
+    message: string;
+  }>(
+    "/api/mobile/moderation/report",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
+}
+
+export function blockUser(input: {
+  blockedAttendeeId: string;
+  targetType: "gallery_post" | "gallery_comment" | "networking_profile" | "live_question";
+  targetId: string;
+  reason?: string;
+  details?: Record<string, unknown>;
+}) {
+  return apiRequest<{
+    ok: true;
+    blockedAttendeeId: string;
+    blockId: string;
+    reportId: string;
+    message: string;
+  }>(
+    "/api/mobile/moderation/block",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    },
+    { auth: true }
+  );
+}
+
 export function fetchNetworkingGalleryComments(itemId: string, limit = 40) {
   const normalizedLimit = Number.isFinite(limit)
     ? Math.max(10, Math.min(120, Math.floor(limit)))

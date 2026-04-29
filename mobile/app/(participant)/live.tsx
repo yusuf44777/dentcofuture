@@ -2,9 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Brain, Flame, Hand, Lightbulb, CircleHelp, Send } from "lucide-react-native";
+import { Ban, Brain, Flag, Flame, Hand, Lightbulb, CircleHelp, Send } from "lucide-react-native";
+import { CommunityTermsGate } from "../../src/components/community-terms-gate";
 import { ScreenShell } from "../../src/components/screen-shell";
-import { fetchLiveState, sendLiveReaction, submitLiveQuestion, voteLivePoll } from "../../src/lib/mobile-api";
+import {
+  blockUser,
+  fetchLiveState,
+  reportContent,
+  sendLiveReaction,
+  submitLiveQuestion,
+  voteLivePoll
+} from "../../src/lib/mobile-api";
 import type { MobileLiveState } from "../../src/lib/mobile-contracts";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
@@ -111,6 +119,9 @@ export default function ParticipantLiveScreen() {
   const queryClient = useQueryClient();
   const { me } = useMobileMe();
   const [questionText, setQuestionText] = useState("");
+  const [hiddenAttendeeIds, setHiddenAttendeeIds] = useState<Set<string>>(() => new Set());
+  const [moderationMessage, setModerationMessage] = useState("");
+  const [moderationError, setModerationError] = useState("");
   const [selectedPollVote, setSelectedPollVote] = useState<{
     pollId: string;
     optionIndex: number;
@@ -240,9 +251,57 @@ export default function ParticipantLiveScreen() {
     }
   });
 
+  const reportMutation = useMutation({
+    mutationFn: reportContent,
+    onMutate: () => {
+      setModerationError("");
+      setModerationMessage("");
+    },
+    onSuccess: (result) => {
+      setModerationError("");
+      setModerationMessage(result.message || "Rapor alındı.");
+    },
+    onError: (error) => {
+      setModerationError(error instanceof Error ? error.message : "Rapor gönderilemedi.");
+    }
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: blockUser,
+    onMutate: ({ blockedAttendeeId }) => {
+      setModerationError("");
+      setModerationMessage("");
+      setHiddenAttendeeIds((current) => {
+        const next = new Set(current);
+        next.add(blockedAttendeeId);
+        return next;
+      });
+    },
+    onSuccess: async (result) => {
+      setModerationError("");
+      setModerationMessage(result.message || "Kullanıcı engellendi.");
+      await queryClient.invalidateQueries({ queryKey: ["mobile-live-state"] });
+    },
+    onError: (error, variables) => {
+      setHiddenAttendeeIds((current) => {
+        const next = new Set(current);
+        next.delete(variables.blockedAttendeeId);
+        return next;
+      });
+      setModerationError(error instanceof Error ? error.message : "Kullanıcı engellenemedi.");
+    }
+  });
+
   const totalReactions = useMemo(
     () => Object.values(liveQuery.data?.reactionCounts ?? {}).reduce((sum, count) => sum + count, 0),
     [liveQuery.data?.reactionCounts]
+  );
+  const visibleQuestions = useMemo(
+    () =>
+      (liveQuery.data?.questions ?? []).filter(
+        (item) => !hiddenAttendeeIds.has(item.attendee_id)
+      ),
+    [hiddenAttendeeIds, liveQuery.data?.questions]
   );
 
   if (me?.role === "participant" && !me.attendee) {
@@ -250,7 +309,8 @@ export default function ParticipantLiveScreen() {
   }
 
   return (
-    <ScreenShell
+    <CommunityTermsGate>
+      <ScreenShell
       title="Canlı Merkez"
       subtitle="Soru sor, anketlere katıl ve sahnedeki akışa anlık tepki ver."
     >
@@ -266,6 +326,9 @@ export default function ParticipantLiveScreen() {
           <Text style={styles.errorText}>{liveQuery.error instanceof Error ? liveQuery.error.message : "Canlı veri alınamadı."}</Text>
         </View>
       ) : null}
+
+      {moderationMessage ? <Text style={styles.moderationSuccessText}>{moderationMessage}</Text> : null}
+      {moderationError ? <Text style={styles.errorText}>{moderationError}</Text> : null}
 
       {/* Question Submit */}
       {me?.attendee ? (
@@ -388,19 +451,58 @@ export default function ParticipantLiveScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Öne Çıkan Sorular</Text>
         </View>
-        {(liveQuery.data?.questions ?? []).length === 0 ? (
+        {visibleQuestions.length === 0 ? (
           <Text style={styles.mutedText}>Henüz soru gönderilmedi.</Text>
         ) : null}
-        {(liveQuery.data?.questions ?? []).slice(0, 8).map((item) => (
+        {visibleQuestions.slice(0, 8).map((item) => (
           <View key={item.id} style={styles.questionRow}>
             <Text style={styles.questionText}>{item.text}</Text>
             <View style={styles.questionMeta}>
-              <Text style={styles.questionMetaText}>{item.votes} oy</Text>
+              <Text style={styles.questionMetaText}>
+                {item.attendee_name ?? "Katılımcı"} • {item.votes} oy
+              </Text>
+              {item.attendee_id !== me?.attendee?.id ? (
+                <View style={styles.questionModerationRow}>
+                  <Pressable
+                    disabled={reportMutation.isPending}
+                    style={({ pressed }) => [styles.questionModerationButton, pressed ? styles.pressed : null]}
+                    onPress={() => {
+                      reportMutation.mutate({
+                        targetType: "live_question",
+                        targetId: item.id,
+                        targetAttendeeId: item.attendee_id,
+                        reason: "objectionable_content"
+                      });
+                    }}
+                  >
+                    <Flag color={colors.warning} size={12} />
+                    <Text style={styles.questionModerationButtonText}>Bildir</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={blockMutation.isPending}
+                    style={({ pressed }) => [styles.questionModerationButton, pressed ? styles.pressed : null]}
+                    onPress={() => {
+                      blockMutation.mutate({
+                        blockedAttendeeId: item.attendee_id,
+                        targetType: "live_question",
+                        targetId: item.id,
+                        reason: "abusive_user"
+                      });
+                    }}
+                  >
+                    <Ban color={colors.danger} size={12} />
+                    <Text style={[styles.questionModerationButtonText, styles.questionBlockText]}>
+                      Engelle
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           </View>
         ))}
       </View>
-    </ScreenShell>
+      </ScreenShell>
+    </CommunityTermsGate>
   );
 }
 
@@ -431,6 +533,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 19
+  },
+  moderationSuccessText: {
+    color: colors.positive,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: spacing.sm
   },
   warningCard: {
     backgroundColor: colors.warningSoft,
@@ -647,13 +756,38 @@ const styles = StyleSheet.create({
     lineHeight: 19
   },
   questionMeta: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 4
   },
   questionMetaText: {
     color: colors.inkMuted,
+    flex: 1,
     fontFamily: typography.body,
     fontSize: 11,
     fontWeight: "700"
+  },
+  questionModerationRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginLeft: spacing.xs
+  },
+  questionModerationButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    paddingHorizontal: 4,
+    paddingVertical: 3
+  },
+  questionModerationButtonText: {
+    color: colors.warning,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    marginLeft: 3
+  },
+  questionBlockText: {
+    color: colors.danger
   },
   disabled: {
     opacity: 0.5

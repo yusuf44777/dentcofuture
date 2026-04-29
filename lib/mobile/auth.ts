@@ -59,6 +59,10 @@ function getBearerToken(request: NextRequest) {
   return token.trim();
 }
 
+export function hasBearerToken(request: NextRequest) {
+  return Boolean(getBearerToken(request));
+}
+
 export function unauthorized(message = "Yetkisiz erişim.") {
   return NextResponse.json({ error: message }, { status: 401 });
 }
@@ -119,6 +123,21 @@ export async function resolveMobileSession(request: NextRequest) {
       role,
       staffRole
     } satisfies MobileSession
+  };
+}
+
+export async function resolveOptionalMobileSession(request: NextRequest) {
+  if (!hasBearerToken(request)) {
+    return { session: null as MobileSession | null };
+  }
+
+  const resolved = await resolveMobileSession(request);
+  if ("errorResponse" in resolved) {
+    return resolved;
+  }
+
+  return {
+    session: resolved.session
   };
 }
 

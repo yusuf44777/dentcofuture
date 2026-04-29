@@ -23,7 +23,7 @@ export function useBlockerinoHtml(reloadKey = 0) {
 
         const uri = asset.localUri ?? asset.uri;
         if (!uri) {
-          throw new Error("Blockerino dosyası bulunamadı.");
+          throw new Error("Dentblast dosyası bulunamadı.");
         }
 
         const nextHtml = await FileSystem.readAsStringAsync(uri);
@@ -34,7 +34,7 @@ export function useBlockerinoHtml(reloadKey = 0) {
       } catch (loadError) {
         if (!mounted) return;
 
-        setError(loadError instanceof Error ? loadError.message : "Blockerino açılamadı.");
+        setError(loadError instanceof Error ? loadError.message : "Dentblast açılamadı.");
         setLoading(false);
       }
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPollMessage } from "@/lib/engagement";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import { normalizeText, readJsonBody } from "@/lib/mobile/http";
+import { ObjectionableContentError, assertUserGeneratedTextAllowed } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +28,15 @@ export async function POST(request: NextRequest) {
 
   if (!finalMessage || finalMessage.length > 500) {
     return NextResponse.json({ error: "Mesaj 1-500 karakter aralığında olmalı." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(finalMessage, "Mesaj");
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   const { data, error } = await resolved.session.supabase

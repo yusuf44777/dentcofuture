@@ -4,6 +4,7 @@ import type { Attendee, AttendeeClassLevel, AttendeeRole } from "@/lib/types";
 import { ensureNetworkingProfileForSession } from "@/lib/mobile/networking";
 import { buildContactInfo } from "@/lib/networking-contact";
 import { NETWORKING_INTEREST_OPTIONS } from "@/lib/networking/contracts";
+import { ObjectionableContentError, assertUserGeneratedTextAllowed } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +101,16 @@ export async function POST(request: NextRequest) {
     (outlierScore === null || !Number.isFinite(outlierScore) || outlierScore < 0 || outlierScore > 100)
   ) {
     return NextResponse.json({ error: "Outlier puanı 0-100 aralığında olmalı." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(name, "Ad soyad");
+    assertUserGeneratedTextAllowed(university, "Üniversite");
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   const supabase = resolved.session.supabase;

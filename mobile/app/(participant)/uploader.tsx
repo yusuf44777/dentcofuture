@@ -11,6 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, Instagram, Linkedin, Play } from "lucide-react-native";
+import { CommunityTermsGate } from "../../src/components/community-terms-gate";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchNetworkingGalleryUploaderProfile } from "../../src/lib/mobile-api";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
@@ -67,7 +68,8 @@ export default function ParticipantUploaderProfileScreen() {
   };
 
   return (
-    <ScreenShell title="Profil" subtitle="Paylaşım sahibinin Outliers profili">
+    <CommunityTermsGate>
+      <ScreenShell title="Profil" subtitle="Paylaşım sahibinin Outliers profili">
       <Pressable
         style={({ pressed }) => [styles.backButton, pressed ? styles.pressed : null]}
         onPress={() => {
@@ -193,7 +195,8 @@ export default function ParticipantUploaderProfileScreen() {
           </View>
         </>
       ) : null}
-    </ScreenShell>
+      </ScreenShell>
+    </CommunityTermsGate>
   );
 }
 

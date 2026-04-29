@@ -4,6 +4,7 @@ import { resolveMobileSession } from "@/lib/mobile/auth";
 import type { MobileNetworkingFeed } from "@/lib/mobile/contracts";
 import { mapPublicNetworkingProfileToMobile } from "@/lib/mobile/mappers";
 import { ensureNetworkingProfileForSession, getNetworkingProfilesByIds } from "@/lib/mobile/networking";
+import { getBlockedAttendeeIds } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,12 +87,18 @@ export async function GET(request: NextRequest) {
     return mapPublicNetworkingProfileToMobile(profile, attendeeId, attendeeId ? attendeeById.get(attendeeId) : null);
   };
 
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+  const isVisibleProfile = (profile: (typeof feed.recommended)[number]) => {
+    const attendeeId = linkedProfiles.get(profile.id)?.attendee_id ?? null;
+    return !attendeeId || !blockedAttendeeIds.has(attendeeId);
+  };
+
   const payload: MobileNetworkingFeed = {
     ok: true,
     current: feed.currentProfile ? mapProfile(feed.currentProfile) : null,
-    recommended: feed.recommended.map((item) => mapProfile(item)),
-    directory: feed.directory.map((item) => mapProfile(item)),
-    queue: feed.queue.map((item) => mapProfile(item)),
+    recommended: feed.recommended.filter(isVisibleProfile).map((item) => mapProfile(item)),
+    directory: feed.directory.filter(isVisibleProfile).map((item) => mapProfile(item)),
+    queue: feed.queue.filter(isVisibleProfile).map((item) => mapProfile(item)),
     likesSentCount: feed.likesSentCount,
     mutualMatchesCount: feed.mutualMatchesCount,
     message: feed.message,

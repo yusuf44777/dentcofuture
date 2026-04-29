@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { MobileNetworkingGalleryComment } from "@/lib/mobile/contracts";
+import {
+  ObjectionableContentError,
+  assertUserGeneratedTextAllowed,
+  getBlockedAttendeeIds
+} from "@/lib/moderation";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import { isValidUuid, normalizeText, readJsonBody } from "@/lib/mobile/http";
 
@@ -40,6 +45,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Geçersiz galeri kimliği." }, { status: 400 });
   }
 
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+
   const [commentsResult, countResult] = await Promise.all([
     resolved.session.supabase
       .from("networking_gallery_comments")
@@ -67,7 +74,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const comments = commentsResult.data ?? [];
+  const comments = (commentsResult.data ?? []).filter(
+    (comment) => !blockedAttendeeIds.has(comment.attendee_id)
+  );
   const commentAttendeeIds = Array.from(
     new Set(comments.map((comment) => comment.attendee_id).filter(Boolean))
   );
@@ -114,7 +123,7 @@ export async function GET(request: NextRequest) {
     ok: true,
     itemId,
     comments: payloadComments,
-    total: countResult.count ?? payloadComments.length
+    total: payloadComments.length
   });
 }
 
@@ -139,6 +148,15 @@ export async function POST(request: NextRequest) {
 
   if (!text || text.length > 280) {
     return NextResponse.json({ error: "Yorum 1-280 karakter aralığında olmalı." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(text, "Yorum");
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   const insertResult = await resolved.session.supabase

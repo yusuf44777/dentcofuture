@@ -246,6 +246,8 @@ export interface Database {
         };
         Update: never;
       };
+      content_reports: { Row: ContentReportRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      user_blocks: { Row: UserBlockRow; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       staff_roles: {
         Row: {
           id: string;
@@ -311,6 +313,7 @@ export interface NetworkingProfileRow {
 
 export interface EventGalleryItemRow {
   id: string;
+  uploader_attendee_id: string | null;
   uploader_name: string;
   caption: string | null;
   media_type: "photo" | "video";
@@ -336,5 +339,29 @@ export interface NetworkingGalleryCommentRow {
   gallery_item_id: string;
   attendee_id: string;
   text: string;
+  created_at: string;
+}
+
+export interface ContentReportRow {
+  id: string;
+  reporter_attendee_id: string;
+  target_attendee_id: string | null;
+  target_type: "gallery_post" | "gallery_comment" | "networking_profile" | "live_question";
+  target_id: string | null;
+  action: "report" | "block" | "auto_filter";
+  reason: string;
+  details: Json;
+  status: "open" | "reviewing" | "resolved" | "dismissed";
+  reviewed_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface UserBlockRow {
+  id: string;
+  blocker_attendee_id: string;
+  blocked_attendee_id: string;
+  reason: string;
+  source_report_id: string | null;
   created_at: string;
 }

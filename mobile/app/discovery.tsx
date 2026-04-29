@@ -100,7 +100,7 @@ export default function DiscoveryScreen() {
             style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : null]}
           >
             <Gamepad2 color={colors.copper} size={16} />
-            <Text style={[styles.headerButtonText, styles.gameButtonText]}>Oyun</Text>
+            <Text style={[styles.headerButtonText, styles.gameButtonText]}>Dentblast</Text>
           </Pressable>
         </View>
       }

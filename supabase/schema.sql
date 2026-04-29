@@ -274,6 +274,7 @@ create table public.live_poll_presets (
 
 create table public.event_gallery_items (
   id uuid primary key default gen_random_uuid(),
+  uploader_attendee_id uuid references public.attendees(id) on delete set null,
   uploader_name text not null check (char_length(uploader_name) between 2 and 120),
   caption text check (caption is null or char_length(caption) <= 280),
   media_type text not null check (media_type in ('photo', 'video')),
@@ -292,6 +293,10 @@ create index event_gallery_items_created_idx
 
 create index event_gallery_items_media_type_idx
   on public.event_gallery_items (media_type, created_at desc);
+
+create index event_gallery_items_uploader_attendee_idx
+  on public.event_gallery_items (uploader_attendee_id, created_at desc)
+  where uploader_attendee_id is not null;
 
 create table public.networking_gallery_likes (
   id uuid primary key default gen_random_uuid(),
@@ -320,6 +325,45 @@ create index networking_gallery_comments_item_idx
 
 create index networking_gallery_comments_attendee_idx
   on public.networking_gallery_comments (attendee_id, created_at desc);
+
+create table public.content_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_attendee_id uuid not null references public.attendees(id) on delete cascade,
+  target_attendee_id uuid references public.attendees(id) on delete set null,
+  target_type text not null check (target_type in ('gallery_post', 'gallery_comment', 'networking_profile', 'live_question')),
+  target_id uuid,
+  action text not null default 'report' check (action in ('report', 'block', 'auto_filter')),
+  reason text not null default 'objectionable_content' check (char_length(reason) between 1 and 240),
+  details jsonb not null default '{}'::jsonb,
+  status text not null default 'open' check (status in ('open', 'reviewing', 'resolved', 'dismissed')),
+  reviewed_at timestamptz,
+  resolved_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index content_reports_status_created_idx
+  on public.content_reports (status, created_at asc);
+
+create index content_reports_target_attendee_idx
+  on public.content_reports (target_attendee_id, created_at desc)
+  where target_attendee_id is not null;
+
+create table public.user_blocks (
+  id uuid primary key default gen_random_uuid(),
+  blocker_attendee_id uuid not null references public.attendees(id) on delete cascade,
+  blocked_attendee_id uuid not null references public.attendees(id) on delete cascade,
+  reason text not null default 'abusive_user' check (char_length(reason) between 1 and 240),
+  source_report_id uuid references public.content_reports(id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique (blocker_attendee_id, blocked_attendee_id),
+  check (blocker_attendee_id <> blocked_attendee_id)
+);
+
+create index user_blocks_blocker_idx
+  on public.user_blocks (blocker_attendee_id, created_at desc);
+
+create index user_blocks_blocked_idx
+  on public.user_blocks (blocked_attendee_id, created_at desc);
 
 -- -----------------------------------------------------------------------------
 -- Legacy profile-card networking tables
@@ -679,6 +723,8 @@ alter table public.live_poll_presets replica identity full;
 alter table public.event_gallery_items replica identity full;
 alter table public.networking_gallery_likes replica identity full;
 alter table public.networking_gallery_comments replica identity full;
+alter table public.content_reports replica identity full;
+alter table public.user_blocks replica identity full;
 alter table public.networking_profiles replica identity full;
 alter table public.networking_profile_actions replica identity full;
 alter table public.raffle_participants replica identity full;
@@ -706,6 +752,8 @@ alter table public.live_poll_presets enable row level security;
 alter table public.event_gallery_items enable row level security;
 alter table public.networking_gallery_likes enable row level security;
 alter table public.networking_gallery_comments enable row level security;
+alter table public.content_reports enable row level security;
+alter table public.user_blocks enable row level security;
 alter table public.networking_profiles enable row level security;
 alter table public.networking_profile_actions enable row level security;
 alter table public.raffle_participants enable row level security;
@@ -788,6 +836,10 @@ drop policy if exists networking_gallery_likes_insert on public.networking_galle
 drop policy if exists networking_gallery_likes_delete on public.networking_gallery_likes;
 drop policy if exists networking_gallery_comments_read_all on public.networking_gallery_comments;
 drop policy if exists networking_gallery_comments_insert on public.networking_gallery_comments;
+drop policy if exists content_reports_insert on public.content_reports;
+drop policy if exists user_blocks_read_all on public.user_blocks;
+drop policy if exists user_blocks_insert on public.user_blocks;
+drop policy if exists user_blocks_update on public.user_blocks;
 create policy live_polls_read_all on public.live_polls for select to anon, authenticated using (true);
 create policy live_poll_presets_read_all on public.live_poll_presets for select to anon, authenticated using (true);
 create policy event_gallery_items_read_all on public.event_gallery_items for select to anon, authenticated using (true);
@@ -796,6 +848,10 @@ create policy networking_gallery_likes_insert on public.networking_gallery_likes
 create policy networking_gallery_likes_delete on public.networking_gallery_likes for delete to anon, authenticated using (true);
 create policy networking_gallery_comments_read_all on public.networking_gallery_comments for select to anon, authenticated using (true);
 create policy networking_gallery_comments_insert on public.networking_gallery_comments for insert to anon, authenticated with check (true);
+create policy content_reports_insert on public.content_reports for insert to anon, authenticated with check (true);
+create policy user_blocks_read_all on public.user_blocks for select to anon, authenticated using (true);
+create policy user_blocks_insert on public.user_blocks for insert to anon, authenticated with check (true);
+create policy user_blocks_update on public.user_blocks for update to anon, authenticated using (true);
 
 -- Legacy profile-card networking
 drop policy if exists public_can_insert_networking_profiles on public.networking_profiles;
@@ -861,6 +917,8 @@ grant select on public.live_poll_presets to anon, authenticated;
 grant select on public.event_gallery_items to anon, authenticated;
 grant select, insert, delete on public.networking_gallery_likes to anon, authenticated;
 grant select, insert on public.networking_gallery_comments to anon, authenticated;
+grant insert on public.content_reports to anon, authenticated;
+grant select, insert, update on public.user_blocks to anon, authenticated;
 
 grant select, insert, update on public.networking_profiles to anon, authenticated;
 grant select, insert, update on public.networking_profile_actions to anon, authenticated;

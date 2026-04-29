@@ -27,13 +27,68 @@ const BLOCKERINO_VIEWPORT_IIFE = `
 })();
 `;
 
+const BLOCKERINO_READY_IIFE = `
+(function () {
+  var hasPostedReady = false;
+
+  function postReady() {
+    if (hasPostedReady) return;
+    hasPostedReady = true;
+
+    window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: "BLOCKERINO_READY"
+    }));
+  }
+
+  function hasRenderedGame() {
+    var root = document.getElementById("root");
+    if (!root) return false;
+
+    var rect = root.getBoundingClientRect();
+    if (!rect || rect.width < 20 || rect.height < 20) return false;
+
+    var text = (root.textContent || "").replace(/\\s+/g, "");
+    var interactiveElement = root.querySelector("button,[role='button'],canvas,svg");
+    return text.length > 0 || Boolean(interactiveElement);
+  }
+
+  function checkReady() {
+    if (hasRenderedGame()) {
+      postReady();
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      setTimeout(checkReady, 250);
+    });
+  } else {
+    setTimeout(checkReady, 250);
+  }
+
+  window.addEventListener("load", function () {
+    setTimeout(checkReady, 250);
+  });
+
+  setTimeout(checkReady, 1000);
+  setTimeout(checkReady, 2500);
+})();
+`;
+
 export const BLOCKERINO_VIEWPORT_SCRIPT = `
 ${BLOCKERINO_VIEWPORT_IIFE}
 true;
 `;
 
+export const BLOCKERINO_READY_BRIDGE_SCRIPT = `
+${BLOCKERINO_VIEWPORT_IIFE}
+${BLOCKERINO_READY_IIFE}
+true;
+`;
+
 export const BLOCKERINO_SCORE_BRIDGE_SCRIPT = `
 ${BLOCKERINO_VIEWPORT_IIFE}
+${BLOCKERINO_READY_IIFE}
 (function () {
   var lastPayload = "";
 

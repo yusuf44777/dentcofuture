@@ -109,9 +109,9 @@ export default function ParticipantHomeScreen() {
         <View style={styles.plaqueBlastCopy}>
           <View style={styles.plaqueBlastTitleRow}>
             <Gamepad2 color={colors.accent} size={16} />
-            <Text style={styles.plaqueBlastLabel}>BLOCKERINO</Text>
+            <Text style={styles.plaqueBlastLabel}>DENTBLAST</Text>
           </View>
-          <Text style={styles.plaqueBlastSubtitle}>Gömülü Blockerino'yu aç, oynayıp skorunu kaydet.</Text>
+          <Text style={styles.plaqueBlastSubtitle}>Dentblast'ı aç, oynayıp skorunu kaydet.</Text>
         </View>
         <Text style={styles.plaqueBlastAction}>Oyunu Aç ›</Text>
       </Pressable>

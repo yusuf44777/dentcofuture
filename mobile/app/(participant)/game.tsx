@@ -10,6 +10,7 @@ import {
   BLOCKERINO_SCORE_BRIDGE_SCRIPT,
   BLOCKERINO_VIEWPORT_SCRIPT
 } from "../../src/game/blockerino-web-scripts";
+import { CommunityTermsGate } from "../../src/components/community-terms-gate";
 import { useBlockerinoHtml } from "../../src/game/use-blockerino-html";
 import { useMobileMe } from "../../src/hooks/use-mobile-me";
 import { fetchGameScores, submitGameScore } from "../../src/lib/mobile-api";
@@ -17,8 +18,9 @@ import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 const RANK_COLORS = ["#C9A96E", "#A8A9AD", "#B87333"];
 const SCORE_SETTLE_DELAY_MS = 3500;
+const GAME_READY_TIMEOUT_MS = 7000;
 
-type BlockerinoScoreMessage = {
+type DentblastScoreMessage = {
   type?: string;
   score?: number;
   mode?: string;
@@ -41,11 +43,14 @@ export default function ParticipantGameScreen() {
   const [showScores, setShowScores] = useState(false);
   const [webViewLoading, setWebViewLoading] = useState(true);
   const [webViewError, setWebViewError] = useState(false);
+  const [webViewReady, setWebViewReady] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const { html, loading: htmlLoading, error: htmlError } = useBlockerinoHtml(reloadKey);
   const submittedBestRef = useRef<Record<string, number>>({});
   const pendingScoreRef = useRef<{ score: number; mode: string } | null>(null);
   const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const webViewReadyRef = useRef(false);
 
   const loading = htmlLoading || webViewLoading;
   const hasError = Boolean(htmlError) || webViewError;
@@ -73,6 +78,22 @@ export default function ParticipantGameScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    webViewReadyRef.current = webViewReady;
+  }, [webViewReady]);
+
+  useEffect(() => {
+    if (!html || hasError) return undefined;
+
+    const recoveryTimer = setTimeout(() => {
+      if (!webViewReadyRef.current) {
+        setShowRecovery(true);
+      }
+    }, GAME_READY_TIMEOUT_MS);
+
+    return () => clearTimeout(recoveryTimer);
+  }, [html, hasError, reloadKey]);
+
   if (me?.role === "participant" && !me.attendee) {
     return <Redirect href={"/(participant)/more" as never} />;
   }
@@ -80,6 +101,8 @@ export default function ParticipantGameScreen() {
   function reloadGame() {
     setWebViewError(false);
     setWebViewLoading(true);
+    setWebViewReady(false);
+    setShowRecovery(false);
     setReloadKey((current) => current + 1);
   }
 
@@ -108,7 +131,14 @@ export default function ParticipantGameScreen() {
 
   function handleGameMessage(event: WebViewMessageEvent) {
     try {
-      const payload = JSON.parse(event.nativeEvent.data) as BlockerinoScoreMessage;
+      const payload = JSON.parse(event.nativeEvent.data) as DentblastScoreMessage;
+      if (payload.type === "BLOCKERINO_READY") {
+        setWebViewReady(true);
+        setShowRecovery(false);
+        setWebViewLoading(false);
+        return;
+      }
+
       if (payload.type !== "BLOCKERINO_SCORE") return;
 
       const score = Number(payload.score);
@@ -121,20 +151,25 @@ export default function ParticipantGameScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <CommunityTermsGate>
+      <View style={styles.root}>
       <StatusBar hidden={isFullscreen} style="light" />
       <View style={styles.stage}>
         {loading && !hasError ? (
           <View style={styles.loadingOverlay}>
+            <View style={styles.loadingBadge}>
+              <Text style={styles.loadingBrand}>Dentblast</Text>
+              <Text style={styles.loadingSubcopy}>8x8 skor arenası</Text>
+            </View>
             <ActivityIndicator color={colors.accent} size="large" />
-            <Text style={styles.loadingText}>Blockerino hazırlanıyor...</Text>
+            <Text style={styles.loadingText}>Dentblast hazırlanıyor...</Text>
           </View>
         ) : null}
 
         {hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorTitle}>Oyun yüklenemedi</Text>
-            <Text style={styles.errorText}>Uygulama içindeki Blockerino dosyası açılamadı.</Text>
+            <Text style={styles.errorText}>Uygulama içindeki Dentblast dosyası açılamadı.</Text>
             <Pressable onPress={reloadGame} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
               <Text style={styles.retryText}>Tekrar Dene</Text>
             </Pressable>
@@ -159,8 +194,14 @@ export default function ParticipantGameScreen() {
               onLoadStart={() => {
                 setWebViewLoading(true);
                 setWebViewError(false);
+                setWebViewReady(false);
+                setShowRecovery(false);
               }}
               onLoadEnd={() => setWebViewLoading(false)}
+              onContentProcessDidTerminate={() => {
+                setWebViewLoading(false);
+                setWebViewError(true);
+              }}
               onError={() => {
                 setWebViewLoading(false);
                 setWebViewError(true);
@@ -173,6 +214,16 @@ export default function ParticipantGameScreen() {
           ) : null
         )}
 
+        {showRecovery && !hasError ? (
+          <View style={styles.recoveryOverlay}>
+            <Text style={styles.errorTitle}>Oyun ekranda görünmüyor mu?</Text>
+            <Text style={styles.errorText}>Dentblast yeniden yüklenerek devam edebilir.</Text>
+            <Pressable onPress={reloadGame} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
+              <Text style={styles.retryText}>Oyunu Yenile</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={[styles.topOverlay, { paddingTop: Math.max(insets.top, spacing.xs) }]}>
           <Pressable
             onPress={() => router.back()}
@@ -182,14 +233,10 @@ export default function ParticipantGameScreen() {
             <ArrowLeft color="#FFFFFF" size={20} />
           </Pressable>
 
-          {!isFullscreen ? (
-            <View style={styles.titlePill}>
-              <Text style={styles.title}>Blockerino</Text>
-              <Text style={styles.subtitle}>Skor otomatik kaydedilir</Text>
-            </View>
-          ) : (
-            <View style={styles.overlaySpacer} />
-          )}
+          <View style={styles.titlePill}>
+            <Text style={styles.title}>Dentblast</Text>
+            <Text style={styles.subtitle}>Skor otomatik kaydedilir</Text>
+          </View>
 
           <Pressable
             onPress={() => setShowScores((current) => !current)}
@@ -259,7 +306,8 @@ export default function ParticipantGameScreen() {
           </View>
         ) : null}
       </View>
-    </View>
+      </View>
+    </CommunityTermsGate>
   );
 }
 
@@ -302,20 +350,22 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.32)"
   },
   titlePill: {
-    backgroundColor: "rgba(4,3,16,0.78)",
-    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(12,10,26,0.86)",
+    borderColor: "rgba(139,92,246,0.32)",
     borderRadius: radii.pill,
     borderWidth: 1,
     flex: 1,
     justifyContent: "center",
     minHeight: 42,
+    minWidth: 0,
     paddingHorizontal: spacing.md
   },
   title: {
     color: "#FFFFFF",
     fontFamily: typography.display,
-    fontSize: 15,
-    fontWeight: "800"
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0
   },
   subtitle: {
     color: "rgba(255,255,255,0.68)",
@@ -330,9 +380,35 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: colors.backgroundDeep,
+    backgroundColor: "#07030F",
     justifyContent: "center",
+    padding: spacing.xl,
     zIndex: 10
+  },
+  loadingBadge: {
+    alignItems: "center",
+    borderColor: "rgba(139,92,246,0.34)",
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md
+  },
+  loadingBrand: {
+    color: "#FFFFFF",
+    fontFamily: typography.display,
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 0,
+    textAlign: "center"
+  },
+  loadingSubcopy: {
+    color: colors.copper,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 4,
+    textAlign: "center"
   },
   loadingText: {
     color: "#FFFFFF",
@@ -340,6 +416,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginTop: spacing.sm
+  },
+  recoveryOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.88)",
+    justifyContent: "center",
+    padding: spacing.xl,
+    zIndex: 16
   },
   errorContainer: {
     alignItems: "center",

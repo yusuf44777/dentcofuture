@@ -94,6 +94,7 @@ export type MobileNetworkingGalleryMediaItem = {
 
 export type MobileNetworkingGalleryPost = {
   id: string;
+  uploaderAttendeeId: string | null;
   uploaderName: string;
   caption: string | null;
   mediaType: "photo" | "video";

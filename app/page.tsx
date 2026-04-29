@@ -340,7 +340,7 @@ export default function LandingPage() {
           {[
             { icon: <Zap className="h-4 w-4" />, text: "Canlı Soru-Cevap + Anketler" },
             { icon: <Users className="h-4 w-4" />, text: "Akıllı Networking" },
-            { icon: <Gamepad2 className="h-4 w-4" />, text: "Blockerino Oyunu" },
+            { icon: <Gamepad2 className="h-4 w-4" />, text: "Dentblast Oyunu" },
             { icon: <Images className="h-4 w-4" />, text: "Etkinlik Galerisi" }
           ].map(({ icon, text }) => (
             <div key={text} className="flex items-center gap-2.5 text-sm text-[rgba(200,195,255,0.45)]">

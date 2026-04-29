@@ -17,6 +17,8 @@ import {
 import { Redirect, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Ban,
+  Flag,
   Heart,
   Instagram,
   Linkedin,
@@ -29,14 +31,17 @@ import {
   UserRound
 } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
+import { CommunityTermsGate } from "../../src/components/community-terms-gate";
 import { ScreenShell } from "../../src/components/screen-shell";
 import {
+  blockUser,
   createNetworkingGalleryPost,
   createNetworkingGalleryComment,
   deleteNetworkingGalleryPost,
   fetchNetworkingFeed,
   fetchNetworkingGalleryComments,
   fetchNetworkingGalleryFeed,
+  reportContent,
   toggleNetworkingGalleryLike
 } from "../../src/lib/mobile-api";
 import type {
@@ -179,6 +184,9 @@ export default function ParticipantNetworkingScreen() {
   const [uploadCarouselIndex, setUploadCarouselIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const [lastPhotoTap, setLastPhotoTap] = useState<{ itemId: string; at: number } | null>(null);
+  const [hiddenAttendeeIds, setHiddenAttendeeIds] = useState<Set<string>>(() => new Set());
+  const [moderationMessage, setModerationMessage] = useState("");
+  const [moderationError, setModerationError] = useState("");
 
   const feedQuery = useQuery({
     queryKey: ["mobile-networking-feed"],
@@ -414,6 +422,53 @@ export default function ParticipantNetworkingScreen() {
     }
   });
 
+  const reportMutation = useMutation({
+    mutationFn: reportContent,
+    onMutate: () => {
+      setModerationError("");
+      setModerationMessage("");
+    },
+    onSuccess: (result) => {
+      setModerationError("");
+      setModerationMessage(result.message || "Rapor alındı.");
+    },
+    onError: (error) => {
+      setModerationMessage("");
+      setModerationError(error instanceof Error ? error.message : "Rapor gönderilemedi.");
+    }
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: blockUser,
+    onMutate: async ({ blockedAttendeeId }) => {
+      setModerationError("");
+      setModerationMessage("");
+      setHiddenAttendeeIds((current) => {
+        const next = new Set(current);
+        next.add(blockedAttendeeId);
+        return next;
+      });
+    },
+    onSuccess: async (result) => {
+      setModerationError("");
+      setModerationMessage(result.message || "Kullanıcı engellendi.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-comments"] })
+      ]);
+    },
+    onError: (error, variables) => {
+      setHiddenAttendeeIds((current) => {
+        const next = new Set(current);
+        next.delete(variables.blockedAttendeeId);
+        return next;
+      });
+      setModerationMessage("");
+      setModerationError(error instanceof Error ? error.message : "Kullanıcı engellenemedi.");
+    }
+  });
+
   const galleryUploadMutation = useMutation({
     onMutate: () => {
       setUploadError("");
@@ -543,13 +598,20 @@ export default function ParticipantNetworkingScreen() {
     [searchQuery]
   );
 
+  const isAttendeeHidden = (targetAttendeeId: string | null | undefined) =>
+    Boolean(targetAttendeeId && hiddenAttendeeIds.has(targetAttendeeId));
+
   const recommendedProfiles = useMemo(() => {
     const source = feedQuery.data?.recommended ?? feedQuery.data?.queue ?? [];
     if (!normalizedSearchQuery) {
-      return source;
+      return source.filter((profile) => !isAttendeeHidden(profile.attendeeId));
     }
 
     return source.filter((profile) => {
+      if (isAttendeeHidden(profile.attendeeId)) {
+        return false;
+      }
+
       const haystack = [
         profile.fullName,
         profile.interestArea,
@@ -564,15 +626,19 @@ export default function ParticipantNetworkingScreen() {
 
       return haystack.includes(normalizedSearchQuery);
     });
-  }, [feedQuery.data?.queue, feedQuery.data?.recommended, normalizedSearchQuery]);
+  }, [feedQuery.data?.queue, feedQuery.data?.recommended, hiddenAttendeeIds, normalizedSearchQuery]);
 
   const directoryProfiles = useMemo(() => {
     const source = feedQuery.data?.directory ?? feedQuery.data?.queue ?? [];
     if (!normalizedSearchQuery) {
-      return source;
+      return source.filter((profile) => !isAttendeeHidden(profile.attendeeId));
     }
 
     return source.filter((profile) => {
+      if (isAttendeeHidden(profile.attendeeId)) {
+        return false;
+      }
+
       const haystack = [
         profile.fullName,
         profile.interestArea,
@@ -587,7 +653,7 @@ export default function ParticipantNetworkingScreen() {
 
       return haystack.includes(normalizedSearchQuery);
     });
-  }, [feedQuery.data?.directory, feedQuery.data?.queue, normalizedSearchQuery]);
+  }, [feedQuery.data?.directory, feedQuery.data?.queue, hiddenAttendeeIds, normalizedSearchQuery]);
 
   const recommendationProfileIds = useMemo(
     () => new Set((feedQuery.data?.recommended ?? feedQuery.data?.queue ?? []).map((item) => item.profileId)),
@@ -721,6 +787,10 @@ export default function ParticipantNetworkingScreen() {
     () => (me?.attendee?.name ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR"),
     [me?.attendee?.name]
   );
+  const visibleGalleryPosts = useMemo(
+    () => (galleryFeedQuery.data?.posts ?? []).filter((post) => !isAttendeeHidden(post.uploaderAttendeeId)),
+    [galleryFeedQuery.data?.posts, hiddenAttendeeIds]
+  );
 
   const handlePhotoDoubleTapLike = (itemId: string, likedByMe: boolean) => {
     const now = Date.now();
@@ -747,7 +817,8 @@ export default function ParticipantNetworkingScreen() {
   }
 
   return (
-    <ScreenShell
+    <CommunityTermsGate>
+      <ScreenShell
       title="Outliers"
       subtitle="Feed'de paylaş, katılımcıları keşfet ve profillerini görüntüle."
     >
@@ -964,16 +1035,28 @@ export default function ParticipantNetworkingScreen() {
               </View>
             ) : null}
 
-            {!galleryFeedQuery.isLoading && (galleryFeedQuery.data?.posts ?? []).length === 0 ? (
+            {moderationMessage ? (
+              <Text style={styles.moderationSuccessText}>{moderationMessage}</Text>
+            ) : null}
+            {moderationError ? (
+              <Text style={styles.errorText}>{moderationError}</Text>
+            ) : null}
+
+            {!galleryFeedQuery.isLoading && visibleGalleryPosts.length === 0 ? (
               <Text style={styles.mutedText}>Henüz galeriye paylaşım eklenmedi.</Text>
             ) : null}
 
-            {(galleryFeedQuery.data?.posts ?? []).map((post) => {
+            {visibleGalleryPosts.map((post) => {
               const draft = commentDrafts[post.id] ?? "";
               const avatarLetter = post.uploaderName.trim().charAt(0).toLocaleUpperCase("tr-TR") || "?";
               const hiddenCommentCount = Math.max(post.commentsCount - post.recentComments.length, 0);
               const postOwnerName = post.uploaderName.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR");
-              const isOwnPost = myNormalizedName.length > 0 && myNormalizedName === postOwnerName;
+              const isOwnPost =
+                (post.uploaderAttendeeId && post.uploaderAttendeeId === attendeeId) ||
+                (myNormalizedName.length > 0 && myNormalizedName === postOwnerName);
+              const visibleRecentComments = post.recentComments.filter(
+                (comment) => !isAttendeeHidden(comment.attendeeId)
+              );
               const postMediaItems =
                 post.mediaItems && post.mediaItems.length > 0
                   ? post.mediaItems
@@ -1027,6 +1110,50 @@ export default function ParticipantNetworkingScreen() {
                         <Trash2 color={colors.danger} size={14} />
                         <Text style={styles.galleryDeleteButtonText}>Sil</Text>
                       </Pressable>
+                    ) : post.uploaderAttendeeId ? (
+                      <View style={styles.moderationActionRow}>
+                        <Pressable
+                          disabled={reportMutation.isPending}
+                          style={({ pressed }) => [
+                            styles.moderationButton,
+                            pressed ? styles.pressed : null,
+                            reportMutation.isPending ? styles.disabled : null
+                          ]}
+                          onPress={() => {
+                            reportMutation.mutate({
+                              targetType: "gallery_post",
+                              targetId: post.id,
+                              targetAttendeeId: post.uploaderAttendeeId,
+                              reason: "objectionable_content",
+                              details: { uploaderName: post.uploaderName }
+                            });
+                          }}
+                        >
+                          <Flag color={colors.warning} size={13} />
+                          <Text style={styles.moderationButtonText}>Bildir</Text>
+                        </Pressable>
+                        <Pressable
+                          disabled={blockMutation.isPending}
+                          style={({ pressed }) => [
+                            styles.moderationButton,
+                            styles.blockButton,
+                            pressed ? styles.pressed : null,
+                            blockMutation.isPending ? styles.disabled : null
+                          ]}
+                          onPress={() => {
+                            blockMutation.mutate({
+                              blockedAttendeeId: post.uploaderAttendeeId as string,
+                              targetType: "gallery_post",
+                              targetId: post.id,
+                              reason: "abusive_user",
+                              details: { uploaderName: post.uploaderName }
+                            });
+                          }}
+                        >
+                          <Ban color={colors.danger} size={13} />
+                          <Text style={[styles.moderationButtonText, styles.blockButtonText]}>Engelle</Text>
+                        </Pressable>
+                      </View>
                     ) : null}
                   </View>
 
@@ -1173,8 +1300,8 @@ export default function ParticipantNetworkingScreen() {
                   </View>
 
                   <View style={styles.galleryComments}>
-                    {post.recentComments.length > 0 ? (
-                      post.recentComments.map((comment) => (
+                    {visibleRecentComments.length > 0 ? (
+                      visibleRecentComments.map((comment) => (
                         <Text key={comment.id} style={styles.galleryCommentText}>
                           <Text style={styles.galleryCommentAuthor}>{comment.attendeeName}: </Text>
                           {comment.text}
@@ -1514,6 +1641,55 @@ export default function ParticipantNetworkingScreen() {
                     <Text style={styles.profileCardSocialButtonText}>Instagram</Text>
                   </Pressable>
                 </View>
+
+                {activeProfileCard.attendeeId && activeProfileCard.attendeeId !== attendeeId ? (
+                  <View style={styles.profileModerationRow}>
+                    <Pressable
+                      disabled={reportMutation.isPending}
+                      style={({ pressed }) => [
+                        styles.profileModerationButton,
+                        pressed ? styles.pressed : null,
+                        reportMutation.isPending ? styles.disabled : null
+                      ]}
+                      onPress={() => {
+                        reportMutation.mutate({
+                          targetType: "networking_profile",
+                          targetId: activeProfileCard.profileId,
+                          targetAttendeeId: activeProfileCard.attendeeId,
+                          reason: "objectionable_content",
+                          details: { fullName: activeProfileCard.fullName }
+                        });
+                      }}
+                    >
+                      <Flag color={colors.warning} size={14} />
+                      <Text style={styles.profileModerationButtonText}>Profili Bildir</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={blockMutation.isPending}
+                      style={({ pressed }) => [
+                        styles.profileModerationButton,
+                        styles.profileBlockButton,
+                        pressed ? styles.pressed : null,
+                        blockMutation.isPending ? styles.disabled : null
+                      ]}
+                      onPress={() => {
+                        blockMutation.mutate({
+                          blockedAttendeeId: activeProfileCard.attendeeId as string,
+                          targetType: "networking_profile",
+                          targetId: activeProfileCard.profileId,
+                          reason: "abusive_user",
+                          details: { fullName: activeProfileCard.fullName }
+                        });
+                        setIsProfileCardVisible(false);
+                      }}
+                    >
+                      <Ban color={colors.danger} size={14} />
+                      <Text style={[styles.profileModerationButtonText, styles.blockButtonText]}>
+                        Kullanıcıyı Engelle
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </>
             ) : (
               <Text style={styles.mutedText}>Profil bilgisi bulunamadı.</Text>
@@ -1578,18 +1754,69 @@ export default function ParticipantNetworkingScreen() {
               contentContainerStyle={styles.sheetCommentsContent}
               showsVerticalScrollIndicator={false}
             >
-              {(galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? []).map(
-                (comment) => (
-                  <View key={comment.id} style={styles.sheetCommentRow}>
-                    <Text style={styles.sheetCommentAuthor}>{comment.attendeeName}</Text>
-                    <Text style={styles.sheetCommentText}>{comment.text}</Text>
-                    <Text style={styles.sheetCommentDate}>{formatGalleryDate(comment.createdAt)}</Text>
-                  </View>
-                )
-              )}
+              {(galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? [])
+                .filter((comment) => !isAttendeeHidden(comment.attendeeId))
+                .map((comment) => {
+                  const isOwnComment = comment.attendeeId === attendeeId;
+                  return (
+                    <View key={comment.id} style={styles.sheetCommentRow}>
+                      <View style={styles.sheetCommentHeader}>
+                        <Text style={styles.sheetCommentAuthor}>{comment.attendeeName}</Text>
+                        {!isOwnComment ? (
+                          <View style={styles.commentModerationRow}>
+                            <Pressable
+                              disabled={reportMutation.isPending}
+                              style={({ pressed }) => [
+                                styles.commentModerationButton,
+                                pressed ? styles.pressed : null
+                              ]}
+                              onPress={() => {
+                                reportMutation.mutate({
+                                  targetType: "gallery_comment",
+                                  targetId: comment.id,
+                                  targetAttendeeId: comment.attendeeId,
+                                  reason: "objectionable_content",
+                                  details: { itemId: comment.itemId }
+                                });
+                              }}
+                            >
+                              <Flag color={colors.warning} size={12} />
+                              <Text style={styles.commentModerationButtonText}>Bildir</Text>
+                            </Pressable>
+                            <Pressable
+                              disabled={blockMutation.isPending}
+                              style={({ pressed }) => [
+                                styles.commentModerationButton,
+                                pressed ? styles.pressed : null
+                              ]}
+                              onPress={() => {
+                                blockMutation.mutate({
+                                  blockedAttendeeId: comment.attendeeId,
+                                  targetType: "gallery_comment",
+                                  targetId: comment.id,
+                                  reason: "abusive_user",
+                                  details: { itemId: comment.itemId }
+                                });
+                              }}
+                            >
+                              <Ban color={colors.danger} size={12} />
+                              <Text style={[styles.commentModerationButtonText, styles.blockButtonText]}>
+                                Engelle
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.sheetCommentText}>{comment.text}</Text>
+                      <Text style={styles.sheetCommentDate}>{formatGalleryDate(comment.createdAt)}</Text>
+                    </View>
+                  );
+                })}
 
               {!galleryCommentsQuery.isLoading &&
-              (galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? []).length ===
+              (galleryCommentsQuery.data?.comments ?? selectedCommentPost?.recentComments ?? []).filter(
+                (comment) => !isAttendeeHidden(comment.attendeeId)
+              ).length ===
                 0 ? (
                 <Text style={styles.sheetEmptyText}>Henüz yorum yok. İlk yorumu sen bırak.</Text>
               ) : null}
@@ -1631,7 +1858,8 @@ export default function ParticipantNetworkingScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScreenShell>
+      </ScreenShell>
+    </CommunityTermsGate>
   );
 }
 
@@ -1883,6 +2111,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 13,
     lineHeight: 18
+  },
+  moderationSuccessText: {
+    color: colors.positive,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: spacing.xs
   },
   warningCard: {
     backgroundColor: colors.warningSoft,
@@ -2182,6 +2417,36 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: 6
   },
+  profileModerationRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  profileModerationButton: {
+    alignItems: "center",
+    backgroundColor: colors.warningSoft,
+    borderColor: "rgba(245,158,11,0.3)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    minHeight: 34,
+    paddingHorizontal: spacing.sm
+  },
+  profileBlockButton: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: "rgba(248,113,113,0.32)"
+  },
+  profileModerationButtonText: {
+    color: colors.warning,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "800",
+    marginLeft: 6
+  },
+  blockButtonText: {
+    color: colors.danger
+  },
   galleryPostCard: {
     backgroundColor: colors.surfaceMuted,
     borderColor: colors.line,
@@ -2230,6 +2495,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     marginLeft: 5
+  },
+  moderationActionRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6
+  },
+  moderationButton: {
+    alignItems: "center",
+    backgroundColor: colors.warningSoft,
+    borderColor: "rgba(245,158,11,0.3)",
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    flexDirection: "row",
+    paddingHorizontal: 8,
+    paddingVertical: 5
+  },
+  blockButton: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: "rgba(248,113,113,0.32)"
+  },
+  moderationButtonText: {
+    color: colors.warning,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    marginLeft: 4
   },
   galleryAuthor: {
     color: colors.ink,
@@ -2446,11 +2737,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs
   },
+  sheetCommentHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
   sheetCommentAuthor: {
     color: colors.copper,
     fontFamily: typography.body,
     fontSize: 12,
     fontWeight: "700"
+  },
+  commentModerationRow: {
+    flexDirection: "row",
+    gap: 6
+  },
+  commentModerationButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    paddingHorizontal: 4,
+    paddingVertical: 3
+  },
+  commentModerationButtonText: {
+    color: colors.warning,
+    fontFamily: typography.body,
+    fontSize: 10,
+    fontWeight: "800",
+    marginLeft: 3
   },
   sheetCommentText: {
     color: colors.ink,

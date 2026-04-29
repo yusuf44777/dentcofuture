@@ -3,6 +3,7 @@ import { parsePollResponse } from "@/lib/engagement";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import type { MobileLiveState } from "@/lib/mobile/contracts";
 import type { ReactionEmoji } from "@/lib/types";
+import { getBlockedAttendeeIds } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -169,17 +170,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const questions = (questionsResult.data ?? []).map((row) => ({
-    id: row.id,
-    text: row.text,
-    votes: row.votes,
-    answered: row.answered,
-    pinned: row.pinned,
-    created_at: row.created_at,
-    attendee_id: row.attendee_id,
-    attendee_name: (row.attendee as { name?: string } | null)?.name ?? null,
-    attendee_role: (row.attendee as { role?: string } | null)?.role ?? null
-  }));
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+  const questions = (questionsResult.data ?? [])
+    .filter((row) => !blockedAttendeeIds.has(row.attendee_id))
+    .map((row) => ({
+      id: row.id,
+      text: row.text,
+      votes: row.votes,
+      answered: row.answered,
+      pinned: row.pinned,
+      created_at: row.created_at,
+      attendee_id: row.attendee_id,
+      attendee_name: (row.attendee as { name?: string } | null)?.name ?? null,
+      attendee_role: (row.attendee as { role?: string } | null)?.role ?? null
+    }));
 
   const payload: MobileLiveState = {
     ok: true,

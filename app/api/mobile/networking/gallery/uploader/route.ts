@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import type { MobileNetworkingGalleryUploaderProfile } from "@/lib/mobile/contracts";
 import { normalizeGalleryPublicUrl } from "@/lib/gallery";
 import { resolveMobileSession } from "@/lib/mobile/auth";
+import { getBlockedAttendeeIds } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type GalleryItemRow = {
   id: string;
+  uploader_attendee_id: string | null;
   uploader_name: string;
   caption: string | null;
   media_type: "photo" | "video";
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
       .limit(1),
     resolved.session.supabase
       .from("event_gallery_items")
-      .select("id, uploader_name, caption, media_type, public_url, created_at")
+      .select("id, uploader_attendee_id, uploader_name, caption, media_type, public_url, created_at")
       .eq("uploader_name", uploaderName)
       .order("created_at", { ascending: false })
       .limit(limit)
@@ -75,6 +77,11 @@ export async function GET(request: NextRequest) {
   }
 
   const attendee = attendeesResult.data?.[0] ?? null;
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+  if (attendee?.id && blockedAttendeeIds.has(attendee.id)) {
+    return NextResponse.json({ error: "Bu kullanıcı engellendi." }, { status: 403 });
+  }
+
   let profileMeta: { interest_area: string | null; institution_name: string | null } | null = null;
 
   if (attendee?.id) {
@@ -113,7 +120,9 @@ export async function GET(request: NextRequest) {
     profileMeta = profileByNameResult.data ?? null;
   }
 
-  const items = (itemsResult.data ?? []) as GalleryItemRow[];
+  const items = ((itemsResult.data ?? []) as GalleryItemRow[]).filter(
+    (item) => !item.uploader_attendee_id || !blockedAttendeeIds.has(item.uploader_attendee_id)
+  );
   const itemIds = items.map((item) => item.id);
 
   let likesByItem = new Map<string, number>();

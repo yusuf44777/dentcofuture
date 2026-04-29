@@ -10,6 +10,8 @@ import {
   sanitizeCaption,
   sanitizeUploaderName
 } from "@/lib/gallery";
+import { resolveOptionalMobileSession } from "@/lib/mobile/auth";
+import { ObjectionableContentError, assertUserGeneratedTextAllowed } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,10 +34,19 @@ export async function POST(request: NextRequest) {
     payload = {};
   }
 
+  const resolved = await resolveOptionalMobileSession(request);
+  if ("errorResponse" in resolved) {
+    return resolved.errorResponse;
+  }
+
+  if (resolved.session && !resolved.session.attendee?.id) {
+    return NextResponse.json({ error: "Galeri paylaşımı için onboarding tamamlanmalı." }, { status: 400 });
+  }
+
   const fileName = typeof payload.fileName === "string" ? payload.fileName.trim() : "";
   const mimeType = typeof payload.mimeType === "string" ? payload.mimeType.trim().toLowerCase() : "";
   const fileSize = Number(payload.fileSize);
-  const uploaderName = sanitizeUploaderName(payload.uploaderName);
+  const uploaderName = sanitizeUploaderName(resolved.session?.attendee?.name ?? payload.uploaderName);
   const caption = sanitizeCaption(payload.caption);
   const batchId = typeof payload.batchId === "string" ? payload.batchId : "";
   const mediaType = resolveGalleryMediaType(mimeType);
@@ -64,6 +75,18 @@ export async function POST(request: NextRequest) {
 
   if (caption.length > 280) {
     return NextResponse.json({ error: "Açıklama en fazla 280 karakter olabilir." }, { status: 400 });
+  }
+
+  try {
+    assertUserGeneratedTextAllowed(uploaderName, "Ad soyad");
+    if (caption) {
+      assertUserGeneratedTextAllowed(caption, "Açıklama");
+    }
+  } catch (error) {
+    if (error instanceof ObjectionableContentError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+    throw error;
   }
 
   try {

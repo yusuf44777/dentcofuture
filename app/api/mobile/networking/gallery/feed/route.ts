@@ -5,12 +5,14 @@ import type {
 } from "@/lib/mobile/contracts";
 import { normalizeGalleryPublicUrl } from "@/lib/gallery";
 import { resolveMobileSession } from "@/lib/mobile/auth";
+import { getBlockedAttendeeIds } from "@/lib/moderation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type GalleryItemRow = {
   id: string;
+  uploader_attendee_id: string | null;
   uploader_name: string;
   caption: string | null;
   media_type: "photo" | "video";
@@ -34,6 +36,10 @@ type GalleryCommentRow = {
 
 const DEFAULT_LIMIT = 18;
 const FEED_FETCH_EXPANSION_FACTOR = 4;
+
+function normalizeName(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLocaleLowerCase("tr-TR");
+}
 
 function clampLimit(value: string | null) {
   const parsed = Number(value);
@@ -99,9 +105,11 @@ export async function GET(request: NextRequest) {
 
   const fetchLimit = Math.max(12, Math.min(120, limit * FEED_FETCH_EXPANSION_FACTOR));
 
+  const blockedAttendeeIds = await getBlockedAttendeeIds(resolved.session);
+
   const itemsResult = await resolved.session.supabase
     .from("event_gallery_items")
-    .select("id, uploader_name, caption, media_type, public_url, file_path, created_at")
+    .select("id, uploader_attendee_id, uploader_name, caption, media_type, public_url, file_path, created_at")
     .order("created_at", { ascending: false })
     .limit(fetchLimit);
 
@@ -113,7 +121,41 @@ export async function GET(request: NextRequest) {
   }
 
   const items = (itemsResult.data ?? []) as GalleryItemRow[];
-  const groupedItems = groupGalleryItems(items, limit);
+
+  const legacyUploaderNames = Array.from(
+    new Set(
+      items
+        .filter((item) => !item.uploader_attendee_id)
+        .map((item) => item.uploader_name.replace(/\s+/g, " ").trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 120);
+
+  let attendeeIdByUploaderName = new Map<string, string>();
+  if (legacyUploaderNames.length > 0) {
+    const legacyAttendeesResult = await resolved.session.supabase
+      .from("attendees")
+      .select("id, name")
+      .in("name", legacyUploaderNames);
+
+    if (!legacyAttendeesResult.error) {
+      attendeeIdByUploaderName = new Map(
+        (legacyAttendeesResult.data ?? []).map((attendee) => [
+          normalizeName(attendee.name),
+          attendee.id
+        ])
+      );
+    }
+  }
+
+  const resolveUploaderAttendeeId = (item: GalleryItemRow) =>
+    item.uploader_attendee_id ?? attendeeIdByUploaderName.get(normalizeName(item.uploader_name)) ?? null;
+
+  const visibleItems = items.filter((item) => {
+    const uploaderAttendeeId = resolveUploaderAttendeeId(item);
+    return !uploaderAttendeeId || !blockedAttendeeIds.has(uploaderAttendeeId);
+  });
+  const groupedItems = groupGalleryItems(visibleItems, limit);
 
   if (groupedItems.length === 0) {
     const payload: MobileNetworkingGalleryFeed = {
@@ -153,7 +195,9 @@ export async function GET(request: NextRequest) {
   }
 
   const likes = (likesResult.data ?? []) as GalleryLikeRow[];
-  const comments = (commentsResult.data ?? []) as GalleryCommentRow[];
+  const comments = ((commentsResult.data ?? []) as GalleryCommentRow[]).filter(
+    (comment) => !blockedAttendeeIds.has(comment.attendee_id)
+  );
 
   const commentAttendeeIds = Array.from(
     new Set(comments.map((comment) => comment.attendee_id).filter(Boolean))
@@ -203,6 +247,7 @@ export async function GET(request: NextRequest) {
       left.created_at.localeCompare(right.created_at)
     );
     const coverItem = orderedMedia[0] ?? group.items[0];
+    const uploaderAttendeeId = resolveUploaderAttendeeId(coverItem);
     const mediaItems = orderedMedia.map((item) => ({
       id: item.id,
       mediaType: item.media_type,
@@ -250,6 +295,7 @@ export async function GET(request: NextRequest) {
 
     return {
       id: coverItem.id,
+      uploaderAttendeeId,
       uploaderName: coverItem.uploader_name,
       caption,
       mediaType: mediaItems[0]?.mediaType ?? coverItem.media_type,
