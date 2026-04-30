@@ -16,7 +16,7 @@ const config: ExpoConfig = {
   newArchEnabled: true,
   ios: {
     icon: "./assets/ios-icon.png",
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: "com.communitive.dentlinkco"
   },
   android: {
