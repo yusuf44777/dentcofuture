@@ -86,16 +86,16 @@ type ScheduleItem = {
 const SCHEDULE: ScheduleItem[] = [
   { time: "10:30-11:00", title: "Kapı Açılışı", type: "break" },
   { time: "11:00-11:20", title: "Açılış Konuşması", type: "talk" },
-  { time: "11:30-12:00", title: "1. Konuşmacı: Dr. Sina Saygılı", type: "talk", speaker: "Dr. Sina Saygılı" },
-  { time: "12:00-12:10", title: "Kahve + Networking", type: "break" },
-  { time: "12:20-12:50", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk", speaker: "Doç. Dr. Gaye Keser" },
+  { time: "11:20-12:00", title: "1. Konuşmacı: Dr. Sina Saygılı", type: "talk" },
+  { time: "12:00-12:10", title: "Networking + Kahve Arası", type: "break" },
+  { time: "12:10-12:50", title: "2. Konuşmacı: Doç. Dr. Gaye Keser", type: "talk" },
   { time: "12:50-13:00", title: "Networking + Kahve Arası", type: "break" },
-  { time: "13:00-13:30", title: "3. Konuşmacı: Prof. Dr. Alper Alkan", type: "talk", speaker: "Prof. Dr. Alper Alkan" },
-  { time: "13:30-14:10", title: "Yemek Arası + Networking", type: "break" },
-  { time: "14:20-14:50", title: "4. Konuşmacı: Dr. Esra Bozbay", type: "talk", speaker: "Dr. Esra Bozbay" },
-  { time: "14:50-15:00", title: "Networking + Kahve Arası", type: "break" },
-  { time: "15:00-15:30", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk", speaker: "Dt. Kerem İnan" },
-  { time: "15:30-15:50", title: "Kapanış ve Ödül Takdimi", type: "break" }
+  { time: "13:00-13:40", title: "3. Konuşmacı: Prof. Dr. Alper Alkan", type: "talk" },
+  { time: "13:40-14:20", title: "Yemek Arası + Networking", type: "break" },
+  { time: "14:20-15:00", title: "4. Konuşmacı: Dr. Esra Bozbay", type: "talk" },
+  { time: "15:00-15:10", title: "Networking + Kahve Arası", type: "break" },
+  { time: "15:10-15:50", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk" },
+  { time: "15:50-16:10", title: "Kapanış ve Ödül Takdimi", type: "break" }
 ];
 
 const BADGE_MAP: Record<SpeakerBadge, {
