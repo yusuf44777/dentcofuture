@@ -25,6 +25,9 @@ pnpm-debug.log*
 
 # local env files
 .env*
+dentco-outlier-*.json
+*service-account*.json
+google-credentials*.json
 
 # typescript
 *.tsbuildinfo

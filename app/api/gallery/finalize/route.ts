@@ -157,15 +157,10 @@ export async function POST(request: NextRequest) {
     const drivePublicUrl = driveIsSynced ? driveBackup.publicUrl : null;
 
     if (requireDriveSync && !driveIsSynced) {
-      await cleanupUploadedObject();
-      return NextResponse.json(
-        {
-          error:
-            driveBackup.error ||
-            "Drive senkronu zorunlu ama dosya Google Drive'a aktarilamadi. Ayarlari kontrol edin."
-        },
-        { status: 500 }
-      );
+      console.warn("Drive senkronu basarisiz; etkinlik akisi icin Supabase kopyasi kullaniliyor.", {
+        path,
+        driveError
+      });
     }
 
     if (removeSupabaseCopy && driveIsSynced && !drivePublicUrl) {
