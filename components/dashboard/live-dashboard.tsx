@@ -50,6 +50,7 @@ type PollCounts = Record<string, number>;
 type ReactionCounts = Record<ReactionEmoji, number>;
 type AnalyzeUiState = "idle" | "loading" | "success" | "error";
 type HardResetUiState = "idle" | "loading" | "success" | "error";
+type ReactionResetUiState = "idle" | "loading" | "success" | "error";
 type PollControlUiState = "idle" | "loading" | "success" | "error";
 type ModeratorBrief = {
   roomMood: string;
@@ -70,6 +71,11 @@ type LivePollPresetApiResponse = {
   preset?: LivePollPresetConfig | null;
   presetId?: string;
   message?: string;
+  error?: string;
+};
+type ResetReactionsApiResponse = {
+  ok?: boolean;
+  deleted_reactions?: number;
   error?: string;
 };
 
@@ -460,6 +466,8 @@ export function LiveDashboard() {
   const [analyzeUiMessage, setAnalyzeUiMessage] = useState("");
   const [hardResetUiState, setHardResetUiState] = useState<HardResetUiState>("idle");
   const [hardResetUiMessage, setHardResetUiMessage] = useState("");
+  const [reactionResetUiState, setReactionResetUiState] = useState<ReactionResetUiState>("idle");
+  const [reactionResetUiMessage, setReactionResetUiMessage] = useState("");
   const [qrDownloadState, setQrDownloadState] = useState<"idle" | "loading" | "error">("idle");
   const [qrDownloadMessage, setQrDownloadMessage] = useState("");
   const [resetCursor, setResetCursor] = useState<string | null>(null);
@@ -811,6 +819,19 @@ export function LiveDashboard() {
           }));
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "reactions"
+        },
+        () => {
+          void getReactionCounts(supabase, resetCursor).then((nextReactionCounts) => {
+            setReactionCounts(nextReactionCounts ?? createEmptyReactionCounts());
+          });
+        }
+      )
       .subscribe();
 
     const analyticsChannel = supabase
@@ -943,6 +964,7 @@ export function LiveDashboard() {
     setModeratorBrief(EMPTY_MODERATOR_BRIEF);
     setResetUiMessage("Panel görünümü sıfırlandı. Veritabanı verileri silinmedi.");
     setHardResetUiMessage("");
+    setReactionResetUiMessage("");
   };
 
   const handleHardResetDatabase = async () => {
@@ -996,6 +1018,7 @@ export function LiveDashboard() {
       setModeratorBrief(EMPTY_MODERATOR_BRIEF);
       setAnalyzeUiMessage("");
       setResetUiMessage("Panel sıfırlandı. Veritabanındaki eski mesajlar kalıcı olarak silindi.");
+      setReactionResetUiMessage("");
       setHardResetUiState("success");
       setHardResetUiMessage(
         `Silinen kayıtlar: ${data.deleted_feedbacks ?? 0} geri bildirim, ${data.deleted_analytics ?? 0} analiz.`
@@ -1005,6 +1028,46 @@ export function LiveDashboard() {
       setHardResetUiMessage(
         error instanceof Error ? error.message : "Veritabanı temizlenirken bir hata oluştu."
       );
+    }
+  };
+
+  const handleResetReactions = async () => {
+    if (reactionResetUiState === "loading") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bu işlem canlı tepki sayaçlarını sıfırlamak için Supabase'deki tüm tepki kayıtlarını kalıcı olarak siler. Devam etmek istiyor musunuz?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setReactionResetUiState("loading");
+    setReactionResetUiMessage("");
+
+    try {
+      const response = await fetch("/api/dashboard/reset-reactions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({ confirm: "RESET_REACTIONS" })
+      });
+
+      const data = (await response.json().catch(() => null)) as ResetReactionsApiResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error ?? "Canlı tepkiler sıfırlanamadı.");
+      }
+
+      setReactionCounts(createEmptyReactionCounts());
+      setReactionResetUiState("success");
+      setReactionResetUiMessage(`Canlı tepkiler sıfırlandı. Silinen tepki: ${data.deleted_reactions ?? 0}.`);
+    } catch (error) {
+      setReactionResetUiState("error");
+      setReactionResetUiMessage(error instanceof Error ? error.message : "Canlı tepkiler sıfırlanamadı.");
     }
   };
 
@@ -1775,9 +1838,31 @@ export function LiveDashboard() {
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">
-              <div className="mb-4 flex items-center gap-2 text-cyan-100">
-                <Zap className="h-5 w-5" />
-                <h3 className="text-lg font-semibold">Canlı Tepkiler</h3>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-cyan-100">
+                  <Zap className="h-5 w-5" />
+                  <h3 className="text-lg font-semibold">Canlı Tepkiler</h3>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetReactions}
+                  disabled={reactionResetUiState === "loading" || reactionTotal === 0}
+                  className="w-fit border-rose-300/35 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20"
+                >
+                  {reactionResetUiState === "loading" ? (
+                    <>
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      Sıfırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Tepkileri Sıfırla
+                    </>
+                  )}
+                </Button>
               </div>
 
               <div className="space-y-3">
@@ -1809,6 +1894,15 @@ export function LiveDashboard() {
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-cyan-200/80">
                 Toplam tepki: {reactionTotal}
               </p>
+              {reactionResetUiMessage ? (
+                <p
+                  className={`mt-2 text-xs ${
+                    reactionResetUiState === "error" ? "text-rose-300" : "text-emerald-200"
+                  }`}
+                >
+                  {reactionResetUiMessage}
+                </p>
+              ) : null}
             </article>
 
             <article className="glass-panel rounded-3xl p-5 md:p-6">

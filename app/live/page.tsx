@@ -106,6 +106,8 @@ export default function LivePage() {
             [payload.new.emoji]: (prev[payload.new.emoji] ?? 0) + 1
           }));
         })
+      .on("postgres_changes" as never, { event: "DELETE", schema: "public", table: "reactions" } as never,
+        () => loadReactionCounts())
       .on("postgres_changes" as never, { event: "*", schema: "public", table: "attendees" } as never,
         () => loadLeaderboard())
       .subscribe();
