@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
 const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
-const ANDROID_APP_URL = "https://play.google.com/store/apps";
-const IOS_APP_URL = "https://apps.apple.com";
+const ANDROID_APP_URL = "https://play.google.com/store/apps/details?id=com.communitive.dentlinkco";
+const IOS_APP_URL = "https://apps.apple.com/us/app/dentco-outlier/id6764522833";
 const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
 const LUMA_EVENT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
 
@@ -96,6 +96,21 @@ const SCHEDULE: ScheduleItem[] = [
   { time: "15:00-15:10", title: "Networking + Kahve Arası", type: "break" },
   { time: "15:10-15:50", title: "5. Konuşmacı: Dt. Kerem İnan", type: "talk" },
   { time: "15:50-16:10", title: "Kapanış ve Ödül Takdimi", type: "break" }
+];
+
+const STORE_LINKS = [
+  {
+    href: IOS_APP_URL,
+    iconClass: "fa-brands fa-apple",
+    label: "App Store",
+    eyebrow: "iPhone için"
+  },
+  {
+    href: ANDROID_APP_URL,
+    iconClass: "fa-brands fa-google-play",
+    label: "Google Play",
+    eyebrow: "Android için"
+  }
 ];
 
 const BADGE_MAP: Record<SpeakerBadge, {
@@ -201,6 +216,45 @@ function ApplicationCheckoutButton() {
     >
       Etkinliğe Kaydol
     </a>
+  );
+}
+
+function StoreDownloadLinks({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={cn("flex flex-col items-center gap-3", compact ? "sm:flex-row" : "")}>
+      {!compact && (
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[rgba(190,255,236,0.78)]">
+          Kongre uygulaması yayında
+        </p>
+      )}
+      <div className={cn("flex flex-col gap-3", compact ? "sm:flex-row" : "w-full sm:flex-row sm:justify-center")}>
+        {STORE_LINKS.map((store) => (
+          <a
+            key={store.label}
+            href={store.href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`DentCo Outlier ${store.label} mağazasını aç`}
+            className={cn(
+              "group inline-flex h-14 items-center justify-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.08)] px-5 text-left text-white shadow-[0_16px_40px_rgba(0,0,0,0.18)] backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[rgba(0,229,160,0.5)] hover:bg-[rgba(0,229,160,0.12)]",
+              compact ? "h-11 px-4" : "min-w-[178px]"
+            )}
+          >
+            <i className={cn(store.iconClass, compact ? "text-lg" : "text-2xl")} aria-hidden="true" />
+            <span className="leading-none">
+              {!compact && (
+                <span className="block text-[9px] font-semibold uppercase tracking-[0.18em] text-[rgba(210,205,255,0.46)]">
+                  {store.eyebrow}
+                </span>
+              )}
+              <span className={cn("block font-heading font-extrabold", compact ? "text-xs" : "mt-1 text-sm")}>
+                {store.label}
+              </span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -323,6 +377,7 @@ export default function LandingPage() {
                 <p className="mt-1 font-heading text-2xl font-extrabold text-[#7CFFD0]">300 TL</p>
               </div>
               <ApplicationCheckoutButton />
+              <StoreDownloadLinks />
             </motion.div>
           </motion.div>
 
@@ -515,19 +570,19 @@ export default function LandingPage() {
           <div className="mt-8 flex justify-center">
             <ApplicationCheckoutButton />
           </div>
+          <div className="mt-6 flex justify-center">
+            <StoreDownloadLinks />
+          </div>
         </motion.div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-[rgba(123,110,255,0.1)] py-8 text-center">
         <p className="text-xs text-[rgba(180,170,255,0.25)]">© 2026 Communitive Dentistry — DentCo Outliers</p>
-        <div className="mt-3 flex flex-wrap justify-center gap-6 text-xs text-[rgba(180,170,255,0.25)]">
-          <a href={ANDROID_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
-            Android Uygulamasını İndir
-          </a>
-          <a href={IOS_APP_URL} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
-            iOS Uygulamasını İndir
-          </a>
+        <div className="mt-5 flex justify-center">
+          <StoreDownloadLinks compact />
+        </div>
+        <div className="mt-5 flex flex-wrap justify-center gap-6 text-xs text-[rgba(180,170,255,0.25)]">
           <a href="/privacy" className="hover:text-white transition-colors">
             Gizlilik Politikası
           </a>
