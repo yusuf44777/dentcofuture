@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
 const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
-const ANDROID_APP_URL = "https://play.google.com/store/apps/details?id=com.communitive.dentlinkco";
+const ANDROID_APP_URL = "https://expo.dev/artifacts/eas/kEX1qmpWVTALQu16bqtMw6.apk";
 const IOS_APP_URL = "https://apps.apple.com/us/app/dentco-outlier/id6764522833";
 const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
 const LUMA_EVENT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
@@ -107,9 +107,9 @@ const STORE_LINKS = [
   },
   {
     href: ANDROID_APP_URL,
-    iconClass: "fa-brands fa-google-play",
-    label: "Google Play",
-    eyebrow: "Android için"
+    iconClass: "fa-brands fa-android",
+    label: "Android APK",
+    eyebrow: "Direkt indirme"
   }
 ];
 
@@ -234,7 +234,7 @@ function StoreDownloadLinks({ compact = false }: { compact?: boolean }) {
             href={store.href}
             target="_blank"
             rel="noreferrer"
-            aria-label={`DentCo Outlier ${store.label} mağazasını aç`}
+            aria-label={`DentCo Outlier ${store.label} bağlantısını aç`}
             className={cn(
               "group inline-flex h-14 items-center justify-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.08)] px-5 text-left text-white shadow-[0_16px_40px_rgba(0,0,0,0.18)] backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[rgba(0,229,160,0.5)] hover:bg-[rgba(0,229,160,0.12)]",
               compact ? "h-11 px-4" : "min-w-[178px]"
