@@ -165,26 +165,6 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
     DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
   const makePublic = readBooleanEnv("GOOGLE_DRIVE_MAKE_PUBLIC", true);
 
-  // Service account yöntemi. Bunu önce deneriz; uzun ömürlü prod yedekleme için
-  // refresh token akışından daha dayanıklı.
-  const credentialsFromJson = readGoogleServiceAccountFromEnv();
-  const clientEmail =
-    credentialsFromJson?.client_email?.trim() ||
-    stripWrappingQuotes(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "");
-  const privateKeyRaw =
-    credentialsFromJson?.private_key ?? process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
-  const privateKey = normalizePrivateKey(privateKeyRaw);
-
-  if (clientEmail && privateKey) {
-    return {
-      authMode: "service_account",
-      clientEmail,
-      privateKey,
-      folderId,
-      makePublic
-    };
-  }
-
   // OAuth refresh token yöntemi (kişisel Drive)
   const oauthClientId = stripWrappingQuotes(process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID?.trim() ?? "");
   const oauthClientSecret = stripWrappingQuotes(
@@ -205,7 +185,26 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
     };
   }
 
-  return null;
+  // Service account yöntemi (Shared Drive)
+  const credentialsFromJson = readGoogleServiceAccountFromEnv();
+  const clientEmail =
+    credentialsFromJson?.client_email?.trim() ||
+    stripWrappingQuotes(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL?.trim() ?? "");
+  const privateKeyRaw =
+    credentialsFromJson?.private_key ?? process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY ?? "";
+  const privateKey = normalizePrivateKey(privateKeyRaw);
+
+  if (!clientEmail || !privateKey) {
+    return null;
+  }
+
+  return {
+    authMode: "service_account",
+    clientEmail,
+    privateKey,
+    folderId,
+    makePublic
+  };
 }
 
 function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
