@@ -2,27 +2,30 @@ import { Buffer } from "node:buffer";
 import { createSign } from "node:crypto";
 
 const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+const GOOGLE_DRIVE_FILE_FIELDS = "id,name,webViewLink,webContentLink,thumbnailLink";
 const GOOGLE_DRIVE_UPLOAD_ENDPOINT =
-  "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true";
+  `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=${encodeURIComponent(GOOGLE_DRIVE_FILE_FIELDS)}`;
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DEFAULT_GOOGLE_DRIVE_FOLDER_ID = "1QKdCWBWRWJAfPUWgd5QqhJHtLb8w6i95";
 
-type GoogleDriveConfig =
+type GoogleDriveAuthConfig =
   | {
       authMode: "service_account";
       clientEmail: string;
       privateKey: string;
-      folderId: string;
-      makePublic: boolean;
     }
   | {
       authMode: "oauth_refresh_token";
       oauthClientId: string;
       oauthClientSecret: string;
       oauthRefreshToken: string;
-      folderId: string;
-      makePublic: boolean;
     };
+
+type GoogleDriveConfig = {
+  authOptions: GoogleDriveAuthConfig[];
+  folderId: string;
+  makePublic: boolean;
+};
 
 type GoogleServiceAccountJson = {
   client_email?: string;
@@ -78,7 +81,7 @@ export async function backupBytesToGoogleDrive(input: BackupInput): Promise<Goog
     return {
       status: "disabled",
       error:
-        "Google Drive yedekleme pasif. GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL ve GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY tanımlı değil."
+        "Google Drive yedekleme pasif. OAuth refresh token veya service account ortam değişkenleri tanımlı değil."
     };
   }
 
@@ -119,7 +122,7 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
     return {
       status: "disabled",
       error:
-        "Google Drive silme pasif. GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL ve GOOGLE_DRIVE_SERVICE_ACCOUNT_PRIVATE_KEY tanımlı değil."
+        "Google Drive silme pasif. OAuth refresh token veya service account ortam değişkenleri tanımlı değil."
     };
   }
 
@@ -136,15 +139,11 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
     );
 
     if (!response.ok && response.status !== 404) {
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            error?: {
-              message?: string;
-            };
-          }
-        | null;
-      const errorMessage =
-        payload?.error?.message?.trim() || `HTTP ${response.status} ile silme başarısız oldu.`;
+      const payload = await readResponseBody(response);
+      const errorMessage = googleErrorMessage(
+        payload,
+        `HTTP ${response.status} ile silme başarısız oldu.`
+      );
       throw new Error(`Google Drive silme hatası: ${errorMessage}`);
     }
 
@@ -161,9 +160,10 @@ export async function deleteFileFromGoogleDrive(fileId: string): Promise<GoogleD
 
 function getGoogleDriveConfig(): GoogleDriveConfig | null {
   const folderId =
-    stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "") ||
+    normalizeFolderId(stripWrappingQuotes(process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? "")) ||
     DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
   const makePublic = readBooleanEnv("GOOGLE_DRIVE_MAKE_PUBLIC", true);
+  const authOptions: GoogleDriveAuthConfig[] = [];
 
   // OAuth refresh token yöntemi (kişisel Drive)
   const oauthClientId = stripWrappingQuotes(process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID?.trim() ?? "");
@@ -175,14 +175,12 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
   );
 
   if (oauthClientId && oauthClientSecret && oauthRefreshToken) {
-    return {
+    authOptions.push({
       authMode: "oauth_refresh_token",
       oauthClientId,
       oauthClientSecret,
-      oauthRefreshToken,
-      folderId,
-      makePublic
-    };
+      oauthRefreshToken
+    });
   }
 
   // Service account yöntemi (Shared Drive)
@@ -195,16 +193,16 @@ function getGoogleDriveConfig(): GoogleDriveConfig | null {
   const privateKey = normalizePrivateKey(privateKeyRaw);
 
   if (!clientEmail || !privateKey) {
-    return null;
+    return authOptions.length > 0 ? { authOptions, folderId, makePublic } : null;
   }
 
-  return {
+  authOptions.push({
     authMode: "service_account",
     clientEmail,
-    privateKey,
-    folderId,
-    makePublic
-  };
+    privateKey
+  });
+
+  return authOptions.length > 0 ? { authOptions, folderId, makePublic } : null;
 }
 
 function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
@@ -221,7 +219,7 @@ function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
     }
   }
 
-  const rawJson = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON?.trim() ?? "";
+  const rawJson = stripWrappingQuotes(process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON?.trim() ?? "");
   if (rawJson) {
     try {
       const parsed = JSON.parse(rawJson) as GoogleServiceAccountJson;
@@ -235,10 +233,21 @@ function readGoogleServiceAccountFromEnv(): GoogleServiceAccountJson | null {
 }
 
 async function getAccessToken(config: GoogleDriveConfig) {
-  if (config.authMode === "oauth_refresh_token") {
-    return getAccessTokenViaRefreshToken(config);
+  const failures: string[] = [];
+
+  for (const authConfig of config.authOptions) {
+    try {
+      if (authConfig.authMode === "oauth_refresh_token") {
+        return await getAccessTokenViaRefreshToken(authConfig);
+      }
+      return await getAccessTokenViaServiceAccount(authConfig);
+    } catch (error) {
+      const message = error instanceof Error ? error.message.trim() : "Bilinmeyen hata";
+      failures.push(`${authConfig.authMode}: ${message}`);
+    }
   }
-  return getAccessTokenViaServiceAccount(config);
+
+  throw new Error(`Google Drive kimlik doğrulaması başarısız: ${failures.join(" | ")}`);
 }
 
 async function getAccessTokenViaRefreshToken(config: {
@@ -263,7 +272,7 @@ async function getAccessTokenViaRefreshToken(config: {
     })
   });
 
-  const payload = (await response.json().catch(() => null)) as
+  const payload = (await readResponseBody(response)) as
     | {
         access_token?: string;
         expires_in?: number;
@@ -273,8 +282,7 @@ async function getAccessTokenViaRefreshToken(config: {
     | null;
 
   if (!response.ok || !payload?.access_token) {
-    const description =
-      payload?.error_description?.trim() || payload?.error?.trim() || "OAuth token alınamadı.";
+    const description = googleErrorMessage(payload, "OAuth token alınamadı.");
     throw new Error(`Google OAuth hatası: ${description}`);
   }
 
@@ -290,9 +298,8 @@ async function getAccessTokenViaRefreshToken(config: {
 async function getAccessTokenViaServiceAccount(config: {
   clientEmail: string;
   privateKey: string;
-  folderId: string;
 }) {
-  const cacheKey = `sa:${config.clientEmail}:${config.folderId}`;
+  const cacheKey = `sa:${config.clientEmail}`;
   const nowMs = Date.now();
   if (tokenCache && tokenCache.cacheKey === cacheKey && tokenCache.expiresAtMs - 60_000 > nowMs) {
     return tokenCache.accessToken;
@@ -320,7 +327,7 @@ async function getAccessTokenViaServiceAccount(config: {
     body
   });
 
-  const payload = (await response.json().catch(() => null)) as
+  const payload = (await readResponseBody(response)) as
     | {
         access_token?: string;
         expires_in?: number;
@@ -330,8 +337,7 @@ async function getAccessTokenViaServiceAccount(config: {
     | null;
 
   if (!response.ok || !payload?.access_token) {
-    const description =
-      payload?.error_description?.trim() || payload?.error?.trim() || "OAuth token alınamadı.";
+    const description = googleErrorMessage(payload, "OAuth token alınamadı.");
     throw new Error(`Google OAuth hatası: ${description}`);
   }
 
@@ -374,7 +380,7 @@ async function uploadToGoogleDrive(
   accessToken: string,
   config: GoogleDriveConfig,
   input: BackupInput
-): Promise<{ id: string; webViewLink?: string }> {
+): Promise<{ id: string; webViewLink?: string; webContentLink?: string; thumbnailLink?: string }> {
   const boundary = `dentco_boundary_${Date.now().toString(36)}`;
   const metadata: {
     name: string;
@@ -406,22 +412,26 @@ async function uploadToGoogleDrive(
     body
   });
 
-  const payload = (await response.json().catch(() => null)) as
+  const payload = (await readResponseBody(response)) as
     | {
         id?: string;
         webViewLink?: string;
+        webContentLink?: string;
+        thumbnailLink?: string;
         error?: { message?: string };
       }
     | null;
 
   if (!response.ok || !payload?.id) {
-    const errorMessage = payload?.error?.message?.trim() || "Dosya Google Drive'a yüklenemedi.";
+    const errorMessage = googleErrorMessage(payload ?? {}, "Dosya Google Drive'a yüklenemedi.");
     throw new Error(`Google Drive upload hatası: ${errorMessage}`);
   }
 
   return {
     id: payload.id,
-    webViewLink: payload.webViewLink
+    webViewLink: payload.webViewLink,
+    webContentLink: payload.webContentLink,
+    thumbnailLink: payload.thumbnailLink
   };
 }
 
@@ -445,14 +455,8 @@ async function ensurePublicReadPermission(accessToken: string, fileId: string) {
     return;
   }
 
-  const payload = (await response.json().catch(() => null)) as
-    | {
-        error?: {
-          message?: string;
-        };
-      }
-    | null;
-  const message = payload?.error?.message?.trim() || `HTTP ${response.status}`;
+  const payload = await readResponseBody(response);
+  const message = googleErrorMessage(payload, `HTTP ${response.status}`);
   const normalized = message.toLowerCase();
 
   if (normalized.includes("already") && normalized.includes("permission")) {
@@ -463,7 +467,7 @@ async function ensurePublicReadPermission(accessToken: string, fileId: string) {
 }
 
 function buildDrivePublicUrl(fileId: string) {
-  return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+  return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
 }
 
 function readBooleanEnv(name: string, defaultValue: boolean) {
@@ -494,6 +498,43 @@ function base64UrlEncode(value: Buffer) {
     .replace(/=+$/g, "");
 }
 
+async function readResponseBody(response: Response) {
+  const text = await response.text().catch(() => "");
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return { error: { message: text } };
+  }
+}
+
+function googleErrorMessage(payload: Record<string, unknown> | null, fallback: string) {
+  if (!payload) {
+    return fallback;
+  }
+
+  const error = payload.error;
+  if (typeof error === "string" && error.trim()) {
+    return error.trim();
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+  }
+
+  const description = payload.error_description;
+  if (typeof description === "string" && description.trim()) {
+    return description.trim();
+  }
+
+  return fallback;
+}
+
 function normalizeErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message.trim() : "";
   const lower = message.toLowerCase();
@@ -506,8 +547,16 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
     return "Google Drive private key formatı geçersiz. Anahtarı tırnaksız girin veya GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 ile tüm service-account JSON'unu base64 olarak verin.";
   }
 
-  if (lower.includes("invalid_grant") || lower.includes("oauth")) {
-    return "Google OAuth doğrulaması başarısız. Service account e-postası, private key ve Drive paylaşım izinlerini kontrol edin.";
+  if (lower.includes("invalid_grant")) {
+    return "Google Drive OAuth refresh token geçersiz veya süresi dolmuş. Dentel'de çalışan OAuth client id, client secret ve refresh token değerlerini bu projeye de aynı şekilde girin.";
+  }
+
+  if (lower.includes("google drive kimlik doğrulaması başarısız")) {
+    return `Google Drive kimlik doğrulaması başarısız. OAuth refresh token ve varsa service account ayarlarını kontrol edin. Detay: ${message.slice(0, 280)}`;
+  }
+
+  if (lower.includes("oauth")) {
+    return "Google Drive OAuth doğrulaması başarısız. OAuth client id, client secret, refresh token ve Drive klasör erişimini kontrol edin.";
   }
 
   if (lower.includes("insufficient") || lower.includes("permission")) {
@@ -532,6 +581,30 @@ function normalizePrivateKey(value: string) {
   normalized = normalized.replace(/\r/g, "\n");
 
   return normalized;
+}
+
+function normalizeFolderId(value: string) {
+  const raw = value.trim();
+  if (!raw) {
+    return raw;
+  }
+
+  const fromPath = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/)?.[1];
+  if (fromPath) {
+    return fromPath;
+  }
+
+  try {
+    const url = new URL(raw);
+    const idFromQuery = url.searchParams.get("id");
+    if (idFromQuery) {
+      return idFromQuery;
+    }
+  } catch {
+    // Plain folder id.
+  }
+
+  return raw;
 }
 
 function stripWrappingQuotes(value: string) {
