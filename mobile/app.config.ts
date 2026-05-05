@@ -6,7 +6,7 @@ const config: ExpoConfig = {
   name: "DentCo Outlier",
   slug: "dentlinkco",
   scheme: "dentlinkco",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   userInterfaceStyle: "light",
   icon: "./assets/icon.png",
