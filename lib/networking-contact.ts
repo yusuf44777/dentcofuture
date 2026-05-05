@@ -3,15 +3,17 @@ export type ParsedNetworkingContact = {
   linkedin: string;
 };
 
+const LINKEDIN_PROFILE_PATH_PREFIXES = new Set(["in", "company", "school", "pub", "profile"]);
+
 export function normalizeInstagramHandle(input: string) {
-  let value = input.trim();
+  let value = input.trim().replace(/\s+/g, "");
   if (!value) {
     return "";
   }
 
-  value = value.replace(/^https?:\/\/(www\.)?/i, "");
-  value = value.replace(/^www\./i, "");
-  value = value.replace(/^instagram\.com\//i, "");
+  value = value.replace(/^https?:\/\//i, "");
+  value = value.replace(/^(?:www\.|m\.)?instagram\.com(?:\/|$)/i, "");
+  value = value.replace(/^instagr\.am(?:\/|$)/i, "");
   value = value.replace(/^@+/, "");
   value = value.split(/[/?#]/)[0] ?? "";
   value = value.replace(/[^a-zA-Z0-9._]/g, "");
@@ -20,14 +22,14 @@ export function normalizeInstagramHandle(input: string) {
 }
 
 export function normalizeLinkedinPath(input: string) {
-  let value = input.trim();
+  let value = input.trim().replace(/\s+/g, "");
   if (!value) {
     return "";
   }
 
-  value = value.replace(/^https?:\/\/(www\.)?/i, "");
-  value = value.replace(/^www\./i, "");
-  value = value.replace(/^linkedin\.com\//i, "");
+  value = value.replace(/^https?:\/\//i, "");
+  value = value.replace(/^(?:[a-z0-9-]+\.)*linkedin\.com(?:\/|$)/i, "");
+  value = value.replace(/^@+/, "");
   value = value.split(/[?#]/)[0] ?? "";
   value = value.replace(/^\/+|\/+$/g, "");
   value = value.replace(/\/{2,}/g, "/");
@@ -36,13 +38,13 @@ export function normalizeLinkedinPath(input: string) {
     return "";
   }
 
-  if (!/^(in|company)\//i.test(value)) {
+  if (!/^(in|company|school|pub|profile)\//i.test(value)) {
     value = `in/${value}`;
   }
 
   const [kindRaw, ...restParts] = value.split("/").filter(Boolean);
   const kind = (kindRaw ?? "").toLowerCase();
-  if ((kind !== "in" && kind !== "company") || restParts.length === 0) {
+  if (!LINKEDIN_PROFILE_PATH_PREFIXES.has(kind) || restParts.length === 0) {
     return "";
   }
 

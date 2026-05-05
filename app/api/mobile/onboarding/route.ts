@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveMobileSession } from "@/lib/mobile/auth";
 import type { Attendee, AttendeeClassLevel, AttendeeRole } from "@/lib/types";
 import { ensureNetworkingProfileForSession } from "@/lib/mobile/networking";
-import { buildContactInfo } from "@/lib/networking-contact";
+import {
+  buildContactInfo,
+  normalizeInstagramHandle,
+  normalizeLinkedinPath
+} from "@/lib/networking-contact";
 import { NETWORKING_INTEREST_OPTIONS } from "@/lib/networking/contracts";
 import { ObjectionableContentError, assertUserGeneratedTextAllowed } from "@/lib/moderation";
 
@@ -24,10 +28,16 @@ const ALLOWED_ROLES: AttendeeRole[] = ["Student", "Academic"];
 const ALLOWED_CLASS_LEVELS: AttendeeClassLevel[] = ["Hazırlık", "1", "2", "3", "4", "5", "Mezun"];
 const ALLOWED_DENTISTRY_INTEREST_AREAS = NETWORKING_INTEREST_OPTIONS as readonly string[];
 
-function normalizeSocial(value: unknown) {
+function normalizeInstagram(value: unknown) {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  const normalized = normalizeInstagramHandle(value);
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeLinkedin(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = normalizeLinkedinPath(value);
+  return normalized.length > 0 ? normalized : null;
 }
 
 function normalizeOptionalField(value: unknown, maxLength: number) {
@@ -70,8 +80,8 @@ export async function POST(request: NextRequest) {
     ? rawDentistryInterestArea
     : null;
   const university = normalizeOptionalField(body.university, 120);
-  const instagram = normalizeSocial(body.instagram);
-  const linkedin = normalizeSocial(body.linkedin);
+  const instagram = normalizeInstagram(body.instagram);
+  const linkedin = normalizeLinkedin(body.linkedin);
   const hasOutlierScore = body.outlier_score !== undefined && body.outlier_score !== null;
   const outlierScore = hasOutlierScore ? Number(body.outlier_score) : null;
 

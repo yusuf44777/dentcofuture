@@ -297,7 +297,7 @@ export function ProfileEditor({
       >
         <Field
           label="Instagram"
-          placeholder="@kullaniciadi"
+          placeholder="@kullaniciadi veya instagram.com/..."
           value={values.instagram}
           onChangeText={(nextValue) => {
             setValues((currentValues) => ({ ...currentValues, instagram: nextValue }));
@@ -307,7 +307,7 @@ export function ProfileEditor({
 
         <Field
           label="LinkedIn"
-          placeholder="linkedin.com/in/kullaniciadi"
+          placeholder="linkedin.com/in/... veya kullanıcı adı"
           value={values.linkedin}
           onChangeText={(nextValue) => {
             setValues((currentValues) => ({ ...currentValues, linkedin: nextValue }));

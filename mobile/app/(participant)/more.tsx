@@ -353,7 +353,7 @@ export default function ParticipantMoreScreen() {
           style={styles.input}
           value={instagram}
           onChangeText={(value) => setInstagram(value)}
-          placeholder="Instagram kullanıcı adı"
+          placeholder="@kullaniciadi veya instagram.com/..."
           placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />
@@ -362,7 +362,7 @@ export default function ParticipantMoreScreen() {
           style={styles.input}
           value={linkedin}
           onChangeText={(value) => setLinkedin(value)}
-          placeholder="LinkedIn profil linki"
+          placeholder="linkedin.com/in/... veya kullanıcı adı"
           placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
         />

@@ -14,6 +14,7 @@ import { ChevronLeft, Instagram, Linkedin, Play } from "lucide-react-native";
 import { CommunityTermsGate } from "../../src/components/community-terms-gate";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchNetworkingGalleryUploaderProfile } from "../../src/lib/mobile-api";
+import { getInstagramProfileUrl, getLinkedinProfileUrl } from "../../src/lib/networking-contact";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 function formatGalleryDate(value: string) {
@@ -59,6 +60,14 @@ export default function ParticipantUploaderProfileScreen() {
     queryFn: () => fetchNetworkingGalleryUploaderProfile(uploaderName, 36),
     enabled: uploaderName.length >= 2
   });
+  const uploaderInstagramUrl = useMemo(
+    () => getInstagramProfileUrl(profileQuery.data?.uploader.instagram ?? ""),
+    [profileQuery.data?.uploader.instagram]
+  );
+  const uploaderLinkedinUrl = useMemo(
+    () => getLinkedinProfileUrl(profileQuery.data?.uploader.linkedin ?? ""),
+    [profileQuery.data?.uploader.linkedin]
+  );
 
   const openSocial = async (url: string | null | undefined) => {
     if (!url) {
@@ -137,24 +146,27 @@ export default function ParticipantUploaderProfileScreen() {
 
             <View style={styles.contactActions}>
               <Pressable
-                style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
+                disabled={!uploaderInstagramUrl}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  !uploaderInstagramUrl ? styles.iconButtonDisabled : null,
+                  pressed ? styles.pressed : null
+                ]}
                 onPress={() => {
-                  const instagram = profileQuery.data?.uploader.instagram;
-                  void openSocial(
-                    instagram ? `https://www.instagram.com/${instagram.replace(/^@+/, "")}/` : ""
-                  );
+                  void openSocial(uploaderInstagramUrl);
                 }}
               >
                 <Instagram color={colors.copper} size={16} />
               </Pressable>
               <Pressable
-                style={({ pressed }) => [styles.iconButton, pressed ? styles.pressed : null]}
+                disabled={!uploaderLinkedinUrl}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  !uploaderLinkedinUrl ? styles.iconButtonDisabled : null,
+                  pressed ? styles.pressed : null
+                ]}
                 onPress={() => {
-                  const linkedin = profileQuery.data?.uploader.linkedin;
-                  const normalized = linkedin ? linkedin.replace(/^https?:\/\//, "") : "";
-                  void openSocial(
-                    linkedin ? (linkedin.startsWith("http") ? linkedin : `https://${normalized}`) : ""
-                  );
+                  void openSocial(uploaderLinkedinUrl);
                 }}
               >
                 <Linkedin color={colors.accent} size={16} />
@@ -284,6 +296,9 @@ const styles = StyleSheet.create({
     height: 32,
     justifyContent: "center",
     width: 32
+  },
+  iconButtonDisabled: {
+    opacity: 0.42
   },
   cardTitle: {
     color: colors.ink,
