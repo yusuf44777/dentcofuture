@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronDown, LogOut, MapPin, Save, UserRound } from "lucide-react-native";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  LogOut,
+  MapPin,
+  Save,
+  UserRound
+} from "lucide-react-native";
 import { ScreenShell } from "../../src/components/screen-shell";
 import { fetchNetworkingFeed, submitOnboarding } from "../../src/lib/mobile-api";
 import type { AttendeeClassLevel, AttendeeRole } from "../../src/lib/mobile-contracts";
@@ -66,6 +74,7 @@ export default function ParticipantMoreScreen() {
   const [university, setUniversity] = useState("");
   const [instagram, setInstagram] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [saveNotice, setSaveNotice] = useState("");
 
   const feedQuery = useQuery({
     queryKey: ["mobile-networking-feed"],
@@ -112,6 +121,20 @@ export default function ParticipantMoreScreen() {
     }
   }, [role]);
 
+  useEffect(() => {
+    if (!saveNotice) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setSaveNotice("");
+    }, 4200);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [saveNotice]);
+
   const requiresRoleReset = attendee ? !isProfileRole(attendee.role) : false;
 
   const canSaveProfile =
@@ -121,6 +144,9 @@ export default function ParticipantMoreScreen() {
     (role === "Academic" || classLevel !== null);
 
   const onboardingMutation = useMutation({
+    onMutate: () => {
+      setSaveNotice("");
+    },
     mutationFn: async () => {
       if (!role) {
         throw new Error("Rol seçimi zorunlu.");
@@ -152,6 +178,7 @@ export default function ParticipantMoreScreen() {
         queryClient.invalidateQueries({ queryKey: ["mobile-networking-feed"] }),
         queryClient.invalidateQueries({ queryKey: ["mobile-networking-gallery-feed"] })
       ]);
+      setSaveNotice("Profilin kaydedildi. Değişiklikler Profilim ve Outliers alanlarına yansıtıldı.");
     }
   });
 
@@ -348,6 +375,16 @@ export default function ParticipantMoreScreen() {
           </Text>
         ) : null}
 
+        {saveNotice ? (
+          <View style={styles.successBanner}>
+            <CheckCircle2 color={colors.positive} size={18} />
+            <View style={styles.successTextBlock}>
+              <Text style={styles.successTitle}>Profil kaydedildi</Text>
+              <Text style={styles.successText}>{saveNotice}</Text>
+            </View>
+          </View>
+        ) : null}
+
         <Pressable
           disabled={!canSaveProfile || onboardingMutation.isPending}
           style={({ pressed }) => [
@@ -364,7 +401,9 @@ export default function ParticipantMoreScreen() {
           ) : (
             <>
               <Save color="#FFFFFF" size={14} />
-              <Text style={styles.primaryButtonText}>Profili Kaydet</Text>
+              <Text style={styles.primaryButtonText}>
+                {saveNotice ? "Kaydedildi" : "Profili Kaydet"}
+              </Text>
             </>
           )}
         </Pressable>
@@ -560,6 +599,34 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     marginBottom: spacing.sm
+  },
+  successBanner: {
+    alignItems: "flex-start",
+    backgroundColor: "rgba(52,211,153,0.1)",
+    borderColor: "rgba(52,211,153,0.28)",
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
+  },
+  successTextBlock: {
+    flex: 1,
+    marginLeft: spacing.xs
+  },
+  successTitle: {
+    color: colors.positive,
+    fontFamily: typography.body,
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  successText: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2
   },
   logoutButton: {
     alignItems: "center",

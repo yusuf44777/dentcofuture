@@ -778,8 +778,11 @@ export default function ParticipantNetworkingScreen() {
     galleryCommentMutation.isPending ? (galleryCommentMutation.variables?.itemId ?? null) : null;
   const pendingGalleryDeleteItemId =
     galleryDeleteMutation.isPending ? (galleryDeleteMutation.variables?.itemId ?? null) : null;
-  const galleryCarouselWidth = Math.max(windowWidth - spacing.md * 6, 220);
-  const uploadCarouselWidth = Math.max(windowWidth - spacing.md * 4, 220);
+  const galleryCarouselWidth = Math.max(
+    windowWidth - (spacing.md + spacing.md + spacing.sm) * 2,
+    220
+  );
+  const uploadCarouselWidth = Math.max(windowWidth - spacing.md * 2, 220);
   const uploadCompletionRate = uploadProgress
     ? Math.round((uploadProgress.completed / Math.max(1, uploadProgress.total)) * 100)
     : 0;
@@ -943,6 +946,7 @@ export default function ParticipantNetworkingScreen() {
                     </View>
                   </View>
                   <Pressable
+                    hitSlop={8}
                     style={({ pressed }) => [
                       styles.discoveryProfileOpenButton,
                       pressed ? styles.pressed : null
@@ -951,8 +955,8 @@ export default function ParticipantNetworkingScreen() {
                       openProfileCard(profile);
                     }}
                   >
-                    <UserRound color={colors.accent} size={14} />
-                    <Text style={styles.discoveryProfileOpenButtonText}>Profil Aç</Text>
+                    <UserRound color={colors.accent} size={12} />
+                    <Text style={styles.discoveryProfileOpenButtonText}>Aç</Text>
                   </Pressable>
                 </View>
               ))
@@ -976,6 +980,7 @@ export default function ParticipantNetworkingScreen() {
                     </Text>
                   </View>
                   <Pressable
+                    hitSlop={8}
                     style={({ pressed }) => [
                       styles.discoveryDirectoryButton,
                       pressed ? styles.pressed : null
@@ -984,8 +989,8 @@ export default function ParticipantNetworkingScreen() {
                       openProfileCard(profile);
                     }}
                   >
-                    <UserRound color="#FFFFFF" size={14} />
-                    <Text style={styles.discoveryDirectoryButtonText}>Profil Aç</Text>
+                    <UserRound color={colors.accent} size={12} />
+                    <Text style={styles.discoveryDirectoryButtonText}>Aç</Text>
                   </Pressable>
                 </View>
               ))
@@ -1188,7 +1193,7 @@ export default function ParticipantNetworkingScreen() {
                             >
                               <Image
                                 source={{ uri: mediaItem.publicUrl }}
-                                resizeMode="cover"
+                                resizeMode="contain"
                                 style={[styles.galleryMedia, { width: galleryCarouselWidth }]}
                               />
                             </Pressable>
@@ -1236,7 +1241,7 @@ export default function ParticipantNetworkingScreen() {
                     >
                       <Image
                         source={{ uri: postMediaItems[0]?.publicUrl ?? post.publicUrl }}
-                        resizeMode="cover"
+                        resizeMode="contain"
                         style={styles.galleryMedia}
                       />
                     </Pressable>
@@ -1378,7 +1383,7 @@ export default function ParticipantNetworkingScreen() {
               setIsUploadSheetVisible(false);
             }}
           />
-          <View style={styles.sheetCard}>
+          <View style={[styles.sheetCard, styles.uploadSheetCard]}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Yeni Paylaşım</Text>
               <Pressable
@@ -1391,155 +1396,170 @@ export default function ParticipantNetworkingScreen() {
               </Pressable>
             </View>
 
-            <Text style={styles.sheetMetaText}>
-              Toplu paylaşımda fotoğraf ve videoları karosel olarak seçebilirsin.
-            </Text>
+            <ScrollView
+              style={styles.uploadSheetScroll}
+              contentContainerStyle={styles.uploadSheetContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.sheetMetaText}>
+                Toplu paylaşımda fotoğraf ve videoları karosel olarak seçebilirsin.
+              </Text>
 
-            {selectedUploadAssets.length > 0 ? (
-              <View>
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  decelerationRate="fast"
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.uploadCarouselTrack}
-                  onMomentumScrollEnd={(event) => {
-                    const offsetX = event.nativeEvent.contentOffset.x;
-                    const nextIndex = Math.round(offsetX / uploadCarouselWidth);
-                    setUploadCarouselIndex(
-                      Math.max(0, Math.min(selectedUploadAssets.length - 1, nextIndex))
-                    );
+              {selectedUploadAssets.length > 0 ? (
+                <View>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    decelerationRate="fast"
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.uploadCarouselTrack}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetX = event.nativeEvent.contentOffset.x;
+                      const nextIndex = Math.round(offsetX / uploadCarouselWidth);
+                      setUploadCarouselIndex(
+                        Math.max(0, Math.min(selectedUploadAssets.length - 1, nextIndex))
+                      );
+                    }}
+                  >
+                    {selectedUploadAssets.map((asset, index) => (
+                      resolveAssetMediaKind(asset) === "video" ? (
+                        <View
+                          key={`${asset.uri}-${index}`}
+                          style={[styles.uploadPreviewVideoCard, { width: uploadCarouselWidth }]}
+                        >
+                          <Play color={colors.copper} size={24} />
+                          <Text style={styles.uploadPreviewVideoText}>Video</Text>
+                          <Text style={styles.uploadPreviewVideoName} numberOfLines={1}>
+                            {asset.fileName?.trim() || `video-${index + 1}`}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Image
+                          key={`${asset.uri}-${index}`}
+                          source={{ uri: asset.uri }}
+                          resizeMode="contain"
+                          style={[styles.uploadPreviewThumb, { width: uploadCarouselWidth }]}
+                        />
+                      )
+                    ))}
+                  </ScrollView>
+                  {selectedUploadAssets.length > 1 ? (
+                    <View style={styles.uploadCarouselDots}>
+                      {selectedUploadAssets.map((asset, index) => (
+                        <View
+                          key={`${asset.uri}-dot-${index}`}
+                          style={[
+                            styles.uploadCarouselDot,
+                            uploadCarouselIndex === index ? styles.uploadCarouselDotActive : null
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+                  <Text style={styles.uploadCountText}>
+                    {selectedUploadAssets.length} medya seçildi • {uploadCarouselIndex + 1}/
+                    {selectedUploadAssets.length}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.uploadPlaceholder}>
+                  <Text style={styles.uploadPlaceholderText}>Henüz medya seçilmedi.</Text>
+                </View>
+              )}
+
+              <View style={styles.uploadButtonRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
+                  onPress={() => {
+                    void pickMediaForUpload();
                   }}
                 >
-                  {selectedUploadAssets.map((asset, index) => (
-                    resolveAssetMediaKind(asset) === "video" ? (
-                      <View
-                        key={`${asset.uri}-${index}`}
-                        style={[styles.uploadPreviewVideoCard, { width: uploadCarouselWidth }]}
-                      >
-                        <Play color={colors.copper} size={24} />
-                        <Text style={styles.uploadPreviewVideoText}>Video</Text>
-                        <Text style={styles.uploadPreviewVideoName} numberOfLines={1}>
-                          {asset.fileName?.trim() || `video-${index + 1}`}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Image
-                        key={`${asset.uri}-${index}`}
-                        source={{ uri: asset.uri }}
-                        resizeMode="cover"
-                        style={[styles.uploadPreviewThumb, { width: uploadCarouselWidth }]}
-                      />
-                    )
-                  ))}
-                </ScrollView>
-                {selectedUploadAssets.length > 1 ? (
-                  <View style={styles.uploadCarouselDots}>
-                    {selectedUploadAssets.map((asset, index) => (
-                      <View
-                        key={`${asset.uri}-dot-${index}`}
-                        style={[
-                          styles.uploadCarouselDot,
-                          uploadCarouselIndex === index ? styles.uploadCarouselDotActive : null
-                        ]}
-                      />
-                    ))}
-                  </View>
+                  <Text style={styles.uploadPickButtonText}>Medya Seç</Text>
+                </Pressable>
+                {selectedUploadAssets.length > 0 ? (
+                  <Pressable
+                    style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
+                    onPress={() => {
+                      setSelectedUploadAssets([]);
+                      setUploadCarouselIndex(0);
+                      setUploadMessage("Seçim temizlendi.");
+                      setUploadError("");
+                    }}
+                  >
+                    <Text style={styles.uploadClearButtonText}>Seçimi Temizle</Text>
+                  </Pressable>
                 ) : null}
-                <Text style={styles.uploadCountText}>
-                  {selectedUploadAssets.length} medya seçildi • {uploadCarouselIndex + 1}/
-                  {selectedUploadAssets.length}
-                </Text>
               </View>
-            ) : (
-              <View style={styles.uploadPlaceholder}>
-                <Text style={styles.uploadPlaceholderText}>Henüz medya seçilmedi.</Text>
-              </View>
-            )}
 
-            <View style={styles.uploadButtonRow}>
+              <View style={styles.uploadCaptionBlock}>
+                <View style={styles.uploadCaptionHeader}>
+                  <Text style={styles.uploadCaptionLabel}>Açıklama</Text>
+                  <Text style={styles.uploadCaptionCounter}>{uploadCaption.length}/280</Text>
+                </View>
+                <TextInput
+                  style={styles.uploadCaptionInput}
+                  placeholder="Açıklama ekle..."
+                  placeholderTextColor={colors.inkMuted}
+                  value={uploadCaption}
+                  multiline
+                  textAlignVertical="top"
+                  onChangeText={(value) => setUploadCaption(value.slice(0, 280))}
+                />
+              </View>
+
+              {uploadError ? <Text style={styles.uploadErrorText}>{uploadError}</Text> : null}
+              {uploadMessage ? <Text style={styles.uploadSuccessText}>{uploadMessage}</Text> : null}
+              {galleryUploadMutation.error ? (
+                <Text style={styles.uploadErrorText}>
+                  {galleryUploadMutation.error instanceof Error
+                    ? galleryUploadMutation.error.message
+                    : "Medya paylaşılamadı."}
+                </Text>
+              ) : null}
+
+              {uploadProgress && galleryUploadMutation.isPending ? (
+                <View style={styles.uploadProgressWrap}>
+                  <View style={styles.uploadProgressTrack}>
+                    <View
+                      style={[
+                        styles.uploadProgressFill,
+                        { width: `${Math.max(0, Math.min(100, uploadCompletionRate))}%` }
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.uploadProgressText}>
+                    {uploadProgress.completed}/{uploadProgress.total} tamamlandı • {uploadProgress.uploaded} yüklendi
+                    {uploadProgress.failed > 0 ? ` • ${uploadProgress.failed} hata` : ""}
+                  </Text>
+                  {uploadProgress.currentFile ? (
+                    <Text style={styles.uploadProgressCurrentFile} numberOfLines={1}>
+                      İşleniyor: {uploadProgress.currentFile}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+
               <Pressable
-                style={({ pressed }) => [styles.uploadPickButton, pressed ? styles.pressed : null]}
+                disabled={selectedUploadAssets.length === 0 || galleryUploadMutation.isPending}
+                style={({ pressed }) => [
+                  styles.uploadShareButton,
+                  pressed ? styles.pressed : null,
+                  selectedUploadAssets.length === 0 || galleryUploadMutation.isPending ? styles.disabled : null
+                ]}
                 onPress={() => {
-                  void pickMediaForUpload();
+                  galleryUploadMutation.mutate();
                 }}
               >
-                <Text style={styles.uploadPickButtonText}>Medya Seç</Text>
-              </Pressable>
-              {selectedUploadAssets.length > 0 ? (
-                <Pressable
-                  style={({ pressed }) => [styles.uploadClearButton, pressed ? styles.pressed : null]}
-                  onPress={() => {
-                    setSelectedUploadAssets([]);
-                    setUploadCarouselIndex(0);
-                    setUploadMessage("Seçim temizlendi.");
-                    setUploadError("");
-                  }}
-                >
-                  <Text style={styles.uploadClearButtonText}>Seçimi Temizle</Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            <TextInput
-              style={styles.galleryComposerInput}
-              placeholder="Açıklama ekle..."
-              placeholderTextColor={colors.inkMuted}
-              value={uploadCaption}
-              onChangeText={(value) => setUploadCaption(value.slice(0, 280))}
-            />
-
-            {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
-            {uploadMessage ? <Text style={styles.uploadSuccessText}>{uploadMessage}</Text> : null}
-            {galleryUploadMutation.error ? (
-              <Text style={styles.errorText}>
-                {galleryUploadMutation.error instanceof Error
-                  ? galleryUploadMutation.error.message
-                  : "Medya paylaşılamadı."}
-              </Text>
-            ) : null}
-
-            {uploadProgress && galleryUploadMutation.isPending ? (
-              <View style={styles.uploadProgressWrap}>
-                <View style={styles.uploadProgressTrack}>
-                  <View
-                    style={[
-                      styles.uploadProgressFill,
-                      { width: `${Math.max(0, Math.min(100, uploadCompletionRate))}%` }
-                    ]}
-                  />
-                </View>
-                <Text style={styles.uploadProgressText}>
-                  {uploadProgress.completed}/{uploadProgress.total} tamamlandı • {uploadProgress.uploaded} yüklendi
-                  {uploadProgress.failed > 0 ? ` • ${uploadProgress.failed} hata` : ""}
-                </Text>
-                {uploadProgress.currentFile ? (
-                  <Text style={styles.uploadProgressCurrentFile} numberOfLines={1}>
-                    İşleniyor: {uploadProgress.currentFile}
+                {galleryUploadMutation.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.uploadShareButtonText}>
+                    Paylaş ({selectedUploadAssets.length})
                   </Text>
-                ) : null}
-              </View>
-            ) : null}
-
-            <Pressable
-              disabled={selectedUploadAssets.length === 0 || galleryUploadMutation.isPending}
-              style={({ pressed }) => [
-                styles.uploadShareButton,
-                pressed ? styles.pressed : null,
-                selectedUploadAssets.length === 0 || galleryUploadMutation.isPending ? styles.disabled : null
-              ]}
-              onPress={() => {
-                galleryUploadMutation.mutate();
-              }}
-            >
-              {galleryUploadMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.uploadShareButtonText}>
-                  Paylaş ({selectedUploadAssets.length})
-                </Text>
-              )}
-            </Pressable>
+                )}
+              </Pressable>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1902,7 +1922,6 @@ const styles = StyleSheet.create({
     color: colors.accent
   },
   uploadCarouselTrack: {
-    gap: spacing.xs,
     marginTop: spacing.sm
   },
   uploadCarouselDots: {
@@ -1925,7 +1944,9 @@ const styles = StyleSheet.create({
   uploadPreviewThumb: {
     backgroundColor: colors.backgroundDeep,
     borderRadius: radii.md,
-    height: 176
+    aspectRatio: 1,
+    borderColor: colors.line,
+    borderWidth: 1
   },
   uploadPreviewVideoCard: {
     alignItems: "center",
@@ -1933,7 +1954,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radii.md,
     borderWidth: 1,
-    height: 176,
+    aspectRatio: 1,
     justifyContent: "center",
     paddingHorizontal: spacing.md
   },
@@ -1954,7 +1975,8 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 11,
-    marginTop: spacing.xs
+    marginTop: spacing.xs,
+    textAlign: "center"
   },
   uploadPlaceholder: {
     alignItems: "center",
@@ -1974,6 +1996,7 @@ const styles = StyleSheet.create({
   uploadButtonRow: {
     alignItems: "center",
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.xs,
     marginTop: spacing.sm
   },
@@ -2012,7 +2035,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderRadius: radii.pill,
     justifyContent: "center",
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     minHeight: 40
   },
   uploadShareButtonText: {
@@ -2026,6 +2049,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     marginBottom: spacing.xs
+  },
+  uploadErrorText: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: "rgba(248,113,113,0.28)",
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.danger,
+    fontFamily: typography.body,
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs
   },
   uploadProgressWrap: {
     marginBottom: spacing.xs
@@ -2173,15 +2208,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10
   },
   discoveryProfileRow: {
+    alignItems: "flex-start",
     borderColor: colors.line,
     borderRadius: radii.md,
     borderWidth: 1,
     flexDirection: "row",
     marginBottom: spacing.xs,
-    padding: spacing.sm
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10
   },
   discoveryDirectoryRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     borderColor: colors.line,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -2193,36 +2230,42 @@ const styles = StyleSheet.create({
   },
   discoveryProfileMeta: {
     flex: 1,
-    marginRight: spacing.xs
+    marginRight: spacing.sm,
+    minWidth: 0
   },
   discoveryTitleRow: {
-    alignItems: "center",
+    alignItems: "flex-start",
     flexDirection: "row",
     justifyContent: "space-between"
   },
   discoveryProfileName: {
     color: colors.ink,
+    flex: 1,
     fontFamily: typography.body,
     fontSize: 14,
-    fontWeight: "800"
+    fontWeight: "800",
+    lineHeight: 18,
+    marginRight: spacing.xs
   },
   discoveryProfileInfo: {
     color: colors.inkMuted,
     fontFamily: typography.body,
     fontSize: 12,
+    lineHeight: 17,
     marginTop: 2
   },
   discoveryReasonText: {
     color: colors.copper,
     fontFamily: typography.body,
     fontSize: 12,
+    lineHeight: 17,
     marginTop: spacing.xs
   },
   discoveryRecommendationBadge: {
     backgroundColor: colors.copperSoft,
     borderRadius: radii.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4
+    paddingHorizontal: 7,
+    paddingVertical: 3
   },
   discoveryRecommendationBadgeText: {
     color: colors.copper,
@@ -2237,29 +2280,33 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     flexDirection: "row",
+    gap: 4,
     justifyContent: "center",
-    minHeight: 34,
-    paddingHorizontal: 10
+    minHeight: 30,
+    minWidth: 56,
+    paddingHorizontal: 9
   },
   discoveryProfileOpenButtonText: {
     color: colors.accent,
     fontFamily: typography.body,
     fontSize: 11,
-    fontWeight: "800",
-    marginLeft: 6
+    fontWeight: "800"
   },
   discoveryDirectoryButton: {
     alignItems: "center",
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accentSoft,
+    borderColor: "rgba(139,92,246,0.32)",
+    borderWidth: 1,
     borderRadius: radii.pill,
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
     justifyContent: "center",
-    minHeight: 34,
-    paddingHorizontal: spacing.sm
+    minHeight: 30,
+    minWidth: 56,
+    paddingHorizontal: 9
   },
   discoveryDirectoryButtonText: {
-    color: "#FFFFFF",
+    color: colors.accent,
     fontFamily: typography.body,
     fontSize: 11,
     fontWeight: "800"
@@ -2536,8 +2583,10 @@ const styles = StyleSheet.create({
   },
   galleryMedia: {
     backgroundColor: colors.backgroundDeep,
+    borderColor: colors.line,
     borderRadius: radii.md,
-    height: 220,
+    borderWidth: 1,
+    aspectRatio: 1,
     width: "100%"
   },
   galleryCarouselTrack: {
@@ -2573,7 +2622,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderRadius: radii.md,
     borderWidth: 1,
-    height: 220,
+    aspectRatio: 1,
     justifyContent: "center"
   },
   galleryVideoText: {
@@ -2691,6 +2740,15 @@ const styles = StyleSheet.create({
     maxHeight: "76%",
     padding: spacing.md
   },
+  uploadSheetCard: {
+    maxHeight: "88%"
+  },
+  uploadSheetScroll: {
+    marginTop: spacing.xs
+  },
+  uploadSheetContent: {
+    paddingBottom: spacing.sm
+  },
   sheetHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -2719,6 +2777,41 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: 12,
     marginTop: spacing.xs
+  },
+  uploadCaptionBlock: {
+    marginTop: spacing.sm
+  },
+  uploadCaptionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6
+  },
+  uploadCaptionLabel: {
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  uploadCaptionCounter: {
+    color: colors.inkMuted,
+    fontFamily: typography.body,
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  uploadCaptionInput: {
+    backgroundColor: colors.backgroundDeep,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    color: colors.ink,
+    fontFamily: typography.body,
+    fontSize: 13,
+    lineHeight: 19,
+    minHeight: 92,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs
   },
   sheetLoaderWrap: {
     alignItems: "center",
