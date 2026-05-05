@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const EVENT_DATE = new Date("2026-05-16T09:00:00+03:00");
 const EVENT_ORGANIZER = "Communitive Dentistry Üsküdar";
 const EVENT_ADDRESS = "Ümraniye Birikim Okulları: Yamanevler, Site Yolu Cd No:22, 34768 Ümraniye/İstanbul";
-const ANDROID_APP_URL = "https://expo.dev/artifacts/eas/kEX1qmpWVTALQu16bqtMw6.apk";
+const ANDROID_APP_URL = "https://expo.dev/artifacts/eas/eBV1KPXZpQ8Mbwb5BbZVLB.apk";
 const IOS_APP_URL = "https://apps.apple.com/us/app/dentco-outlier/id6764522833";
 const LUMA_EVENT_ID = "evt-suwIs4rhpB5Yd1Q";
 const LUMA_EVENT_URL = `https://luma.com/event/${LUMA_EVENT_ID}`;
