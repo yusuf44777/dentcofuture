@@ -501,7 +501,7 @@ export function RaffleAdminConsole({
                 Moderatör Çekiliş Merkezi
               </p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-                Dent Co Future Çekiliş Sistemi
+                DentCo Outliers Çekiliş Sistemi
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-300">
                 Katılımcı kodlarını güvenli biçimde yükleyin, ödül bazında çekiliş başlatın ve kazanan
@@ -710,7 +710,7 @@ export function RaffleAdminConsole({
                   <div>
                     <p className="flex items-center gap-2 text-sm font-semibold text-amber-50">
                       <PackagePlus className="h-4 w-4" />
-                      Hazır Dent Co Future Ödül Seti
+                      Hazır DentCo Outliers Ödül Seti
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-amber-50/75">
                       Listedeki ürünleri {DEFAULT_RAFFLE_PRIZE_TOTAL_QUANTITY} kazananlık çekiliş havuzu olarak yükler.

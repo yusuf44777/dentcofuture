@@ -1,4 +1,4 @@
-# DentCo Outlier / Dent Co Future
+# DentCo Outliers
 
 COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart tabanli tanisma ve eslesme urunune evrilen Next.js + Expo + Supabase uygulamasi.
 
@@ -37,7 +37,7 @@ COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart
 - `/api/raffle/participants/import-project-csv` proje kökündeki `outliers_cekilis.csv` veya `cekilis.csv` dosyasını tek tık içe aktarma endpoint'i
 - `/api/raffle/participants` katılımcı listeleme endpoint'i
 - `/api/raffle/prizes` ödül oluşturma/güncelleme endpoint'i
-- `/api/raffle/prizes/seed-defaults` Dent Co Future hazır ödül setini yükleme endpoint'i
+- `/api/raffle/prizes/seed-defaults` DentCo Outliers hazır ödül setini yükleme endpoint'i
 - `/api/raffle/draw` ödül bazlı çekiliş çalıştırma endpoint'i
 - `/api/raffle/public` public çekiliş sonuç endpoint'i
 
@@ -248,7 +248,7 @@ Admin panel (`/admin`), `postgres_changes` eventlerini dinler:
   - Katılımcı listesi toplu içe aktarılır.
   - Tek tıkla proje kökündeki `outliers_cekilis.csv` dosyası içe aktarılabilir; yoksa `cekilis.csv` denenir.
   - Kod verilmeyen satırlar için sistem otomatik `DCF-XXXXXXXX` kod üretir.
-  - Dent Co Future hazır ödül seti tek tıkla yüklenebilir.
+  - DentCo Outliers hazır ödül seti tek tıkla yüklenebilir.
   - Ödül bazında çekiliş tetiklenir ve kazanan kodu anında döner.
   - "Sunum Ekranı" butonu `/cekilis` projeksiyon ekranını yeni sekmede açar.
 - Çekiliş API endpoint'leri moderatör dashboard oturumu veya `RAFFLE_ADMIN_SECRET` ile korunur.
