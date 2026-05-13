@@ -9,6 +9,7 @@ import {
   Bot,
   ChartColumnBig,
   Download,
+  Gift,
   Hash,
   Images,
   ListChecks,
@@ -1366,6 +1367,13 @@ export function LiveDashboard() {
               >
                 <Images className="h-4 w-4" />
                 Etkinlik Galerisi
+              </Link>
+              <Link
+                href="/admin/cekilis"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-amber-200/35 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-300/20"
+              >
+                <Gift className="h-4 w-4" />
+                Çekiliş Paneli
               </Link>
             </div>
           </div>

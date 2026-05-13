@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { RafflePublicBoard } from "@/components/raffle/raffle-public-board";
 
-export default function LegacyRafflePublicPage() {
-  redirect("/galeri");
+export default function RafflePublicPage() {
+  return <RafflePublicBoard />;
 }

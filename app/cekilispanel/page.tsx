@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function LegacyRafflePanelPage() {
-  redirect("/admin");
+  redirect("/admin/cekilis");
 }

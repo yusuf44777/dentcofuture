@@ -18,11 +18,12 @@ COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart
 - `/oyla` -> `/submit` yönlendirmesi
 - `/networking` networking formu
 - `/networking/waiting-room` benzer profil listesi
-- `/cekilis` public çekiliş sonuç ekranı
+- `/cekilis` projeksiyon için public çekiliş sunum ekranı
 - `/admin` canlı analiz yönetim panosu
+- `/admin/cekilis` çekiliş yönetim ekranı
 - `/admin/login` yönetim panel giriş ekranı
 - `/konusmacipanel` ve alt rotalar legacy uyumluluk için `/admin` altına yönlenir
-- `/cekilispanel` özel çekiliş yönetim ekranı
+- `/cekilispanel` legacy uyumluluk için `/admin/cekilis` altına yönlenir
 - `/api/analyze` batch AI analiz endpoint'i (GET/POST)
 - `/api/networking/profile` networking profili oluşturma/okuma/güncelleme endpoint'i
 - `/api/networking/discovery` mobil discovery akışı endpoint'i
@@ -33,9 +34,10 @@ COMMUNITIVE DENTISTRY tarafindan dogan altyapi uzerinde, dis hekimleri icin kart
 - `/api/live-poll` canlı anket yayınlama/okuma endpoint'i
 - `/api/raffle/overview` çekiliş özet endpoint'i
 - `/api/raffle/participants/import` katılımcı toplu içe aktarma endpoint'i
-- `/api/raffle/participants/import-project-csv` proje kökündeki `cekilis.csv` dosyasını tek tık içe aktarma endpoint'i
+- `/api/raffle/participants/import-project-csv` proje kökündeki `outliers_cekilis.csv` veya `cekilis.csv` dosyasını tek tık içe aktarma endpoint'i
 - `/api/raffle/participants` katılımcı listeleme endpoint'i
 - `/api/raffle/prizes` ödül oluşturma/güncelleme endpoint'i
+- `/api/raffle/prizes/seed-defaults` Dent Co Future hazır ödül setini yükleme endpoint'i
 - `/api/raffle/draw` ödül bazlı çekiliş çalıştırma endpoint'i
 - `/api/raffle/public` public çekiliş sonuç endpoint'i
 
@@ -231,7 +233,7 @@ Admin panel (`/admin`), `postgres_changes` eventlerini dinler:
 - Login endpoint'i (`/api/dashboard-auth`) önce Supabase Auth (`signInWithPassword`) dener.
 - Supabase girişlerinde kullanıcı `staff_roles` tablosunda `is_active = true` olmalıdır.
 - Supabase konfigürasyonu olmayan ortamlarda legacy `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` fallback'i devam eder.
-- Çekiliş paneli (`/cekilispanel`) ayrı login istemez; aynı dashboard oturumunu kullanır.
+- Çekiliş paneli (`/admin/cekilis`) ayrı login istemez; aynı dashboard oturumunu kullanır. Legacy `/cekilispanel` bu ekrana yönlenir.
 - Giriş doğrulaması `/api/dashboard-auth` üzerinden server-side yapılır.
 - Varsayılan kullanıcı adı/şifre:
   - `communitive`
@@ -240,16 +242,18 @@ Admin panel (`/admin`), `postgres_changes` eventlerini dinler:
 
 ## 8. Çekiliş Modülü
 
-- Public çekiliş ekranı: `/cekilis`
-- Yönetim ekranı: `/cekilispanel`
+- Projeksiyon çekiliş ekranı: `/cekilis`
+- Yönetim ekranı: `/admin/cekilis`
 - Bu ekrandan:
   - Katılımcı listesi toplu içe aktarılır.
-  - Tek tıkla proje kökündeki `cekilis.csv` dosyası içe aktarılabilir.
+  - Tek tıkla proje kökündeki `outliers_cekilis.csv` dosyası içe aktarılabilir; yoksa `cekilis.csv` denenir.
   - Kod verilmeyen satırlar için sistem otomatik `DCF-XXXXXXXX` kod üretir.
+  - Dent Co Future hazır ödül seti tek tıkla yüklenebilir.
   - Ödül bazında çekiliş tetiklenir ve kazanan kodu anında döner.
+  - "Sunum Ekranı" butonu `/cekilis` projeksiyon ekranını yeni sekmede açar.
 - Çekiliş API endpoint'leri moderatör dashboard oturumu veya `RAFFLE_ADMIN_SECRET` ile korunur.
 - Çekiliş seçim algoritması DB fonksiyonu `run_raffle_draw` ile atomik çalışır.
-- `cekilis.csv` özelliği için dosyanın repo kökünde bulunması gerekir.
+- `outliers_cekilis.csv`/`cekilis.csv` özelliği için dosyanın repo kökünde bulunması gerekir.
 
 ## Notlar
 

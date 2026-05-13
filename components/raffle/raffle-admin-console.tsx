@@ -5,8 +5,11 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Clock3,
+  ExternalLink,
   Gift,
   LoaderCircle,
+  MonitorPlay,
+  PackagePlus,
   PlayCircle,
   PlusCircle,
   RefreshCw,
@@ -16,6 +19,7 @@ import {
   Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_RAFFLE_PRIZE_TOTAL_QUANTITY } from "@/lib/raffle/default-prizes";
 
 type RafflePrizeSummary = {
   id: string;
@@ -61,6 +65,14 @@ type ImportResponse = {
   updated_count?: number;
   invalid_lines?: Array<{ line: number; value: string; reason: string }>;
   sample_codes?: Array<{ full_name: string; participant_code: string }>;
+  error?: string;
+};
+
+type SeedPrizesResponse = {
+  ok?: boolean;
+  inserted_count?: number;
+  updated_count?: number;
+  skipped_count?: number;
   error?: string;
 };
 
@@ -118,10 +130,14 @@ function formatDateTime(value: string) {
 }
 
 interface RaffleAdminConsoleProps {
-  speakerPanelPath?: string;
+  dashboardPath?: string;
+  presentationPath?: string;
 }
 
-export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminConsoleProps) {
+export function RaffleAdminConsole({
+  dashboardPath = "/admin",
+  presentationPath = "/cekilis"
+}: RaffleAdminConsoleProps) {
   const [overview, setOverview] = useState<RaffleOverviewResponse | null>(null);
   const [overviewState, setOverviewState] = useState<RequestState>("loading");
   const [overviewMessage, setOverviewMessage] = useState("");
@@ -143,6 +159,8 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
   const [allowPreviousWinner, setAllowPreviousWinner] = useState(false);
   const [createPrizeState, setCreatePrizeState] = useState<RequestState>("idle");
   const [createPrizeMessage, setCreatePrizeMessage] = useState("");
+  const [seedPrizesState, setSeedPrizesState] = useState<RequestState>("idle");
+  const [seedPrizesMessage, setSeedPrizesMessage] = useState("");
 
   const [selectedPrizeId, setSelectedPrizeId] = useState("");
   const [drawState, setDrawState] = useState<RequestState>("idle");
@@ -332,7 +350,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
 
       const data = (await response.json()) as ImportResponse & { source?: string };
       if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "cekilis.csv içe aktarılamadı.");
+        throw new Error(data.error ?? "outliers_cekilis.csv içe aktarılamadı.");
       }
 
       setImportState("success");
@@ -343,14 +361,48 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
         }, geçersiz satır: ${data.invalid_lines?.length ?? 0}.`
       );
       setImportRows("");
-      setImportFileName("cekilis.csv");
+      setImportFileName(data.source ?? "outliers_cekilis.csv");
       void loadOverview();
       void loadParticipants(participantsQuery);
     } catch (error) {
       setImportState("error");
       setImportMessage(
-        error instanceof Error ? error.message : "cekilis.csv içe aktarılamadı."
+        error instanceof Error ? error.message : "outliers_cekilis.csv içe aktarılamadı."
       );
+    }
+  };
+
+  const handleSeedDefaultPrizes = async () => {
+    if (seedPrizesState === "loading") {
+      return;
+    }
+
+    setSeedPrizesState("loading");
+    setSeedPrizesMessage("");
+
+    try {
+      const response = await fetch("/api/raffle/prizes/seed-defaults", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        }
+      });
+
+      const data = (await response.json()) as SeedPrizesResponse;
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Hazır ödül seti yüklenemedi.");
+      }
+
+      setSeedPrizesState("success");
+      setSeedPrizesMessage(
+        `Hazır ödül seti yüklendi. Yeni: ${data.inserted_count ?? 0}, güncellenen: ${
+          data.updated_count ?? 0
+        }, zaten hazır: ${data.skipped_count ?? 0}.`
+      );
+      void loadOverview();
+    } catch (error) {
+      setSeedPrizesState("error");
+      setSeedPrizesMessage(error instanceof Error ? error.message : "Hazır ödül seti yüklenemedi.");
     }
   };
 
@@ -457,7 +509,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={speakerPanelPath}>
+              <Link href={dashboardPath}>
                 <Button
                   type="button"
                   variant="outline"
@@ -465,6 +517,17 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Canlı Pano
+                </Button>
+              </Link>
+              <Link href={presentationPath} target="_blank" rel="noreferrer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-amber-200/40 bg-amber-300/10 text-amber-50 hover:bg-amber-300/20"
+                >
+                  <MonitorPlay className="h-4 w-4" />
+                  Sunum Ekranı
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
               </Link>
               <Button
@@ -553,7 +616,7 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                     />
                   </label>
                   <p className="text-xs text-cyan-100/75">
-                    {importFileName ? `Seçilen dosya: ${importFileName}` : "Örn: cekilis.csv"}
+                    {importFileName ? `Seçilen dosya: ${importFileName}` : "Örn: outliers_cekilis.csv"}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -572,12 +635,12 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
                     ) : (
                       <>
                         <Upload className="h-4 w-4" />
-                        Projedeki cekilis.csv&apos;yi İçe Aktar
+                        Projedeki outliers_cekilis.csv&apos;yi İçe Aktar
                       </>
                     )}
                   </Button>
                   <p className="text-xs text-cyan-100/75">
-                    Tek tıkla proje kökündeki `cekilis.csv` dosyasını yükler.
+                    Tek tıkla proje kökündeki `outliers_cekilis.csv` dosyasını yükler; yoksa `cekilis.csv` ile devam eder.
                   </p>
                 </div>
                 <textarea
@@ -641,6 +704,49 @@ export function RaffleAdminConsole({ speakerPanelPath = "/admin" }: RaffleAdminC
               <div className="mb-4 flex items-center gap-2 text-cyan-100">
                 <Sparkles className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">Ödül Tanımla</h2>
+              </div>
+              <div className="mb-4 rounded-2xl border border-amber-200/25 bg-amber-300/10 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-semibold text-amber-50">
+                      <PackagePlus className="h-4 w-4" />
+                      Hazır Dent Co Future Ödül Seti
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-50/75">
+                      Listedeki ürünleri {DEFAULT_RAFFLE_PRIZE_TOTAL_QUANTITY} kazananlık çekiliş havuzu olarak yükler.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSeedDefaultPrizes}
+                    disabled={seedPrizesState === "loading"}
+                    className="w-fit border-amber-200/40 bg-amber-300/10 text-amber-50 hover:bg-amber-300/20"
+                  >
+                    {seedPrizesState === "loading" ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        Yükleniyor...
+                      </>
+                    ) : (
+                      <>
+                        <PackagePlus className="h-4 w-4" />
+                        Ödül Setini Yükle
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {seedPrizesMessage ? (
+                  <p
+                    className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
+                      seedPrizesState === "error"
+                        ? "border-rose-300/40 bg-rose-500/15 text-rose-100"
+                        : "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
+                    }`}
+                  >
+                    {seedPrizesMessage}
+                  </p>
+                ) : null}
               </div>
               <form className="space-y-3" onSubmit={handleCreatePrize}>
                 <input
