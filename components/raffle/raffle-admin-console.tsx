@@ -13,6 +13,7 @@ import {
   PlayCircle,
   PlusCircle,
   RefreshCw,
+  RotateCcw,
   Sparkles,
   Trophy,
   Upload,
@@ -112,6 +113,12 @@ type DrawResponse = {
   error?: string;
 };
 
+type ResetRaffleResponse = {
+  ok?: boolean;
+  deleted_draws?: number;
+  error?: string;
+};
+
 type RequestState = "idle" | "loading" | "success" | "error";
 
 function formatDateTime(value: string) {
@@ -166,6 +173,8 @@ export function RaffleAdminConsole({
   const [drawState, setDrawState] = useState<RequestState>("idle");
   const [drawMessage, setDrawMessage] = useState("");
   const [latestWinner, setLatestWinner] = useState<DrawResponse["winner"] | null>(null);
+  const [resetRaffleState, setResetRaffleState] = useState<RequestState>("idle");
+  const [resetRaffleMessage, setResetRaffleMessage] = useState("");
 
   const overviewPrizes = overview?.prizes;
   const overviewRecentDraws = overview?.recent_draws;
@@ -488,6 +497,50 @@ export function RaffleAdminConsole({
     } catch (error) {
       setDrawState("error");
       setDrawMessage(error instanceof Error ? error.message : "Çekiliş çalıştırılamadı.");
+    }
+  };
+
+  const handleResetRaffle = async () => {
+    if (resetRaffleState === "loading") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Çekiliş sonuçlarını sıfırlamak istiyor musunuz? Katılımcılar ve ödüller silinmez, sadece kazanan geçmişi temizlenir."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setResetRaffleState("loading");
+    setResetRaffleMessage("");
+
+    try {
+      const response = await fetch("/api/raffle/reset", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          confirm: "RESET_RAFFLE_DRAWS"
+        })
+      });
+
+      const data = (await response.json()) as ResetRaffleResponse;
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Çekiliş sıfırlanamadı.");
+      }
+
+      setLatestWinner(null);
+      setDrawState("idle");
+      setDrawMessage("");
+      setResetRaffleState("success");
+      setResetRaffleMessage(`Çekiliş sıfırlandı. Silinen sonuç: ${data.deleted_draws ?? 0}.`);
+      void loadOverview();
+    } catch (error) {
+      setResetRaffleState("error");
+      setResetRaffleMessage(error instanceof Error ? error.message : "Çekiliş sıfırlanamadı.");
     }
   };
 
@@ -890,6 +943,25 @@ export function RaffleAdminConsole({
                     </>
                   )}
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetRaffle}
+                  disabled={(overview?.stats?.total_draws ?? 0) === 0 || resetRaffleState === "loading"}
+                  className="border-rose-300/40 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
+                >
+                  {resetRaffleState === "loading" ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Sıfırlanıyor...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-4 w-4" />
+                      Çekilişi Sıfırla
+                    </>
+                  )}
+                </Button>
               </div>
 
               {drawMessage ? (
@@ -901,6 +973,18 @@ export function RaffleAdminConsole({
                   }`}
                 >
                   {drawMessage}
+                </p>
+              ) : null}
+
+              {resetRaffleMessage ? (
+                <p
+                  className={`mt-3 rounded-xl border px-3 py-2 text-xs ${
+                    resetRaffleState === "error"
+                      ? "border-rose-300/40 bg-rose-500/15 text-rose-100"
+                      : "border-emerald-300/40 bg-emerald-500/15 text-emerald-100"
+                  }`}
+                >
+                  {resetRaffleMessage}
                 </p>
               ) : null}
 
