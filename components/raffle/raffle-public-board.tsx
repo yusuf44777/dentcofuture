@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Clock3, Gift, LoaderCircle, Sparkles, Trophy, Users } from "lucide-react";
 
 type PublicRaffleDraw = {
@@ -30,6 +30,18 @@ type PublicRaffleResponse = {
 
 type LoadState = "loading" | "ready" | "error";
 
+const COUNTDOWN_START = 5;
+const CONFETTI_COLORS = ["#fde68a", "#6ee7b7", "#fda4af", "#93c5fd", "#fef3c7", "#c4b5fd"];
+const CONFETTI_PIECES = Array.from({ length: 90 }, (_, index) => ({
+  color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+  delay: `${(index % 18) * 0.045}s`,
+  duration: `${2.5 + (index % 7) * 0.16}s`,
+  left: `${(index * 37) % 100}%`,
+  size: `${6 + (index % 5) * 2}px`,
+  drift: `${((index % 9) - 4) * 42}px`,
+  rotation: `${220 + (index % 8) * 65}deg`
+}));
+
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) {
@@ -45,11 +57,18 @@ function formatDateTime(value: string) {
 }
 
 export function RafflePublicBoard() {
+  const hasInitializedWinnersRef = useRef(false);
+  const latestSeenWinnerIdRef = useRef("");
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [participantsActive, setParticipantsActive] = useState(0);
   const [recentDraws, setRecentDraws] = useState<PublicRaffleDraw[]>([]);
   const [activePrizes, setActivePrizes] = useState<PublicRafflePrize[]>([]);
+  const [displayedWinner, setDisplayedWinner] = useState<PublicRaffleDraw | null>(null);
+  const [pendingWinner, setPendingWinner] = useState<PublicRaffleDraw | null>(null);
+  const [countdown, setCountdown] = useState(COUNTDOWN_START);
+  const [isCountingDown, setIsCountingDown] = useState(false);
+  const [confettiBurstKey, setConfettiBurstKey] = useState("");
 
   const latestWinner = useMemo(() => recentDraws[0] ?? null, [recentDraws]);
   const prizeTotals = useMemo(
@@ -64,7 +83,10 @@ export function RafflePublicBoard() {
       ),
     [activePrizes]
   );
-  const visibleRecentDraws = useMemo(() => recentDraws.slice(0, 5), [recentDraws]);
+  const visibleRecentDraws = useMemo(
+    () => recentDraws.filter((draw) => draw.id !== pendingWinner?.id).slice(0, 5),
+    [pendingWinner?.id, recentDraws]
+  );
 
   const loadPublicRaffle = useCallback(async (backgroundRefresh = false) => {
     try {
@@ -105,8 +127,106 @@ export function RafflePublicBoard() {
     };
   }, [loadPublicRaffle]);
 
+  useEffect(() => {
+    if (loadState !== "ready") {
+      return;
+    }
+
+    if (!hasInitializedWinnersRef.current) {
+      hasInitializedWinnersRef.current = true;
+      latestSeenWinnerIdRef.current = latestWinner?.id ?? "";
+      setDisplayedWinner(latestWinner);
+      return;
+    }
+
+    if (!latestWinner) {
+      latestSeenWinnerIdRef.current = "";
+      setDisplayedWinner(null);
+      setPendingWinner(null);
+      setIsCountingDown(false);
+      setCountdown(COUNTDOWN_START);
+      return;
+    }
+
+    if (latestWinner.id === latestSeenWinnerIdRef.current) {
+      return;
+    }
+
+    latestSeenWinnerIdRef.current = latestWinner.id;
+    setPendingWinner(latestWinner);
+    setCountdown(COUNTDOWN_START);
+    setIsCountingDown(true);
+  }, [latestWinner, loadState]);
+
+  useEffect(() => {
+    if (!isCountingDown || !pendingWinner) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(intervalId);
+          setDisplayedWinner(pendingWinner);
+          setPendingWinner(null);
+          setIsCountingDown(false);
+          setConfettiBurstKey(`${pendingWinner.id}-${Date.now()}`);
+          return COUNTDOWN_START;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isCountingDown, pendingWinner]);
+
+  useEffect(() => {
+    if (!confettiBurstKey) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setConfettiBurstKey("");
+    }, 4500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [confettiBurstKey]);
+
   return (
     <main className="h-screen overflow-hidden bg-[#080807] px-4 py-4 text-stone-50 sm:px-6 lg:px-8">
+      {confettiBurstKey ? (
+        <div
+          key={confettiBurstKey}
+          className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
+          aria-hidden="true"
+        >
+          {CONFETTI_PIECES.map((piece, index) => (
+            <span
+              key={`confetti-${confettiBurstKey}-${index}`}
+              className="raffle-confetti-piece"
+              style={
+                {
+                  "--confetti-color": piece.color,
+                  "--confetti-delay": piece.delay,
+                  "--confetti-duration": piece.duration,
+                  "--confetti-drift": piece.drift,
+                  "--confetti-rotation": piece.rotation,
+                  backgroundColor: piece.color,
+                  height: piece.size,
+                  left: piece.left,
+                  width: piece.size
+                } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      ) : null}
+
       <section className="mx-auto flex h-full w-full max-w-[1900px] flex-col gap-3 overflow-hidden">
         <header className="flex shrink-0 flex-col gap-3 border-b border-amber-200/20 pb-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -156,20 +276,38 @@ export function RafflePublicBoard() {
               ) : null}
             </div>
 
-            {latestWinner ? (
-              <div key={latestWinner.id} className="flex min-h-0 flex-1 animate-fade-up flex-col justify-center py-4">
+            {isCountingDown && pendingWinner ? (
+              <div className="flex min-h-0 flex-1 animate-fade-up flex-col items-center justify-center py-4 text-center">
+                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-amber-100/80">
+                  Kazanan açıklanıyor
+                </p>
+                <div className="relative mt-6 flex h-48 w-48 items-center justify-center rounded-full border border-amber-200/35 bg-amber-200/10 shadow-[0_0_80px_rgba(253,230,138,0.18)] 2xl:h-56 2xl:w-56">
+                  <div className="absolute inset-0 rounded-full border border-amber-200/30 animate-ping" />
+                  <p className="relative text-8xl font-black leading-none text-amber-100 2xl:text-9xl">
+                    {countdown}
+                  </p>
+                </div>
+                <p className="mt-6 max-w-3xl truncate text-2xl font-semibold text-white 2xl:text-4xl">
+                  {pendingWinner.prize_title}
+                </p>
+                <p className="mt-3 text-sm uppercase tracking-[0.2em] text-stone-400">
+                  Kod birazdan açıklanacak
+                </p>
+              </div>
+            ) : displayedWinner ? (
+              <div key={displayedWinner.id} className="flex min-h-0 flex-1 animate-fade-up flex-col justify-center py-4">
                 <p className="max-w-full overflow-hidden whitespace-nowrap text-6xl font-black leading-none tracking-[0.04em] text-amber-100 sm:text-7xl xl:text-8xl 2xl:text-[8.5rem]">
-                  {latestWinner.winner_code}
+                  {displayedWinner.winner_code}
                 </p>
                 <div className="mt-6 max-w-5xl border-l-4 border-amber-300 pl-5">
                   <p className="truncate text-3xl font-semibold text-white sm:text-4xl 2xl:text-5xl">
-                    {latestWinner.winner_name}
+                    {displayedWinner.winner_name}
                   </p>
                   <p className="mt-3 truncate text-xl font-medium text-emerald-100 sm:text-2xl 2xl:text-3xl">
-                    {latestWinner.prize_title}
+                    {displayedWinner.prize_title}
                   </p>
                   <p className="mt-2 text-sm uppercase tracking-[0.18em] text-stone-400">
-                    Tur {latestWinner.draw_number} • {formatDateTime(latestWinner.drawn_at)}
+                    Tur {displayedWinner.draw_number} • {formatDateTime(displayedWinner.drawn_at)}
                   </p>
                 </div>
               </div>
